@@ -46,6 +46,7 @@ public sealed class TenantDbFactory(string connectionString)
             IF COL_LENGTH('{alerts}', 'ExternalEventId') IS NULL ALTER TABLE {alerts} ADD ExternalEventId nvarchar(200) NULL;
             IF COL_LENGTH('{alerts}', 'PayloadHash') IS NULL ALTER TABLE {alerts} ADD PayloadHash nvarchar(64) NULL;
             IF COL_LENGTH('{alerts}', 'OccurredAt') IS NULL ALTER TABLE {alerts} ADD OccurredAt datetimeoffset NULL;
+            IF COL_LENGTH('{alerts}', 'NormalizedPayload') IS NULL ALTER TABLE {alerts} ADD NormalizedPayload nvarchar(max) NULL;
             IF COL_LENGTH('{alerts}', 'RowVersion') IS NULL ALTER TABLE {alerts} ADD RowVersion rowversion NOT NULL;
             IF COL_LENGTH('{cases}', 'RowVersion') IS NULL ALTER TABLE {cases} ADD RowVersion rowversion NOT NULL;
             IF COL_LENGTH('{cases}', 'Summary') IS NULL ALTER TABLE {cases} ADD Summary nvarchar(max) NULL;
