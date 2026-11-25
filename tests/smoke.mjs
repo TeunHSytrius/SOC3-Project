@@ -61,11 +61,11 @@ const payload={externalEventId:'smoke-'+Date.now(),title:'MVP smoke test',occurr
 const ingestOpts={method:'POST',headers:{'X-API-Key':key.secret},body:payload};
 assert.equal((await tool.request('ingest/alerts',{...ingestOpts,body:{...payload,organizationId:delta.id}})).status,400);
 const first=await tool.request('ingest/alerts',ingestOpts);assert.equal(first.status,201);const alert=first.data;
-assert.equal(alert.organizationId,north.id);assert.equal(alert.rawPayload,JSON.stringify(payload));assert.equal(alert.security.category,'Authenticatie');assert.equal(alert.security.sourceIp,'192.0.2.10');assert.equal(alert.description,payload.payload.description);assert.equal(JSON.parse(alert.normalizedPayload).class_uid,2004);assert.equal(JSON.parse(alert.normalizedPayload).severity_id,4);
+assert.equal(alert.slaStatus,'Pending');assert.equal(alert.organizationId,north.id);assert.equal(alert.rawPayload,JSON.stringify(payload));assert.equal(alert.security.category,'Authenticatie');assert.equal(alert.security.sourceIp,'192.0.2.10');assert.equal(alert.description,payload.payload.description);assert.equal(JSON.parse(alert.normalizedPayload).class_uid,2004);assert.equal(JSON.parse(alert.normalizedPayload).severity_id,4);
 const replay=await tool.request('ingest/alerts',ingestOpts);assert.equal(replay.status,200);assert.equal(replay.data.id,alert.id);
 assert.equal((await tool.request('ingest/alerts',{...ingestOpts,body:{...payload,title:'Gewijzigd'}})).status,409);
 assert.equal((await analyst.request(`alerts/${alert.id}/claim`,{method:'POST',body:{},csrf:false})).status,400,'CSRF vereist');
-const claimed=await analyst.post(`alerts/${alert.id}/claim`);assert(claimed.firstHandledAt);assert.equal(claimed.status,'UnderReview');assert.notEqual(claimed.rowVersion,alert.rowVersion,'Claim must update rowversion');assert(claimed.history.some(h=>h.text==='Alert opgepakt'),'Claim history must be inserted');
+const claimed=await analyst.post(`alerts/${alert.id}/claim`);assert(claimed.firstHandledAt);assert.equal(claimed.slaStatus,'Met');assert.equal(claimed.status,'UnderReview');assert.notEqual(claimed.rowVersion,alert.rowVersion,'Claim must update rowversion');assert(claimed.history.some(h=>h.text==='Alert opgepakt'),'Claim history must be inserted');
 const persistedClaim=await analyst.ok(`alerts/${alert.id}`);assert.equal(persistedClaim.rowVersion,claimed.rowVersion);assert(persistedClaim.history.some(h=>h.text==='Alert opgepakt'),'Claim history must persist');
 assert.equal((await analyst.request(`alerts/${alert.id}/triage`,{method:'POST',body:{rowVersion:alert.rowVersion,outcome:'Bevestigd incident',reason:'Verouderde versie'}})).status,409);
 assert.equal((await analyst.request(`alerts/${alert.id}/claim`,{method:'POST',body:{}})).status,409);

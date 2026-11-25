@@ -26,6 +26,8 @@ public sealed class TenantDbContext(DbContextOptions<TenantDbContext> options, s
         b.Entity<CaseEvent>().Property(x=>x.Id).ValueGeneratedNever();
         b.Entity<Observable>().Property(x=>x.Id).ValueGeneratedNever();
         b.Entity<TenantAudit>().Property(x=>x.Id).ValueGeneratedNever();
+        // Adapted from feature/database CK_Ticket_Deadline: alerts carry the first-response deadline.
+        b.Entity<Alert>().ToTable(t=>t.HasCheckConstraint("CK_Alert_Deadline","[Deadline] >= [CreatedAt]"));
         b.Entity<Alert>().Property(x=>x.RowVersion).IsRowVersion(); b.Entity<ResearchCase>().Property(x=>x.RowVersion).IsRowVersion(); b.Entity<Alert>().Property(x=>x.ExternalEventId).HasMaxLength(200); b.Entity<Alert>().Property(x=>x.PayloadHash).HasMaxLength(64); b.Entity<Alert>().HasIndex(x=>new{x.SourceIntegrationId,x.ExternalEventId}).IsUnique().HasFilter("[SourceIntegrationId] IS NOT NULL AND [ExternalEventId] IS NOT NULL"); b.Entity<Alert>().Property(x=>x.Status).HasConversion<string>(); b.Entity<Alert>().Property(x=>x.Priority).HasConversion<string>(); b.Entity<ResearchCase>().Property(x=>x.Status).HasConversion<string>(); b.Entity<ResearchCase>().Property(x=>x.Priority).HasConversion<string>(); b.Entity<Alert>().HasIndex(x=>new{x.ScopeId,x.CreatedAt}); b.Entity<ResearchCase>().HasIndex(x=>x.ScopeId); b.Entity<ResearchCase>().HasAlternateKey(x=>new{x.ScopeId,x.Id}).HasName("AK_Cases_ScopeId_Id"); b.Entity<Alert>().HasOne(x=>x.Case).WithMany(x=>x.Alerts).HasForeignKey(x=>new{x.ScopeId,x.CaseId}).HasPrincipalKey(x=>new{x.ScopeId,x.Id}).HasConstraintName("FK_Alerts_Cases_ScopeId_CaseId").OnDelete(DeleteBehavior.Restrict); b.Entity<Alert>().HasMany(x=>x.History).WithOne().HasForeignKey(x=>x.AlertId); b.Entity<ResearchCase>().HasMany(x=>x.Entries).WithOne().HasForeignKey(x=>new{x.ScopeId,x.CaseId}).HasPrincipalKey(x=>new{x.ScopeId,x.Id}).HasConstraintName("FK_CaseEvents_Cases_ScopeId_CaseId"); b.Entity<ResearchCase>().HasMany(x=>x.Observables).WithOne().HasForeignKey(x=>new{x.ScopeId,x.CaseId}).HasPrincipalKey(x=>new{x.ScopeId,x.Id}).HasConstraintName("FK_Observables_Cases_ScopeId_CaseId"); }
 }
 public sealed class SchemaModelCacheKeyFactory : IModelCacheKeyFactory { public object Create(DbContext context,bool designTime)=>context is TenantDbContext t?(context.GetType(),t.Schema,designTime):(context.GetType(),designTime); }
@@ -63,6 +65,8 @@ public sealed class TenantDbFactory(string connectionString)
                 EXEC(N'UPDATE o SET ScopeId=c.ScopeId FROM {observables} o JOIN {cases} c ON o.CaseId=c.Id');
                 EXEC(N'ALTER TABLE {observables} ALTER COLUMN ScopeId uniqueidentifier NOT NULL');
             END;
+            IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE parent_object_id=OBJECT_ID('{alerts}') AND name='CK_Alert_Deadline')
+                ALTER TABLE {alerts} WITH CHECK ADD CONSTRAINT [CK_Alert_Deadline] CHECK ([Deadline] >= [CreatedAt]);
             IF NOT EXISTS (SELECT 1 FROM sys.key_constraints WHERE parent_object_id=OBJECT_ID('{cases}') AND name='AK_Cases_ScopeId_Id')
                 ALTER TABLE {cases} ADD CONSTRAINT [AK_Cases_ScopeId_Id] UNIQUE ([ScopeId],[Id]);
             IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE parent_object_id=OBJECT_ID('{alerts}') AND name='FK_Alerts_Cases_ScopeId_CaseId')

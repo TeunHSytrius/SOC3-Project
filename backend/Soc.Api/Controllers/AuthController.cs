@@ -18,9 +18,9 @@ public sealed class AuthController(UserManager<AppUser> users,SignInManager<AppU
     public async Task<IActionResult> Me()=>Ok(await service.PublicUser(await service.UserAsync(User,true)));
     [Authorize,HttpPost("logout")]
     public async Task<IActionResult> Logout(){await signIn.SignOutAsync();return Ok(new{ok=true});}
-    [Authorize,HttpPost("2fa/setup")]
-    public async Task<IActionResult> Setup(){var u=await service.UserAsync(User,true);SocService.Require(!u.TwoFactorEnabled,"2FA is al actief.",409);var key=await users.GetAuthenticatorKeyAsync(u);if(string.IsNullOrEmpty(key)){await users.ResetAuthenticatorKeyAsync(u);key=await users.GetAuthenticatorKeyAsync(u);}return Ok(new{secret=key,manualEntryKey=key,account=u.Email,authenticatorUri=$"otpauth://totp/SOC3:{Uri.EscapeDataString(u.Email!)}?secret={key}&issuer=SOC3"});}
-    [Authorize,HttpPost("2fa/enable")]
+    [Authorize,EnableRateLimiting("login"),HttpPost("2fa/setup")]
+    public async Task<IActionResult> Setup(){var u=await service.UserAsync(User,true);SocService.Require(!u.TwoFactorEnabled,"2FA is al actief.",409);var key=await users.GetAuthenticatorKeyAsync(u);if(string.IsNullOrEmpty(key)){await users.ResetAuthenticatorKeyAsync(u);key=await users.GetAuthenticatorKeyAsync(u);}var uri=$"otpauth://totp/SOC3:{Uri.EscapeDataString(u.Email!)}?secret={key}&issuer=SOC3&algorithm=SHA1&digits=6&period=30";var manualEntryKey=string.Join(' ',key!.Chunk(4).Select(chunk=>new string(chunk)));return Ok(new{secret=key,manualEntryKey,account=u.Email,authenticatorUri=uri,otpAuthUri=uri});}
+    [Authorize,EnableRateLimiting("login"),HttpPost("2fa/enable")]
     public async Task<IActionResult> Enable(Input i){var u=await service.UserAsync(User,true);SocService.Require(!u.TwoFactorEnabled,"2FA is al actief.",409);SocService.Require(!string.IsNullOrEmpty(await users.GetAuthenticatorKeyAsync(u)),"Start eerst de setup.",400);var valid=await users.VerifyTwoFactorTokenAsync(u,users.Options.Tokens.AuthenticatorTokenProvider,SocService.Required(i.Code,12));SocService.Require(valid,"Ongeldige code.",400);var result=await users.SetTwoFactorEnabledAsync(u,true);SocService.Require(result.Succeeded,"2FA activeren mislukt.",500);var codes=await users.GenerateNewTwoFactorRecoveryCodesAsync(u,8);await signIn.RefreshSignInAsync(u);await service.Log(u,"2FA geactiveerd");return Ok(new{recoveryCodes=codes});}
 }
 [Authorize,ApiController,Route("api/v1/me")]
