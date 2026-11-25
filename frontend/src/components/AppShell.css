@@ -14,18 +14,18 @@
 
 .AppShell__header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
+  gap: 0.65rem 1rem;
   min-height: 4.5rem;
-  padding: 0.75rem clamp(1rem, 5vw, 3.5rem);
+  padding: 0.75rem clamp(1rem, 3vw, 2.5rem);
   border-bottom: 1px solid #dedede;
   box-shadow: 0 2px 6px rgb(0 0 0 / 4%);
   color: var(--shell-text);
   background: #fff;
 }
 
-.AppShell__topbar,
-.AppShell__context {
+.AppShell__topbar {
   display: contents;
 }
 
@@ -49,9 +49,13 @@
 }
 
 .AppMenu {
-  grid-column: 2;
+  grid-column: 1 / -1;
+  grid-row: 2;
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  min-width: 0;
   gap: 0.25rem;
   margin: 0;
 }
@@ -66,6 +70,8 @@
   font-size: 0.9rem;
   font-weight: 500;
   text-decoration: none;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .AppMenu__link:hover {
@@ -87,6 +93,8 @@
 
 .AppShell__user {
   margin-left: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .AppShell__user,
@@ -99,11 +107,13 @@
 }
 
 .AppShell__context {
-  grid-column: 3;
+  grid-column: 2;
+  grid-row: 1;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
   min-width: 0;
 }
 
@@ -155,9 +165,11 @@
 }
 
 .AppShell__content {
+  width: 100%;
+  min-width: 0;
   max-width: 1440px;
   margin: 0 auto;
-  padding: 1.75rem clamp(1rem, 4vw, 3rem) 3rem;
+  padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 3rem;
 }
 
 .PageHeader {
@@ -214,22 +226,31 @@
   outline-offset: 3px;
 }
 
+/* A full navigation row prevents long labels and account details from overlapping.
+   Only use a single row when the viewport has enough room. */
+@media (min-width: 1500px) {
+  .AppShell__header {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .AppMenu {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .AppShell__context {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
+
 @media (max-width: 760px) {
   .AppShell__header {
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0;
     padding: 0.75rem 1rem;
   }
-
   .AppShell__brand {
     grid-column: 1;
     grid-row: 1;
   }
-
-  .AppShell__context {
-    display: contents;
-  }
-
   .AppShell__mobileToggle {
     grid-column: 2;
     grid-row: 1;
@@ -243,111 +264,65 @@
     color: var(--shell-text);
     background: #fff;
     font: inherit;
+    font-size: 0.85rem;
     cursor: pointer;
   }
-
-  .AppMenu {
+  .AppShell__context {
     grid-column: 1 / -1;
     grid-row: 2;
-    display: none;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.15rem;
-    margin: 0 -1rem;
-    padding: 0.5rem 1rem;
-    border-top: 1px solid #ededed;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
   }
-
-  .AppMenu--open {
-    display: flex;
-  }
-
-  .AppMenu__link {
-    min-height: 2.6rem;
-    border-radius: 0.35rem;
-  }
-
-  .AppShell__customer,
-  .AppShell__user {
-    grid-row: 3;
-    margin: 0;
-    padding: 0.45rem 0 0.55rem;
+  .AppShell__user,.AppShell__customer {
     font-size: 0.82rem;
-  }
-
-  .AppShell__customer {
-    grid-column: 1;
-    justify-self: start;
     max-width: 100%;
-    border-left: 0;
-    border-radius: 0.35rem;
-    padding: 0.2rem 0.45rem;
-    background: #f3f3f3;
-  }
-
-  .AppShell__customer select {
-    max-width: clamp(6rem, 30vw, 9rem);
-  }
-
-  .AppShell__user {
-    grid-column: 2;
-    justify-content: flex-end;
     min-width: 0;
+    flex-wrap: wrap;
   }
-
+  .AppShell__userName,.AppShell__customerName {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .AppShell__customer {
+    border-left: 0;
+    padding: 0.25rem 0.5rem;
+    background: #f3f3f3;
+    border-radius: 0.35rem;
+  }
+  .AppShell__customer select {
+    max-width: 100%;
+  }
   .AppShell__role {
     padding: 0.35rem 0.65rem;
   }
-
-  .AppShell__content {
-    padding-top: 1.5rem;
+  .AppMenu {
+    display: none;
+    grid-column: 1 / -1;
+    grid-row: 3;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.15rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #ededed;
   }
-
+  .AppMenu--open { display: flex; }
+  .AppMenu__link {
+    min-height: 2.6rem;
+    border-radius: 0.35rem;
+    white-space: normal;
+  }
+  .AppShell__content { padding-top: 1rem; }
   .PageHeader__row {
     flex-direction: column;
     align-items: center;
   }
 }
-
 @media (max-width: 420px) {
-  .AppShell__header {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-
-  .AppShell__brand {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .AppShell__mobileToggle {
-    grid-column: 2;
-    grid-row: 1;
-    justify-self: end;
-  }
-
-  .AppShell__customer {
-    grid-column: 1;
-    grid-row: 3;
-    max-width: 100%;
-  }
-
-  .AppShell__user {
-    grid-column: 2;
-    grid-row: 3;
-    justify-content: flex-end;
-    min-width: 0;
-  }
-
-  .AppShell__userName {
-    max-width: clamp(2rem, 12vw, 4rem);
-  }
-
-  .AppShell__role {
-    padding: 0.3rem 0.5rem;
-    font-size: 0.75rem;
-  }
+  .AppShell__context { flex-direction: column; align-items: flex-start; }
+  .AppShell__userName { max-width: 100%; }
+  .AppShell__role { font-size: 0.75rem; }
 }
-
 @media (max-height: 500px) and (orientation: landscape) {
   .AppShell__header {
     min-height: 3.5rem;

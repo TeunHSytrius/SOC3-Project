@@ -185,3 +185,10 @@
   line-height: 1.5;
   color: #c0392b;
 }
+
+@media (max-width: 360px) {
+  .login-header { padding-inline: 12px; }
+  .login-content { padding-inline: 12px; }
+  .login-form { padding: 16px; }
+}
+.login-field, .login-form { min-width: 0; }
