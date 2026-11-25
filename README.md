@@ -12,12 +12,12 @@ cd SOC3-Project
 docker compose up --build
 ```
 
-Open daarna <http://localhost:8080>. Als je de repository al lokaal hebt, gebruik dan `git pull --ff-only` in de map `SOC3-Project` in plaats van opnieuw te clonen. De backend wacht op SQL Server en maakt de lege demonstratiedatabase, de drie klantschema's en fictieve gebruikers/meldingen aan. OpenAPI staat op <http://localhost:8080/openapi/v1.json>.
+Open daarna <http://localhost:8081>. Als je de repository al lokaal hebt, gebruik dan `git pull --ff-only` in de map `SOC3-Project` in plaats van opnieuw te clonen. De backend wacht op SQL Server en maakt de lege demonstratiedatabase, de drie klantschema's en fictieve gebruikers/meldingen aan. OpenAPI staat op <http://localhost:8081/openapi/v1.json>.
 
 Controle:
 
 ```bash
-curl http://localhost:8080/api/v1/health
+curl http://localhost:8081/api/v1/health
 ```
 
 Stop met Ctrl+C en daarna `docker compose down`. Data blijft behouden. **Alleen bij het resetten van deze lokale demonstratie**: `docker compose down -v` verwijdert de SQL-data en Data Protection-sleutels van deze Compose-map. Start daarna opnieuw. Gebruik dit nooit op productie of de projectdatabase.
@@ -57,7 +57,7 @@ Maak als beheerder in API-sleutels een bron voor Northstar Finance. Kopieer de e
 
 ```bash
 read -rs 'SOC_KEY?API-sleutel: ' # zsh, standaard op macOS
-curl -X POST http://localhost:8080/api/v1/ingest/alerts \
+curl -X POST http://localhost:8081/api/v1/ingest/alerts \
   -H "X-API-Key: $SOC_KEY" \
   -H 'Content-Type: application/json' \
   -d '{"title":"Testmelding uit securitytool","description":"Fictieve aanlevering tijdens de presentatie","priority":"High"}'
@@ -82,7 +82,7 @@ export Demo__Enabled=true
 dotnet run --project backend/Soc.Api --urls http://localhost:8080
 ```
 
-Tijdens ontwikkeling kun je in een tweede terminal `cd frontend && npm run dev` gebruiken. De Vite-proxy stuurt `/api` door naar poort 8080. Voor de presentatie is de same-origin Docker-versie aanbevolen.
+Tijdens ontwikkeling kun je in een tweede terminal `cd frontend && npm run dev` gebruiken. De Vite-proxy stuurt `/api` door naar poort 8080. Bij deze startmethode zonder Docker gebruik je `SOC_URL=http://localhost:8080` voor de smoketest; met Docker is de standaardpoort 8081. Voor de presentatie is de same-origin Docker-versie aanbevolen.
 
 ## 6. Tests
 

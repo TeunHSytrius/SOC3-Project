@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-const base=process.env.SOC_URL||'http://localhost:8080';
+const base=process.env.SOC_URL||'http://localhost:8081';
 class Client {
   cookies=new Map();
   async request(path,{method='GET',body,headers={},csrf=true}={}) {

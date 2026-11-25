@@ -11,7 +11,7 @@ services:
   app:
     build: .
     ports:
-      - '127.0.0.1:8080:8080'
+      - '127.0.0.1:8081:8080'
     environment:
       ConnectionStrings__Soc: 'Server=sqlserver,1433;Database=Soc3Demo;User Id=sa;Password=${SOC_SQL_PASSWORD:-SocDemo!2026Local};Encrypt=True;TrustServerCertificate=True;Connect Timeout=5'
       Demo__Enabled: 'true'
