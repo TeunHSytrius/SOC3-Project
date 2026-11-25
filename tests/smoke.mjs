@@ -19,7 +19,7 @@ class Client {
   login(role){return this.post('auth/login',{username:`${role}@soc.demo`,password:'Demo2026!'});}
 }
 const guest=new Client();await guest.ok('health');const denied=await guest.request('alerts');assert.equal(denied.status,401);assert(denied.data.message&&denied.data.traceId,'401 must explain failure and include trace ID');
-const admin=new Client();await admin.login('beheerder');const orgs=await admin.ok('organizations');assert(orgs.length>=3);assert.equal((await admin.request('alerts')).status,403);const errors=await admin.ok('errors');assert(errors.some(e=>e.traceId===denied.data.traceId&&e.status===401));assert(errors.every(e=>!('body' in e)&&!('headers' in e)));
+const admin=new Client();await admin.login('beheerder');const orgs=await admin.ok('organizations');assert(orgs.length>=3);assert((await admin.ok('alerts')).length>=8);const errors=await admin.ok('errors');assert(errors.some(e=>e.traceId===denied.data.traceId&&e.status===401));assert(errors.every(e=>!('body' in e)&&!('headers' in e)));
 // Group accounts are seeded once; their role/profile can be changed through user management.
 const teamUsers=await admin.ok('users');
 for(const email of ['teun@soc.demo','dominique@soc.demo','sergio@soc.demo','hamza@soc.demo','ruben@soc.demo','thijs@soc.demo'])assert(teamUsers.some(u=>u.email===email),`Demoaccount ontbreekt: ${email}`);
@@ -94,7 +94,11 @@ const archive=await admin.ok('ticket-register');
 const registered=archive.find(t=>t.id===id);
 assert(registered&&registered.status==='Closed'&&registered.closedAt&&registered.organizationId===north.id);
 assert(archive.every(t=>!('title' in t)&&!('entries' in t)&&!('scopeId' in t)&&!('alertIds' in t)));
-assert.equal((await admin.request(`cases/${id}`)).status,403);
+const adminCase=await admin.ok(`cases/${id}`);assert(adminCase.entries.some(e=>e.text===noteText));assert(adminCase.entries.some(e=>e.kind==='Observable'));assert(adminCase.alertIds.includes(alert.id));
+assert((await admin.ok('cases')).some(c=>c.id===id&&c.status==='Closed'));
+assert((await admin.ok(`alerts/${alert.id}`)).rawPayload);
+assert.equal((await admin.request(`cases/${id}/events`,{method:'POST',body:{kind:'Notitie',text:'Verboden beheerderswijziging'}})).status,403);
+assert.equal((await admin.request(`alerts/${alert.id}/claim`,{method:'POST',body:{}})).status,403);
 assert.equal((await customer.request('ticket-register')).status,403);
 assert((await customer.ok('portal/cases')).some(t=>t.id===id&&t.status==='Closed'));
 assert((await analyst.ok('cases')).some(t=>t.id===id&&t.status==='Closed'));

@@ -111,7 +111,7 @@ De onderstaande rollen zijn gekozen voor het demonstreren van de applicatie, nie
 | Ruben Abrahamse | ruben@soc.demo | Accountmanager |
 | Thijs Dronkers | thijs@soc.demo | Klant |
 
-De zes accounts worden eenmalig toegevoegd, ook aan een bestaande geïnitialiseerde demodatabase. Bestaande accounts en hun wijzigingen blijven behouden bij herstart. Analisten krijgen toegang tot de bestaande demoklanten, de klant tot één (bij voorkeur Northstar Finance), de accountmanager tot twee (bij voorkeur Northstar Finance en Delta Logistics). De beheerder krijgt platformbeheer, geen automatische onderzoekstoegang.
+De zes accounts worden eenmalig toegevoegd, ook aan een bestaande geïnitialiseerde demodatabase. Bestaande accounts en hun wijzigingen blijven behouden bij herstart. Analisten krijgen toegang tot de bestaande demoklanten, de klant tot één (bij voorkeur Northstar Finance), de accountmanager tot twee (bij voorkeur Northstar Finance en Delta Logistics). De beheerder krijgt platformbeheer en volledige leesrechten op alle klantdossiers.
 
 ### Algemene testaccounts
 
@@ -127,7 +127,7 @@ De volgende accounts blijven beschikbaar voor de smoketest en generieke presenta
 
 | Functionaliteit | Analist | Senior | Beheerder | Klant | Accountmanager |
 | --- | --- | --- | --- | --- | --- |
-| SOC-dashboard en interne alerts | Ja | Ja | Nee | Nee | Nee |
+| SOC-dashboard en interne alerts | Ja | Ja | Alleen lezen | Nee | Nee |
 | Beheerdashboard (auditmetadata) | Nee | Nee | Ja | Nee | Nee |
 | Alert oppakken, triage en escalatie | Ja | Ja | Nee | Nee | Nee |
 | Afgewezen/opgeloste alert zonder case heropenen | Nee | Ja | Nee | Nee | Nee |
@@ -138,7 +138,7 @@ De volgende accounts blijven beschikbaar voor de smoketest en generieke presenta
 | Auditlog bekijken | Nee | Nee | Ja | Nee | Nee |
 | Eigen 2FA instellen | Ja | Ja | Ja | Ja | Ja |
 
-Klant- en scopetoewijzingen begrenzen operationele toegang. Beheerders krijgen niet automatisch toegang tot onderzoeksinhoud. De voorgestelde procesrollen van de opdrachtgever zijn nog niet volledig geïmplementeerd; zie hoofdstuk 10.
+Klant- en scopetoewijzingen begrenzen operationele toegang. Beheerders hebben expliciet platformbrede leesrechten; operationele wijzigingen blijven bij de analisten. De voorgestelde procesrollen van de opdrachtgever zijn nog niet volledig geïmplementeerd; zie hoofdstuk 10.
 
 ### Gebruikersbeheer
 
@@ -156,7 +156,7 @@ Een beheerder kan klanten aanmaken, hun naam wijzigen, deactiveren en heractiver
 
 ### Dashboard
 
-Beheerders starten op een eigen dashboard met actieve klanten, gebruikers, bronnen, aantallen geregistreerde alertontvangsten per klant en recente ontvangsten uit het bestaande auditlog. Het gaat niet om actuele aantallen openstaande alerts; die worden alleen binnen bevoegde analistenscopes getoond. Er wordt geen ruwe payload of interne case-inhoud aan de beheerder beschikbaar gesteld. Voor de analistenweergave log je in als analist of senior analist.
+Beheerders starten op een eigen dashboard met actieve klanten, gebruikers, bronnen, aantallen geregistreerde alertontvangsten per klant en recente ontvangsten uit het bestaande auditlog. Het dashboard toont daarnaast actuele aantallen openstaande alerts en historische cases. De beheerder kan alle dossiers en ruwe payloads inzien, maar niet behandelen.
 
 Het dashboard toont open alerts, actieve cases, SLA-risico's, overschrijdingen, prioriteitsverdeling, SLA-prestaties, FIFO-wachtrij en actieve onderzoeken. De klantfilter beperkt de getoonde resultaten. De actieve analistenoverzichten vernieuwen automatisch elke 15 seconden. Details, formulieren en verborgen tabbladen worden niet automatisch vernieuwd. Het dashboard toont ook dreigingscategorieën, betrokken systemen en recent ontvangen meldingen; dit is polling, geen realtime push.
 
@@ -559,7 +559,7 @@ Open cases gaan via de toewijzing naar In onderzoek. Vanuit In onderzoek kan de 
 
 ### Wireframes en huisstijl
 
-De oorspronkelijke kaartweergave uit FO v1.1 (figuren 1–4) is hersteld: drie kaarten naast elkaar, maximaal twaalf alerts per pagina, zoek- en filterbalk, driepuntjesmenu, apart triagepaneel, casebanner, observables en tijdlijn, en kaarten voor klantonderzoeken. De basis-index.css is overgenomen van de aangeleverde groepscode. De precieze ernstkleuren zijn in het FO nog niet definitief vastgelegd; deze versie gebruikt grijs voor laag/gemiddeld, oranje voor hoog, rood voor urgent en magenta voor kritiek, steeds met tekstlabels. Het latere FO v2.0 bevat ook een tabelvariant; de oorspronkelijke v1.1-kaarten zijn hier gekozen omdat die als visuele basis zijn aangewezen. De beheerder heeft geen automatische analisttoegang (TO 6.2/8.2). Browser- en buildcontrole van deze nieuwe UI zijn nog nodig.
+De oorspronkelijke kaartweergave uit FO v1.1 (figuren 1–4) is hersteld: drie kaarten naast elkaar, maximaal twaalf alerts per pagina, zoek- en filterbalk, driepuntjesmenu, apart triagepaneel, casebanner, observables en tijdlijn, en kaarten voor klantonderzoeken. De basis-index.css is overgenomen van de aangeleverde groepscode. De precieze ernstkleuren zijn in het FO nog niet definitief vastgelegd; deze versie gebruikt grijs voor laag/gemiddeld, oranje voor hoog, rood voor urgent en magenta voor kritiek, steeds met tekstlabels. Het latere FO v2.0 bevat ook een tabelvariant; de oorspronkelijke v1.1-kaarten zijn hier gekozen omdat die als visuele basis zijn aangewezen. De beheerder heeft leesrechten, geen analistenmutatierechten; dit wijkt af van de oorspronkelijke TO 6.2/8.2. Browser- en buildcontrole van deze nieuwe UI zijn nog nodig.
 
 ### Hergebruik van originele groepsbranches (25 november 2026)
 
@@ -588,4 +588,8 @@ Notities, observables, acties en bewijsreferenties zijn per ticket/onderzoek gek
 
 ### Ticketarchief en klantregister
 
-Analisten en klantgebruikers hebben bij Tickets / onderzoeken de keuze Alle tickets, Lopend en Archief. Afgesloten cases blijven raadpleegbaar binnen toegewezen actieve tenant/scopes; klanten en accountmanagers zien uitsluitend vrijgegeven cases. Datum en klantfilters blijven beschikbaar. Er worden geen fictieve historische tickets toegevoegd. De beheerder krijgt een afzonderlijke administratieve route GET /api/v1/ticket-register met ticketnummer, klant, status en tijdstippen, ook voor inactieve klanten. Dit is een expliciete uitbreiding van de beheerrechten voor lifecycle-metadata; geen toegang tot titels, scope-ID, gekoppelde alerts of onderzoeksinhoud. De oorspronkelijke TO-rollenmatrix geeft beheerders geen interne onderzoekstoegang; die blijft afgeschermd. De opdrachtgever moet bevestigen of ook deze beperkte metadata contractueel aan platformbeheer mag worden getoond. De registertoegang wordt geaudit. De nieuwe archieftests zijn nog niet runtime uitgevoerd.
+Analisten en klantgebruikers hebben bij Tickets / onderzoeken de keuze Alle tickets, Lopend en Archief. Afgesloten cases blijven raadpleegbaar binnen toegewezen actieve tenant/scopes; klanten en accountmanagers zien uitsluitend vrijgegeven cases. Datum en klantfilters blijven beschikbaar. Er worden geen fictieve historische tickets toegevoegd. De beheerder krijgt een afzonderlijke administratieve route GET /api/v1/ticket-register met ticketnummer, klant, status en tijdstippen, ook voor inactieve klanten. Dit is een expliciete uitbreiding van de beheerrechten voor lifecycle-metadata; geen toegang tot titels, scope-ID, gekoppelde alerts of onderzoeksinhoud. Het afzonderlijke register blijft metadata-only. Op uitdrukkelijk verzoek is de reguliere GET API voor alerts en cases nu ook beschikbaar voor beheerders, inclusief volledige dossierinhoud en inactieve klanten. Dit is een wijziging ten opzichte van de TO-rollenmatrix en moet door de opdrachtgever worden bevestigd voordat echte klantgegevens worden gebruikt. De registertoegang wordt geaudit. De nieuwe archieftests zijn nog niet runtime uitgevoerd.
+
+### Uitgebreide beheerdersleesrechten
+
+Beheerder → Alerts en Tickets toont alle klantorganisaties, scopes en historische gegevens, ook van inactieve klanten. Klanten blijven beperkt tot hun eigen vrijgegeven onderzoeken. De backend verleent deze extra rechten alleen voor lezen; POST/PATCH-acties voor triage, notities en casebeheer blijven afgeschermd. Leesacties worden gelogd. De beheerdersrol is daardoor zeer vertrouwelijk en vereist sterke beveiliging; productie vereist 2FA en formele goedkeuring van deze afwijking van het TO. Demoaccounts behouden hun bestaande demo-uitzondering. Tests voor lees- en schrijfgrenzen zijn aangepast, nog niet uitgevoerd.
