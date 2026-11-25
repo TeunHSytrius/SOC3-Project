@@ -124,7 +124,7 @@ Deactivering blokkeert inloggen en API-toegang; historische gegevens blijven beh
 
 ### Klantenbeheer
 
-Een beheerder kan klanten aanmaken, hun naam wijzigen, deactiveren en heractiveren. Een nieuwe klant krijgt een eigen SQL-schema met standaard scope Algemeen. Hernoemen verandert de tenant-GUID en schemanaam niet. Deactivering blokkeert nieuwe ingest en operationele wijzigingen; bevoegde gebruikers kunnen historische informatie behouden en raadplegen.
+Een beheerder kan klanten aanmaken, hun naam wijzigen, deactiveren en heractiveren. Een nieuwe klant krijgt een eigen SQL-schema met standaard scope Algemeen. Hernoemen verandert de tenant-GUID en schemanaam niet. Deactivering blokkeert ingest en operationele toegang; historie blijft opgeslagen.
 
 ## 3. Functionele werking
 
@@ -142,21 +142,21 @@ Het dashboard toont open alerts, actieve cases, SLA-risico's, overschrijdingen, 
 
 ### Cases en klantportaal
 
-- Case aanmaken vanuit een true-positive-alert of koppelen aan een bestaande open case in dezelfde klant en scope.
-- Status wijzigen, eigenaar overdragen, notities, acties, observables en bewijsreferenties toevoegen.
+- Case aanmaken vanuit een alert met nader onderzoek of bevestigd incident of koppelen aan een bestaande open case in dezelfde klant en scope.
+- Status wijzigen (inclusief Wacht op klant), eigenaar overdragen met toelichting en volgende actie, notities, acties, observables en bewijsreferenties toevoegen.
 - Case vrijgeven aan de klant; geschikte tijdlijnitems klantzichtbaar maken.
 - Klant kan reageren op een open vrijgegeven case; accountmanager kan deze lezen.
-- Afsluiten vereist een conclusie en lost gekoppelde alerts op.
+- Afsluiten vereist een samenvatting en conclusie en lost gekoppelde alerts op.
 
 Bewijsreferenties zijn tekstueel; bestandsuploads ontbreken. Observables en bewijsreferenties zijn intern; notities en acties kunnen expliciet zichtbaar gemaakt worden. De server filtert externe case-responses.
 
 ```mermaid
 flowchart TD
     A[Alert ontvangen] --> B[Oppakken en triage]
-    B -->|False positive| C[Afgewezen]
-    B -->|Onbeslist| D[In beoordeling]
+    B -->|False positive / verwacht gedrag| C[Afgewezen]
+    B -->|Nader onderzoek| D[In beoordeling]
     D --> B
-    B -->|True positive| E[Case maken of koppelen]
+    B -->|Bevestigd incident| E[Case maken of koppelen]
     E --> F[Onderzoek en acties]
     F --> G[Afsluiten met conclusie]
     G --> H[Gekoppelde alerts opgelost]
@@ -166,15 +166,7 @@ Alertstatussen: New, PendingReview, UnderReview, Escalated, Dismissed en Resolve
 
 ### SLA
 
-| Prioriteit | Demo-SLA eerste behandeling |
-| --- | --- |
-| Low | 48 uur |
-| Moderate | 24 uur |
-| High | 8 uur |
-| Urgent | 4 uur |
-| Immediate | 1 uur |
-
-De deadline wordt bij ontvangst berekend. De eerste behandeling wordt geregistreerd bij een operationele alertactie. Een onbehandelde open alert met maximaal twee uur resterende tijd geldt als risico. SLA-prestatie vergelijkt eerste behandeling en deadline. Deze waarden zijn demonstratieafspraken, geen definitieve contractuele SLA's. SLA-instellingen per klant en case-SLA's ontbreken nog.
+Nieuwe alerts krijgen standaard 60 minuten tot eerste behandeling (TO §9.1). Bij maximaal 15 minuten resterend verschijnt een waarschuwing. Alleen oppakken vult FirstHandledAt eenmalig. Bestaande deadlines worden niet herschreven. Per-klant instellingen en case-SLA ontbreken nog.
 
 ### Account, API-sleutels en audit
 
@@ -416,12 +408,12 @@ Status: **Aanwezig** = functionaliteit in de broncode; **Deels** = onvolledig; *
 
 | Nr. | Eis | Status | Toelichting |
 | --- | --- | --- | --- |
-| 01 | Overdracht met toelichting en aandachtspunten | Deels | Eigenaar wijzigen mogelijk; geen verplichte overdrachtstekst |
-| 02 | Overdrager, ontvanger en moment vastleggen | Deels | Audit bevat actor en tijd; geen volledig overdrachtrecord |
+| 01 | Overdracht met toelichting en aandachtspunten | Aanwezig | Verplichte toelichting en volgende actie in tijdlijn |
+| 02 | Overdrager, ontvanger en moment vastleggen | Aanwezig | Tijdlijn met vorige en nieuwe eigenaar, ID's, actor en tijd |
 | 03 | Eigen toegewezen onderzoeken bekijken | Deels | Eigenaar zichtbaar en doorzoekbaar; geen apart Mijn onderzoeken-filter |
 | 04 | Dreigende SLA signaleren | Aanwezig | Dashboard en alertdeadline; geen pushmelding |
 | 05 | Overschreden SLA's bij alerts en onderzoeken | Deels | Alert-SLA; geen aparte case-SLA |
-| 06 | SLA-instellingen per klant beheren | Open | Vaste prioriteitswaarden |
+| 06 | SLA-instellingen per klant beheren | Open | Vaste standaardtermijn van 60 minuten |
 | 07 | Gebruikers koppelen aan klanten en/of rollen | Deels | Meerdere klanten/scopes mogelijk; één rol per account |
 | 08 | Verschillende gebruikersrollen | Deels | Vijf huidige rollen; gewenste procesrollen ontbreken deels |
 | 09 | Klanten aanmaken, wijzigen, deactiveren | Aanwezig | Inclusief heractiveren en naam wijzigen; nog testen |
@@ -459,7 +451,7 @@ Status: **Aanwezig** = functionaliteit in de broncode; **Deels** = onvolledig; *
 1. Log in als analist en toon dashboard, prioriteiten en SLA.
 2. Log in als beheerder, maak een tijdelijk account aan, bewerk dit en deactiveer het. Toon klantbeheer en API-sleutels.
 3. Stuur een fictieve alert via de ingest-API. Vernieuw het dashboard als analist.
-4. Pak de alert op, triageer als true positive met motivatie en maak een case.
+4. Pak de alert op, triageer als bevestigd incident met motivatie en maak een case.
 5. Voeg interne en klantzichtbare informatie toe. Geef de case vrij.
 6. Log in als klant en toon de afgeschermde informatie. Sluit daarna als analist de case met conclusie.
 7. Toon de auditlog als beheerder en trek de tijdelijke sleutel in.
@@ -476,3 +468,7 @@ Gebruik bij voorkeur niet de oorspronkelijke demoaccounts voor de accountbewerki
 6. Splits grote componenten/services op, voeg unit tests, CI en dependency-locks toe.
 
 De originele branches zijn geraadpleegd; delen zijn aangepast of opnieuw geïmplementeerd. `bash scripts/compare-branches.sh` haalt originele branchsnapshots read-only op in een nieuwe lokale map. De oorspronkelijke unit tests, alle oorspronkelijke entiteiten en alle componenten zijn niet letterlijk geïntegreerd. Deze demo mag niet worden gepresenteerd als volledig geaccepteerd eindproduct.
+
+### FO v1.1 en TO v1.3: aanvullende correcties
+
+De triage bevat vier uitkomsten, de claim is verplicht voor triage en FirstHandledAt wordt alleen bij oppakken gevuld. Een tweede claim wordt geweigerd. Een nieuwe case krijgt een eerste tijdlijnregel; herhaalde promotie geeft de bestaande koppeling terug. Cases kunnen wachten op een klant, worden pas definitief gesloten met samenvatting en conclusie en kunnen door een senior met reden worden heropend. De samenvatting, overdracht en observablebeoordeling worden in de interne tijdlijn bewaard; dit is nog niet het volledige afzonderlijke datamodel van het TO. Het TO vereist daarnaast bron-eventdeduplicatie, SQL rowversion, samengestelde scope-FK's, gescheiden platform-/scoperollen, paginering en gecontroleerde productie-updates. Deze punten zijn niet automatisch bewezen door de demo. Nieuwe wijzigingen zijn nog niet uitgevoerd tegen de runtime.

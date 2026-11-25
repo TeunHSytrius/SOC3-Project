@@ -1,7 +1,7 @@
 export type Role='Analist'|'Senior analist'|'Beheerder'|'Klant'|'Accountmanager';
 export type Priority='Low'|'Moderate'|'High'|'Urgent'|'Immediate';
 export type AlertStatus='New'|'PendingReview'|'UnderReview'|'Escalated'|'Dismissed'|'Resolved';
-export type CaseStatus='Open'|'UnderInvestigation'|'UnderReview'|'Resolved'|'Closed';
+export type CaseStatus='Open'|'UnderInvestigation'|'WaitingForCustomer'|'UnderReview'|'Resolved'|'Closed';
 export interface User { id:string; name:string; email:string; role:Role; organizationIds:string[]; isActive:boolean; twoFactorEnabled:boolean;requiresTwoFactorSetup:boolean }
 export interface Organization {id:string;name:string;isActive:boolean;createdAt:string;deactivatedAt:string|null}
 export interface Alert {id:string;organizationId:string;scopeId:string;number:string;title:string;description:string;source:string;rawPayload:string;priority:Priority;status:AlertStatus;createdAt:string;deadline:string;firstHandledAt:string|null;owner:string|null;triage:string|null;caseId:string|null;history:{at:string;actor:string;text:string}[]}
