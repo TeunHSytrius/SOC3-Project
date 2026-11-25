@@ -24,6 +24,8 @@ services:
       ConnectionStrings__Soc: 'Server=sqlserver,1433;Database=Soc3Demo;User Id=sa;Password=${SOC_SQL_PASSWORD:-SocDemo!2026Local};Encrypt=True;TrustServerCertificate=True;Connect Timeout=5'
       Demo__Enabled: 'true'
       ASPNETCORE_ENVIRONMENT: Development
+      # Permit the internal Compose DNS name used by smoke and simulator.
+      AllowedHosts: 'localhost;127.0.0.1;app'
       DataProtection__KeyPath: /app/keys
     volumes:
       - sockeys:/app/keys

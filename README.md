@@ -115,6 +115,7 @@ Als de build faalt: `docker compose build --progress=plain`. Deel de foutmelding
 | npm- of C#-buildfout | Deel de buildlog; dit is mogelijk een code-/dependencyprobleem en niet je laptop. |
 | Init mislukt / onvolledige demo | Deel de app-logs. Wis geen database om de fout te verbergen. |
 | Website niet bereikbaar | Wacht op healthy, controleer de gekozen poort en gebruik localhost. |
+| Smoketest health: HTTP 400 | De interne Compose-hostnaam app moet in AllowedHosts staan. Dit is ingesteld in compose.yaml; haal de nieuwste versie op en bouw opnieuw. |
 
 Normaal stoppen: `docker compose down`. Het databasevolume en de 2FA-sleutels blijven behouden. Gebruik **geen** `docker compose down -v`: daarmee verwijder je de opgeslagen data.
 
