@@ -401,23 +401,37 @@ De demo draait lokaal via HTTP; de verbinding met SQL Server vraagt encryptie aa
 
 ## 9. Ontwikkelen en testen
 
-### Zonder app-container
+### Lokale frontendontwikkeling (aanbevolen)
 
-Vereisten: .NET 10 SDK, Node 22.12+ en een afzonderlijke SQL Server-testdatabase. Gebruik niet de echte projectdatabase.
+Node 22.12+ (24 aanbevolen). Start de app en SQL Server in Docker. Gebruik Vite voor live wijzigingen; de API blijft op 8081.
 
 ```bash
+docker compose up --build -d
 cd frontend
-npm install
-npm run build
-cd ..
-mkdir -p backend/Soc.Api/wwwroot
-cp -R frontend/dist/. backend/Soc.Api/wwwroot/
-export ConnectionStrings__Soc='Server=localhost,1433;Database=Soc3Demo;User Id=sa;Password=VUL_TEST_WACHTWOORD_IN;Encrypt=True;TrustServerCertificate=True'
-export Demo__Enabled=true
-dotnet run --project backend/Soc.Api --urls http://localhost:8080
+# Eenmalig zolang package-lock.json ontbreekt:
+npm install --package-lock-only
+npm ci
+npm run dev
 ```
 
-Frontendontwikkeling: `cd frontend && npm run dev` in een tweede terminal. Vite proxyt /api naar poort 8080. Gebruik Docker voor de presentatie.
+Open http://localhost:5173. In een tweede terminal, vanuit frontend: `npm run build`. Commit package-lock.json; daarna volstaat npm ci. De frontend heeft nog geen lint-script.
+
+### Backend lokaal ontwikkelen
+
+.NET 10 SDK. Start alleen de databasecontainer en gebruik een afzonderlijke ontwikkel-database Soc3Dev. Gebruik het eigen lokale SQL-wachtwoord indien aangepast.
+
+```bash
+docker compose stop app
+docker compose up -d sqlserver
+dotnet restore SOC3.slnx
+dotnet build SOC3.slnx
+export ConnectionStrings__Soc='Server=127.0.0.1,14333;Database=Soc3Dev;User Id=sa;Password=SocDemo!2026Local;Encrypt=True;TrustServerCertificate=True'
+export Demo__Enabled=true
+export ASPNETCORE_ENVIRONMENT=Development
+dotnet watch --project backend/Soc.Api/Soc.Api.csproj run --no-launch-profile --urls http://localhost:8080
+```
+
+In een tweede terminal vanuit de hoofdmap: `cd frontend && VITE_API_TARGET=http://127.0.0.1:8080 npm run dev`. Open http://localhost:5173. De Vite-proxy gebruikt standaard Docker-poort 8081, met deze override de lokale backend 8080. Geen databasevolumes wissen.
 
 ### Smoketest
 
@@ -601,3 +615,7 @@ Analisten en beheerders gebruiken hetzelfde SOC-dashboard met echte alert-, SLA-
 ### Onderzoekscontext in demo-alerts
 
 De acht oorspronkelijke seedmeldingen ALT-1001 t/m ALT-1008 krijgen in demomodus fictieve, specifiek op het type incident afgestemde securitycontext, brongegevens en onderzoeksaandachtspunten. Bestaande oorspronkelijke records worden eenmalig aangevuld op startup, uitsluitend als ze geen ingest-bron, extern ID of payloadhash hebben. De oorspronkelijke demo-JSON wordt vervangen door expliciet gemarkeerde fictieve bron-JSON; statussen, koppelingen, eigenaren, deadlines en historie blijven staan. Ingest-payloads van echte bronnen worden niet aangepast. De nieuwe velden zijn optioneel. De analist ziet de context direct naast triage. Geen automatische incidentbevestiging of externe threat intelligence. Tests nog niet runtime uitgevoerd.
+
+### Dashboard en gebruikers verwijderen
+
+Wachtrij en recente openstaande alerts worden als verticale lijsten weergegeven. Alertvolume per prioriteit gebruikt ontvangen databaserecords in de laatste 24 uur of zeven kalenderdagen (inclusief vandaag), geen verzonnen meetreeks. De originele .gitignore uit main van soc3Managment is aangevuld met lokale projectbestanden. Gebruikers verwijderen is een soft delete: DeletedAt, inactief, toegang ingetrokken, security stamp vernieuwd, auditregistratie. Het account verdwijnt uit gebruikersbeheer; ticket- en auditgeschiedenis blijft intact. Het e-mailadres blijft gereserveerd en eigen account verwijderen is geblokkeerd. Een senior moet eventuele open toegewezen werkzaamheden overnemen. Bestaande demodatabases krijgen een additieve kolom; runtimecontrole nodig.

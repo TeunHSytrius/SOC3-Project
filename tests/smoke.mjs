@@ -90,6 +90,13 @@ assert.equal((await analyst.request(`cases/${id}`,{method:'PATCH',body:{status:'
 await analyst.ok(`cases/${id}`,{method:'PATCH',body:{status:'Resolved'}});
 assert.equal((await analyst.request(`cases/${id}`,{method:'PATCH',body:{status:'Closed'}})).status,400);
 const closed=await analyst.ok(`cases/${id}`,{method:'PATCH',body:{status:'Closed',summary:'Onderzoek en acties afgerond.',conclusion:'Demotest afgerond.'}});assert.equal(closed.status,'Closed');assert.equal((await analyst.ok(`alerts/${alert.id}`)).status,'Resolved');
+const removable=await admin.post('users',{name:'Verwijdertest',email:'remove-'+unique+'@soc.demo',password:'TestAccount2026!',role:'Klant',organizationIds:[north.id]});
+const removedSession=new Client();await removedSession.post('auth/login',{username:removable.email,password:'TestAccount2026!'});
+assert.equal((await customer.request('users/'+removable.id+'/remove',{method:'POST',body:{}})).status,403);
+await admin.post('users/'+removable.id+'/remove',{});
+assert(!(await admin.ok('users')).some(u=>u.id===removable.id));
+assert.equal((await removedSession.request('auth/me')).status,401);
+assert((await admin.ok('audit')).some(a=>a.action==='Gebruiker verwijderd'&&a.target===removable.id));
 const archive=await admin.ok('ticket-register');
 const registered=archive.find(t=>t.id===id);
 assert(registered&&registered.status==='Closed'&&registered.closedAt&&registered.organizationId===north.id);

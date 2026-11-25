@@ -1,9 +1,130 @@
-**/node_modules/
-**/dist/
-**/bin/
-**/obj/
-.env
-*.user
-.DS_Store
+# SOC3 - .gitignore
+# .NET 10 | ASP.NET Core | React | TypeScript | Vite | SQL Server
 
+# .NET - Buildbestanden
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+publish/
+*.binlog
+
+# Visual Studio / Rider / ReSharper
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+_ReSharper*/
+*.[Rr]e[Ss]harper
+
+# VS Code - Lokale instellingen
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# Node.js / npm / React / Vite
+node_modules/
+dist/
+dist-ssr/
+.vite/
+.npm/
+.pnpm-store/
+*.tsbuildinfo
+vite.config.*.timestamp-*.mjs
+
+# ESLint / caches
+.eslintcache
+.cache/
+.parcel-cache/
+.turbo/
+
+# Logs en tijdelijke bestanden
+*.log
+*.tmp
+*.temp
+*.bak
+*.cache
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Tests en coverage
+TestResults/
+coverage/
+coverage-report/
+.nyc_output/
+playwright-report/
+test-results/
+BenchmarkDotNet.Artifacts/
+*.trx
+*.coverage
+*.coveragexml
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+.nuget/packages/
+
+# Lokale configuratie en geheimen
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.local.json
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.local
+secrets.json
+**/secrets/
+*.secret
+*.secrets
+
+# SQL Server en lokale databases
+*.mdf
+*.ldf
+*.ndf
+*.db
+*.sqlite
+*.sqlite3
+*.bacpac
+*.dacpac
+
+# Certificaten en private keys
+*.pfx
+*.p12
+*.key
+*.pem
+
+# Deployment en publicatie-instellingen
+*.publishsettings
+*.pubxml
+*.pubxml.user
+*.azurePubxml
+PublishProfiles/
+PublishScripts/
+
+# Runtimebestanden en uploads
+logs/
+Logs/
+uploads/
+private-storage/
+temp-uploads/
+
+# Lokale containers en overrides
+docker-compose.override.yml
+compose.override.yaml
+compose.override.yml
+
+# Lokaal gegenereerde projectbestanden
 /branch-review/
+/backend/Soc.Api/wwwroot/
