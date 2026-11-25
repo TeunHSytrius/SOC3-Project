@@ -73,6 +73,26 @@ Op Apple Silicon draait het SQL Server-image via amd64-emulatie. Bij problemen: 
 
 Initiële demoaccounts; wachtwoord voor alle accounts: `Demo2026!`.
 
+### Projectgroep 3
+
+De onderstaande rollen zijn gekozen voor het demonstreren van de applicatie, niet als officiële taakverdeling van de groep. De inlogadressen zijn fictief en alleen bedoeld voor lokaal gebruik.
+
+| Naam | Inlogadres | Demo-rol |
+| --- | --- | --- |
+| Teun Hanssen | teun@soc.demo | Beheerder |
+| Dominique Roosen | dominique@soc.demo | Senior analist |
+| Sergio Mendez | sergio@soc.demo | Analist |
+| Hamza Ben Ali | hamza@soc.demo | Analist |
+| Riza Incedal | riza@soc.demo | Analist |
+| Ruben Abrahamse | ruben@soc.demo | Accountmanager |
+| Thijs Dronkers | thijs@soc.demo | Klant |
+
+De zeven accounts worden eenmalig toegevoegd, ook aan een bestaande geïnitialiseerde demodatabase. Bestaande accounts en hun wijzigingen blijven behouden bij herstart. Analisten krijgen toegang tot de bestaande demoklanten, de klant tot één (bij voorkeur Northstar Finance), de accountmanager tot twee (bij voorkeur Northstar Finance en Delta Logistics). De beheerder krijgt platformbeheer, geen automatische onderzoekstoegang.
+
+### Algemene testaccounts
+
+De volgende accounts blijven beschikbaar voor de smoketest en generieke presentaties.
+
 | Account | Rol | Initiële toegang |
 | --- | --- | --- |
 | analist@soc.demo | Analist | Alle drie demoklanten |

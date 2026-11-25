@@ -49,6 +49,13 @@ export default function LoginPage({ error, busy, onSubmit }: LoginPageProps) {
         <details className="login-demo">
           <summary>Demonstratieaccounts</summary>
           <p>Wachtwoord voor alle demoaccounts: <code>Demo2026!</code></p>
+          <p>Projectgroep 3</p>
+          <div className="login-demo-options">
+            {[{name:"Teun",login:"teun"}, {name:"Dominique",login:"dominique"}, {name:"Sergio",login:"sergio"}, {name:"Hamza",login:"hamza"}, {name:"Riza",login:"riza"}, {name:"Ruben",login:"ruben"}, {name:"Thijs",login:"thijs"}].map(member => (
+              <button type="button" key={member.login} onClick={() => { setUsername(member.login + "@soc.demo"); setPassword("Demo2026!"); }}>{member.name}</button>
+            ))}
+          </div>
+          <p>Algemene testaccounts</p>
           <div className="login-demo-options">
             {["analist", "senior", "beheerder", "klant", "accountmanager"].map(role => (
               <button type="button" key={role} onClick={() => setUsername(role + "@soc.demo")}>{role}</button>
