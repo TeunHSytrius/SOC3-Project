@@ -139,6 +139,23 @@ public sealed class SocService(SocDbContext db,TenantDbFactory factory,UserManag
     {
         if(!config.GetValue<bool>("Demo:Enabled"))return;
         const string marker="Projectgroep-demoaccounts ingericht v1";
+        // Deactivate the former group member on existing demo databases, without deleting history.
+        const string rosterMarker="Projectgroep-demoaccounts bijgewerkt v2";
+        if(!await db.Audit.AnyAsync(x=>x.Action==rosterMarker))
+        {
+            await using var rosterTransaction=await db.Database.BeginTransactionAsync();
+            var former=await users.FindByNameAsync("riza@soc.demo");
+            if(former!=null)
+            {
+                former.IsActive=false;
+                db.Assignments.RemoveRange(db.Assignments.Where(x=>x.UserId==former.Id));
+                var result=await users.UpdateSecurityStampAsync(former);
+                Require(result.Succeeded,string.Join(" ",result.Errors.Select(x=>x.Description)),500);
+            }
+            db.Audit.Add(new(){Actor="Systeem",Action=rosterMarker});
+            await db.SaveChangesAsync();
+            await rosterTransaction.CommitAsync();
+        }
         if(await db.Audit.AnyAsync(x=>x.Action==marker))return;
         await using var transaction=await db.Database.BeginTransactionAsync();
         var tenants=await db.Tenants.OrderBy(t=>t.Name=="Northstar Finance"?0:t.Name=="Delta Logistics"?1:2).ThenBy(t=>t.Name).Select(t=>t.Id).ToArrayAsync();
@@ -149,7 +166,6 @@ public sealed class SocService(SocDbContext db,TenantDbFactory factory,UserManag
             ("Dominique Roosen","dominique@soc.demo","Senior analist"),
             ("Sergio Mendez","sergio@soc.demo","Analist"),
             ("Hamza Ben Ali","hamza@soc.demo","Analist"),
-            ("Riza Incedal","riza@soc.demo","Analist"),
             ("Ruben Abrahamse","ruben@soc.demo","Accountmanager"),
             ("Thijs Dronkers","thijs@soc.demo","Klant")
         };

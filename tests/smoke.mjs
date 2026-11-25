@@ -16,7 +16,8 @@ const guest=new Client();await guest.ok('health');assert.equal((await guest.requ
 const admin=new Client();await admin.login('beheerder');const orgs=await admin.ok('organizations');assert(orgs.length>=3);assert.equal((await admin.request('alerts')).status,403);
 // Group accounts are seeded once; their role/profile can be changed through user management.
 const teamUsers=await admin.ok('users');
-for(const email of ['teun@soc.demo','dominique@soc.demo','sergio@soc.demo','hamza@soc.demo','riza@soc.demo','ruben@soc.demo','thijs@soc.demo'])assert(teamUsers.some(u=>u.email===email),`Demoaccount ontbreekt: ${email}`);
+for(const email of ['teun@soc.demo','dominique@soc.demo','sergio@soc.demo','hamza@soc.demo','ruben@soc.demo','thijs@soc.demo'])assert(teamUsers.some(u=>u.email===email),`Demoaccount ontbreekt: ${email}`);
+assert(!teamUsers.some(u=>u.email==='riza@soc.demo'&&u.isActive),'Voormalig groepsaccount mag niet actief zijn');
 const north=orgs.find(o=>o.name==='Northstar Finance');const delta=orgs.find(o=>o.name==='Delta Logistics');assert(north&&delta);
 const analyst=new Client();await analyst.login('analist');assert((await analyst.ok('alerts')).length>=8);
 const customer=new Client();await customer.login('klant');assert.equal((await customer.request('alerts')).status,403);assert.equal((await customer.request('users')).status,403);assert.equal((await customer.request('organizations/'+delta.id)).status,403);

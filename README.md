@@ -83,11 +83,10 @@ De onderstaande rollen zijn gekozen voor het demonstreren van de applicatie, nie
 | Dominique Roosen | dominique@soc.demo | Senior analist |
 | Sergio Mendez | sergio@soc.demo | Analist |
 | Hamza Ben Ali | hamza@soc.demo | Analist |
-| Riza Incedal | riza@soc.demo | Analist |
 | Ruben Abrahamse | ruben@soc.demo | Accountmanager |
 | Thijs Dronkers | thijs@soc.demo | Klant |
 
-De zeven accounts worden eenmalig toegevoegd, ook aan een bestaande geïnitialiseerde demodatabase. Bestaande accounts en hun wijzigingen blijven behouden bij herstart. Analisten krijgen toegang tot de bestaande demoklanten, de klant tot één (bij voorkeur Northstar Finance), de accountmanager tot twee (bij voorkeur Northstar Finance en Delta Logistics). De beheerder krijgt platformbeheer, geen automatische onderzoekstoegang.
+De zes accounts worden eenmalig toegevoegd, ook aan een bestaande geïnitialiseerde demodatabase. Bestaande accounts en hun wijzigingen blijven behouden bij herstart. Analisten krijgen toegang tot de bestaande demoklanten, de klant tot één (bij voorkeur Northstar Finance), de accountmanager tot twee (bij voorkeur Northstar Finance en Delta Logistics). De beheerder krijgt platformbeheer, geen automatische onderzoekstoegang.
 
 ### Algemene testaccounts
 
