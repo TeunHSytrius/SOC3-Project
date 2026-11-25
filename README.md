@@ -1,14 +1,36 @@
-# SOC3 Management
+# SOC3 Management — Demohandleiding
 
-SOC3 Management is een webapplicatie voor een Security Operations Center (SOC) van een Managed Security Service Provider (MSSP). Het systeem ontvangt beveiligingsmeldingen, ondersteunt triage en onderzoek, schermt klantinformatie af en registreert relevante acties.
+**SE3 · Multilayer Webapplications · Projectgroep 3**
 
-Dit is de demonstratie-MVP van het SE3-project: React, ASP.NET Core en een echte SQL Server-database. De oorspronkelijke groepsrepository blijft ongewijzigd. Deze versie is geen letterlijke merge van de oorspronkelijke branches.
+Een incidentcasemanagementplatform voor een MSSP Security Operations Centre (SOC). Deze repository bevat de demonstratie-MVP: React, ASP.NET Core, Entity Framework Core en SQL Server.
+
+## Snel starten
+
+Open Docker Desktop. Vanuit de hoofdmap van het project:
+
+```bash
+git pull --ff-only origin main && docker compose up --build -d
+```
+
+**Website:** [http://localhost:8081](http://localhost:8081)  
+**Demowachtwoord voor alle onderstaande accounts:** `Demo2026!`
+
+| Groepslid | E-mailadres | Rol |
+| --- | --- | --- |
+| Teun Hanssen | teun@soc.demo | Beheerder |
+| Dominique Roosen | dominique@soc.demo | Senior analist |
+| Sergio Mendez | sergio@soc.demo | Analist |
+| Hamza Ben Ali | hamza@soc.demo | Analist |
+| Ruben Abrahamse | ruben@soc.demo | Accountmanager |
+| Thijs Dronkers | thijs@soc.demo | Klant |
+
+Dit zijn fictieve lokale demoaccounts en gekozen demonstratierollen, geen officiële taakverdeling. Het wachtwoord is het initiële demowachtwoord: een bestaande database behoudt gewijzigde wachtwoorden, verwijderde accounts en 2FA-instellingen. Gebruik deze gegevens nooit voor productie.
 
 ## Inhoud
 
 - [1. Installatie](#1-installatie)
-- [2. Gebruikers en rollen](#2-gebruikers-en-rollen)
-- [3. Functionele werking](#3-functionele-werking)
+- [2. Demonstratie voor de groep](#2-demonstratie-voor-de-groep)
+- [3. Functionele werking en rollen](#3-functionele-werking-en-rollen)
 - [4. API-aanlevering](#4-api-aanlevering)
 - [5. Technische architectuur](#5-technische-architectuur)
 - [6. Database](#6-database)
@@ -16,7 +38,10 @@ Dit is de demonstratie-MVP van het SE3-project: React, ASP.NET Core en een echte
 - [8. Beveiliging](#8-beveiliging)
 - [9. Ontwikkelen en testen](#9-ontwikkelen-en-testen)
 - [10. Opdrachtgever en eisenmatrix](#10-opdrachtgever-en-eisenmatrix)
-- [11. Demonstratie en vervolg](#11-demonstratie-en-vervolg)
+- [11. Vragen van de docent](#11-vragen-van-de-docent)
+- [12. Status en herkomst](#12-status-en-herkomst)
+
+
 
 ## 1. Installatie
 
@@ -87,6 +112,11 @@ Stoppen en logs bekijken:
 
 ```bash
 docker compose down
+```
+
+Bij een fout, vóór het stoppen:
+
+```bash
 docker compose logs --tail=100 app sqlserver
 ```
 
@@ -94,113 +124,185 @@ Bekijk de logs vóór het verwijderen van de containers als er een opstartfout o
 
 Op Apple Silicon draait het SQL Server-image via amd64-emulatie. Bij problemen: controleer Docker Desktop of gebruik een afzonderlijke x64 SQL Server-testomgeving. Er is geen SQLite-fallback.
 
-## 2. Gebruikers en rollen
+## 2. Demonstratie voor de groep
 
-Initiële demoaccounts; wachtwoord voor alle accounts: `Demo2026!`.
+### Doel van de applicatie
 
-### Projectgroep 3
+De opdrachtgever gebruikt een verouderd IT-ticketsysteem, spreadsheets en mondelinge overdrachten voor securityonderzoek. Ons platform brengt de alertwachtrij, triage, onderzoek, overdracht, observables, SLA en klantportaal samen in één dossier. Een MSSP bedient meerdere organisaties; gegevens worden per tenant en scope afgeschermd.
 
-De onderstaande rollen zijn gekozen voor het demonstreren van de applicatie, niet als officiële taakverdeling van de groep. De inlogadressen zijn fictief en alleen bedoeld voor lokaal gebruik.
+Wij bouwen **geen SIEM, antivirus of eigen detectiemotor**. Externe tooling levert meldingen aan; ons platform ondersteunt de incident response.
 
-| Naam | Inlogadres | Demo-rol |
+### Vooraf controleren
+
+- Start Docker en controleer `docker compose ps` en de healthcheck.
+- Controleer de zes accounts, de juiste klanttoegang en de schermen. Gebruik een lokaal demoaccount, geen echte persoonsgegevens of productiegegevens.
+- Oefen de volledige onderstaande route vóór de presentatie. Bewaar de bestaande database; verwijder geen volumes.
+- Wissel rollen via Uitloggen en Inloggen in hetzelfde tabblad. Cookies worden tussen tabbladen gedeeld; een nieuw tabblad kan de vorige sessie beëindigen.
+- Noteer tijdens de demo het alertnummer en casenummer, zodat elk volgend groepslid hetzelfde dossier kan openen.
+- Gebruik één nieuwe alert via de ingest-API, zodat bestaande eigenaren en statussen uit eerdere demonstraties geen probleem vormen.
+
+### Demonstratievolgorde (voorstel: 12–15 minuten)
+
+De volgorde hieronder is een voorstel om iedereen een duidelijk onderdeel te geven. De werkelijke groepsbijdragen moeten afzonderlijk en eerlijk worden toegelicht.
+
+| Stap | Wie / rol | Wat laten we zien? |
 | --- | --- | --- |
-| Teun Hanssen | teun@soc.demo | Beheerder |
-| Dominique Roosen | dominique@soc.demo | Senior analist |
-| Sergio Mendez | sergio@soc.demo | Analist |
-| Hamza Ben Ali | hamza@soc.demo | Analist |
-| Ruben Abrahamse | ruben@soc.demo | Accountmanager |
-| Thijs Dronkers | thijs@soc.demo | Klant |
+| 1 | Teun – beheerder | Probleemstelling, dashboard, klanten en API-sleutel |
+| 2 | Hamza – analist | Alert ontvangen, securitycontext, FIFO en triage |
+| 3 | Dominique – senior analist | Case prioriteren en toewijzen |
+| 4 | Sergio – analist | Dossier, notities, observables en acties |
+| 5 | Thijs – klant | Vrijgegeven dossier en klantreactie |
+| 6 | Ruben – accountmanager | Klantgebonden leesrechten |
+| 7 | Sergio en Teun | Afsluiten, archief, audit en technische onderbouwing |
 
-De zes accounts worden eenmalig toegevoegd, ook aan een bestaande geïnitialiseerde demodatabase. Bestaande accounts en hun wijzigingen blijven behouden bij herstart. Analisten krijgen toegang tot de bestaande demoklanten, de klant tot één (bij voorkeur Northstar Finance), de accountmanager tot twee (bij voorkeur Northstar Finance en Delta Logistics). De beheerder krijgt platformbeheer en volledige leesrechten op alle klantdossiers.
+### Stap 1 — Teun: platformbeheer en alertontvangst
 
-### Algemene testaccounts
+Log in met `teun@soc.demo`.
 
-De volgende accounts blijven beschikbaar voor de smoketest en generieke presentaties.
+1. Toon het SOC-dashboard: openstaande alerts, lopende cases, SLA-risico, overschrijdingen en het diagram met ontvangen alerts per prioriteit.
+2. Selecteer Northstar Finance en laat zien dat de gegevens wijzigen met de klantcontext.
+3. Open Klanten en Gebruikers & rollen. Laat zien hoe klanten, accounts en rechten worden beheerd. Bewerk of verwijder geen groepsaccount tijdens de demo.
+4. Open API-sleutels en maak een tijdelijke sleutel voor Northstar Finance met de naam Demo securitytool. Kopieer de sleutel; deze is maar één keer volledig zichtbaar.
+5. Stuur de voorbeeldmelding hieronder vanuit de terminal. Noteer het teruggegeven alertnummer.
 
-| Account | Rol | Initiële toegang |
-| --- | --- | --- |
-| analist@soc.demo | Analist | Alle drie demoklanten |
-| senior@soc.demo | Senior analist | Alle drie demoklanten; heropenen van alerts |
-| beheerder@soc.demo | Beheerder | Platformbeheer en audit |
-| klant@soc.demo | Klant | Vrijgegeven cases van Northstar Finance |
-| accountmanager@soc.demo | Accountmanager | Vrijgegeven cases van Northstar Finance en Delta Logistics |
+```bash
+# macOS zsh
+read -rs 'SOC_KEY?API-sleutel: '
+curl -i -X POST http://localhost:8081/api/v1/ingest/alerts \
+  -H "X-API-Key: $SOC_KEY" \
+  -H 'Content-Type: application/json' \
+  -d "{\"externalEventId\":\"demo-$(date +%s)\",\"title\":\"Verdachte VPN-aanmelding demo\",\"occurredAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"severity\":\"High\",\"payload\":{\"simulated\":true,\"category\":\"Authenticatie\",\"description\":\"Aanmelding vanaf een onbekende locatie na meerdere mislukte pogingen.\",\"sourceIp\":\"192.0.2.45\",\"destinationIp\":\"198.51.100.10\",\"hostname\":\"DEMO-VPN01\",\"username\":\"demo.user\",\"detectionRule\":\"AUTH-001\"}}"
+unset SOC_KEY
+```
 
-| Functionaliteit | Analist | Senior | Beheerder | Klant | Accountmanager |
+Verwacht HTTP 201. De sleutel bepaalt de klant en scope aan de serverzijde; een bron mag deze niet zelf kiezen.
+
+**Uitleg:** De beheerder ziet alle klantdossiers, maar behandelt geen alerts. Het diagram telt echte opgeslagen demorecords; de beveiligingsgebeurtenissen zelf zijn fictief.
+
+### Stap 2 — Hamza: alertanalyse en triage
+
+Log in met `hamza@soc.demo`. Ga naar Alerts → Openstaand. Selecteer Northstar Finance en zoek op Verdachte VPN-aanmelding demo of het alertnummer.
+
+1. Open de nieuwe alert en bekijk de bron, prioriteit, deadline, securityinformatie en originele JSON.
+2. Klik Oppakken. Het eerste behandelmoment en de eigenaar worden vastgelegd.
+3. Kies Nader onderzoek en geef als toelichting: `Aanmelding wijkt af van normaal gedrag; VPN- en authenticatielogs moeten worden gecontroleerd.`
+4. Klik Beoordeling opslaan en vervolgens Case maken / koppelen. Gebruik de titel Onderzoek verdachte VPN-aanmelding demo.
+5. Noteer het casenummer. De alert staat nu onder Gekoppeld aan case.
+
+**Uitleg:** Niet iedere alert is een incident. Triage onderscheidt ruis, verwacht gedrag, nader onderzoek en bevestigde incidenten. FIFO betekent oudste openstaande meldingen eerst; de SLA van standaard 60 minuten meet de tijd tot oppakken.
+
+### Stap 3 — Dominique: prioriteren en toewijzen
+
+Log in met `dominique@soc.demo` en open het zojuist aangemaakte ticket.
+
+1. Klik Prioriteren en toewijzen.
+2. Kies Sergio Mendez als eigenaar, prioriteit Hoog.
+3. Toelichting: `Afwijkende aanmelding nader onderzoeken; mogelijke ongeautoriseerde toegang.`
+4. Volgende actie: `VPN-logs en authenticatielogs controleren.`
+5. Sla op en toon de status In onderzoek en overdracht in de tijdlijn.
+
+**Uitleg:** De senior bewaakt prioriteit en eigenaarschap. Bij overdracht wordt vastgelegd van wie, naar wie, wanneer, waarom en wat de volgende actie is.
+
+### Stap 4 — Sergio: onderzoeksdossier
+
+Log in met `sergio@soc.demo`, zoek het casenummer en open de toegewezen case.
+
+| Knop | Voorbeeldinvoer |
+| --- | --- |
+| + Notitie | VPN-log nagekeken; onbekende bronlocatie vastgesteld. |
+| + Observable | Type IP, waarde 192.0.2.45, beoordeling Verdacht |
+| + Actie | Aanvullende authenticatielogs bij klant opgevraagd. Vink Vrijgeven aan klant aan. |
+| + Bewijsreferentie | DEMO-VPN01 / authenticatielog / demo-event-ID |
+
+Laat de notitie intern. Observables en bewijsreferenties blijven intern. Geef vervolgens de case vrij via Vrijgeven aan klant. Verander de status eventueel naar Wacht op klant.
+
+**Uitleg:** Alle informatie wordt per ticket opgeslagen via CaseId en ScopeId. Een observable is een waarneembaar gegeven, niet automatisch een bewezen dreiging. Bewijsreferenties zijn tekst; er is nog geen bestandsupload.
+
+### Stap 5 — Thijs: klantportaal
+
+Log in met `thijs@soc.demo`. Open Cases en zoek hetzelfde ticket.
+
+- Toon dat de vrijgegeven actie zichtbaar is, maar de interne notitie, observable en ruwe alertgegevens niet.
+- Voeg een reactie toe: `De gevraagde logs zijn beschikbaar voor het SOC.`
+- Controleer dat andere klantorganisaties niet selecteerbaar zijn.
+
+**Uitleg:** De backend controleert tenant, scope en klantzichtbaarheid. Het verbergen van knoppen in React is niet de beveiligingsgrens.
+
+### Stap 6 — Ruben: accountmanager
+
+Log in met `ruben@soc.demo`. Toon vrijgegeven cases van de gekoppelde klanten (standaard Northstar Finance en Delta Logistics). Zoek hetzelfde ticket. Laat zien dat de accountmanager kan lezen, maar geen interne onderzoeksacties kan uitvoeren.
+
+**Uitleg:** Eén gebruiker kan toegang hebben tot meerdere organisaties, zonder automatisch toegang te krijgen tot alle klanten.
+
+### Stap 7 — Sergio en Teun: afsluiting en controle
+
+Sergio opent het ticket opnieuw. Als de status Wacht op klant is, zet deze eerst terug naar In onderzoek. Kies daarna Opgelost, en vervolgens Gesloten. Vul de verplichte samenvatting en conclusie in op basis van de fictieve oefening, bijvoorbeeld: `Aanmelding onderzocht en met de klant afgestemd.` en `Demo afgerond; geen werkelijk incident vastgesteld.`
+
+Toon het ticket in Archief en de gekoppelde alert onder Afgehandeld. De oude notities blijven zichtbaar.
+
+Teun logt opnieuw in en toont hetzelfde afgesloten ticket, inclusief interne notities en historie. Open Auditlog en zoek het alert- of casenummer. Toon Foutenlog indien relevant. Trek de tijdelijke API-sleutel in.
+
+### Authenticator en QR-code (optionele extra demonstratie)
+
+Open Account bij een afzonderlijk tijdelijk demoaccount. Maak de QR-code, scan deze met Microsoft Authenticator of Google Authenticator, voer de zescijferige code in en bewaar de herstelcodes veilig. Log opnieuw in om de tweede factor te tonen.
+
+Gebruik hiervoor niet de generieke smoketestaccounts. Activeer 2FA niet vlak vóór de presentatie op een account dat een ander groepslid nodig heeft. Toon geen geheime QR-code of herstelcodes aan het publiek.
+
+
+
+## 3. Functionele werking en rollen
+
+### Rollenmatrix
+
+| Functionaliteit | Beheerder | Analist | Senior | Klant | Accountmanager |
 | --- | --- | --- | --- | --- | --- |
-| SOC-dashboard en interne alerts | Ja | Ja | Alleen lezen | Nee | Nee |
-| Beheerdashboard (auditmetadata) | Nee | Nee | Ja | Nee | Nee |
-| Alert oppakken, triage en escalatie | Ja | Ja | Nee | Nee | Nee |
-| Afgewezen/opgeloste alert zonder case heropenen | Nee | Ja | Nee | Nee | Nee |
-| Onderzoeken beheren | Ja | Ja | Nee | Nee | Nee |
-| Vrijgegeven onderzoeken bekijken | Ja | Ja | Nee | Ja | Ja |
-| Klantreactie toevoegen | Via onderzoek | Via onderzoek | Nee | Ja | Nee |
-| Klanten, accounts en API-sleutels beheren | Nee | Nee | Ja | Nee | Nee |
-| Auditlog bekijken | Nee | Nee | Ja | Nee | Nee |
+| SOC-dashboard en alerts | Alle, lezen | Bevoegde | Bevoegde | Nee | Nee |
+| Ticketdossiers en archief | Alle, lezen | Bevoegde | Bevoegde | Vrijgegeven | Vrijgegeven |
+| Alert oppakken en triage | Nee | Ja | Ja | Nee | Nee |
+| Case prioriteren en initieel toewijzen | Nee | Nee | Ja | Nee | Nee |
+| Onderzoeksinformatie wijzigen | Nee | Eigen case | Bevoegde case | Alleen reactie | Nee |
+| Klanten, gebruikers en bronintegraties beheren | Ja | Nee | Nee | Nee | Nee |
+| Auditlog en foutenlog | Ja | Nee | Nee | Nee | Nee |
 | Eigen 2FA instellen | Ja | Ja | Ja | Ja | Ja |
 
-Klant- en scopetoewijzingen begrenzen operationele toegang. Beheerders hebben expliciet platformbrede leesrechten; operationele wijzigingen blijven bij de analisten. De voorgestelde procesrollen van de opdrachtgever zijn nog niet volledig geïmplementeerd; zie hoofdstuk 10.
+De beheerder heeft op uitdrukkelijk verzoek platformbrede leesrechten, ook voor inactieve klanten. Dit wijkt af van de oorspronkelijke TO-rollenmatrix en vereist goedkeuring van de opdrachtgever voor echte klantgegevens. Operationele schrijfrechten blijven afzonderlijk. Analisten lezen binnen toegewezen actieve klanten en scopes; klanten zien uitsluitend vrijgegeven dossiers.
 
-### Gebruikersbeheer
+Algemene testaccounts (initieel hetzelfde wachtwoord `Demo2026!`): `beheerder@soc.demo`, `analist@soc.demo`, `senior@soc.demo`, `klant@soc.demo`, `accountmanager@soc.demo`. Gebruik deze niet voor accountverwijdering of 2FA tijdens de demo.
 
-Log in als beheerder en open **Gebruikers & rollen**. Maak een gebruiker aan of gebruik **Bewerken** bij een ander account. Naam, e-mailadres, rol, klanttoegang, actieve status en optioneel een nieuw wachtwoord kunnen worden gewijzigd.
-
-Een leeg wachtwoordveld behoudt het huidige wachtwoord. Bij een reset gelden de Identity-regels: minimaal acht tekens, hoofdletter, kleine letter, cijfer en speciaal teken. Het e-mailadres is ook de gebruikersnaam. Dubbele e-mailadressen worden geweigerd. Een klantaccount moet precies één organisatie hebben. Een account heeft momenteel één applicatierol, maar kan aan meerdere klanten worden gekoppeld als die rol dit toestaat.
-
-Deactivering blokkeert inloggen en API-toegang; historische gegevens blijven behouden. Heractivering is mogelijk. Het eigen beheerdersaccount kan via dit beheerformulier niet worden gewijzigd. De ingestelde 2FA blijft bij accountbewerking behouden. Er is geen hard-delete van accounts.
-
-### Klantenbeheer
-
-Een beheerder kan klanten aanmaken, hun naam wijzigen, deactiveren en heractiveren. Een nieuwe klant krijgt een eigen SQL-schema met standaard scope Algemeen. Hernoemen verandert de tenant-GUID en schemanaam niet. Deactivering blokkeert ingest en operationele toegang; historie blijft opgeslagen.
-
-## 3. Functionele werking
-
-### Dashboard
-
-Beheerders starten op een eigen dashboard met actieve klanten, gebruikers, bronnen, aantallen geregistreerde alertontvangsten per klant en recente ontvangsten uit het bestaande auditlog. Het dashboard toont daarnaast actuele aantallen openstaande alerts en historische cases. De beheerder kan alle dossiers en ruwe payloads inzien, maar niet behandelen.
-
-Het dashboard toont open alerts, actieve cases, SLA-risico's, overschrijdingen, prioriteitsverdeling, SLA-prestaties, FIFO-wachtrij en actieve onderzoeken. De klantfilter beperkt de getoonde resultaten. De actieve analistenoverzichten vernieuwen automatisch elke 15 seconden. Details, formulieren en verborgen tabbladen worden niet automatisch vernieuwd. Het dashboard toont ook dreigingscategorieën, betrokken systemen en recent ontvangen meldingen; dit is polling, geen realtime push.
-
-### Alerts
-
-- Handmatig toevoegen of ontvangen via de ingest-API.
-- Zoeken op titel, nummer, bron, eigenaar, klant, IP-adres, hostname en overige aangeleverde securityvelden; filteren op klant, status, prioriteit, categorie en datum.
-- Details bekijken: bron, omschrijving, ontvangst, deadline, eigenaar, triage en geschiedenis.
-- Oppakken, triage vastleggen met motivatie, afwijzen of escaleren.
-- Senior analist: afgewezen of opgeloste alert zonder case heropenen.
-
-### Cases en klantportaal
-
-- Case aanmaken vanuit een alert met nader onderzoek of bevestigd incident of koppelen aan een bestaande open case in dezelfde klant en scope.
-- Status wijzigen volgens de workflow (inclusief Wacht op klant), eigenaar overdragen met toelichting en volgende actie, notities, acties, observables en bewijsreferenties toevoegen.
-- Case vrijgeven aan de klant; geschikte tijdlijnitems klantzichtbaar maken.
-- Klant kan reageren op een open vrijgegeven case; accountmanager kan deze lezen.
-- Afsluiten vereist een samenvatting en conclusie en lost gekoppelde alerts op.
-
-Bewijsreferenties zijn tekstueel; bestandsuploads ontbreken. Observables en bewijsreferenties zijn intern; notities en acties kunnen expliciet zichtbaar gemaakt worden. De server filtert externe case-responses.
+### Workflow
 
 ```mermaid
 flowchart TD
-    A[Alert ontvangen] --> B[Oppakken en triage]
-    B -->|False positive / verwacht gedrag| C[Afgewezen]
-    B -->|Nader onderzoek| D[In beoordeling]
-    D --> B
-    B -->|Bevestigd incident| E[Case maken of koppelen]
-    E --> F[Onderzoek en acties]
-    F --> G[Afsluiten met conclusie]
-    G --> H[Gekoppelde alerts opgelost]
+  A[Externe melding] --> B[Ontvangst en SLA]
+  B --> C[Analist pakt op en triageert]
+  C -->|False positive of verwacht gedrag| D[Alert afgehandeld]
+  C -->|Nader onderzoek of bevestigd incident| E[Case maken of koppelen]
+  E --> F[Senior prioriteert en wijst toe]
+  F --> G[In onderzoek]
+  G --> H[Wacht op klant]
+  H --> G
+  G --> I[Opgelost]
+  I --> J[Beoordeling of afsluiting]
+  J --> K[Gesloten en archief]
+  K -->|Senior heropent met reden| G
 ```
 
-Alertstatussen: New, PendingReview, UnderReview, Escalated, Dismissed en Resolved. Casestatussen: Open, UnderInvestigation, UnderReview, Resolved en Closed.
+De backend bewaakt de toegestane statusovergangen. De afzonderlijke procesrollen uit de opdracht zijn nog niet volledig gerealiseerd.
 
-### SLA
+### Schermen en gegevens
 
-Nieuwe alerts krijgen standaard 60 minuten tot eerste behandeling (TO §9.1). Bij maximaal 15 minuten resterend verschijnt een waarschuwing. Alleen oppakken vult FirstHandledAt eenmalig. Bestaande deadlines worden niet herschreven. Een beheerder kan de reactietermijn per klant instellen (1–10080 minuten). Bestaande deadlines blijven onveranderd. Case-SLA ontbreekt nog.
+- **Dashboard:** hetzelfde voor analist en beheerder, met extra beheerknoppen voor beheerder. Alertvolume per prioriteit over 24 uur of zeven kalenderdagen; verticale FIFO-wachtrij en recente openstaande meldingen. Polling elke 15 seconden op actieve overzichten.
+- **Alerts:** Openstaand, Gekoppeld aan case, Afgehandeld, Alle alerts. Zoek en filter op klant, status, prioriteit, eigenaar, datum, SLA, categorie en securitytool.
+- **Tickets:** Lopend, Opgelost – nog afsluiten, Archief, Alle tickets. Zoek ook op notities en observables. Afgesloten tickets blijven bewaard.
+- **Onderzoeksdossier:** meerdere alerts per case; eigen notities, observables, acties, bewijsreferenties en tijdlijn. Klantzichtbaarheid wordt server-side gefilterd.
+- **SLA:** standaard 60 minuten tot eerste behandeling, instelbaar per klant voor nieuwe alerts. Waarschuwing bij maximaal 15 minuten resterend. Geen afzonderlijke case-afhandel-SLA.
+- **Gebruikers:** aanmaken, wijzigen, deactiveren, heractiveren en verwijderen. Verwijderen is soft delete: toegang ingetrokken, historie behouden, account uit lijst. Eigen account kan niet worden verwijderd; e-mailadres blijft gereserveerd.
+- **Klanten:** aanmaken, hernoemen, deactiveren, heractiveren; eigen schema en standaard scope.
+- **Foutenlog:** maximaal 500 technische API-fouten sinds backendstart, inclusief HTTP-status en foutreferentie. Geen permanente opslag of vertrouwelijke requestinhoud. Auditlog en onderzoekshistorie staan wel in SQL Server.
 
-### Account, API-sleutels en audit
+De database start met drie fictieve klanten, acht oorspronkelijke demo-alerts en één lopende case. De demo-alerts krijgen fictieve securitycontext. Bestaande status, eigenaar en historie blijven behouden. Er worden niet automatisch afgesloten cases verzonnen; maak er één via de demonstratieroute of gebruik bestaande cases.
 
-Mijn account toont profielgegevens en biedt TOTP-setup via QR-code, handmatige sleutel en acht herstelcodes. Een beheerder genereert en trekt API-sleutels in per bron en klant/scope. De volledige sleutel is alleen bij creatie zichtbaar. De auditlog combineert platform- en klantactiviteiten.
 
-De seeddata bevat drie fictieve klanten (Northstar Finance, Delta Logistics, Atlas Health), acht alerts en één lopende case. De gegevens blijven bij een normale herstart behouden.
 
 ## 4. API-aanlevering
 
@@ -371,10 +473,13 @@ Basis-URL: `http://localhost:8081/api/v1`. OpenAPI: [openapi/v1.json](http://loc
 | POST | /organizations/{id}/deactivate | Deactiveren |
 | GET, POST | /users | Accounts bekijken/aanmaken |
 | PATCH | /users/{id} | Account bewerken |
-| POST | /users/{id}/access | Bestaand rol- en toegangcontract |
+| POST | /users/{id}/access | Rol en toegang |
+| POST | /users/{id}/remove | Soft delete van account |
 | GET, POST | /keys | Sleutels bekijken/aanmaken |
 | POST | /keys/{id}/revoke | Sleutel intrekken |
 | GET | /audit | Auditlog |
+| GET | /errors | Tijdelijk technisch foutenlog |
+| GET | /ticket-register | Administratieve ticketmetadata |
 | GET | /analysts | Analisten voor overdracht |
 
 PATCH /users/{id} verwacht name, email, role, organizationIds en isActive. password is optioneel. PATCH /organizations/{id} verwacht name. De klant-GUID blijft behouden.
@@ -461,7 +566,7 @@ De opdrachtgever beschrijft vijf stappen:
 | 4. Beoordeling en uitvoering | System Owner | Toegewezen analist legt acties vast; geen afzonderlijke System Owner-rol |
 | 5. Validatie en afsluiting | Security Analyst | Eerst opgelost, daarna afsluiten met samenvatting en conclusie; onafhankelijke validatie niet afgedwongen |
 
-De FIFO-wachtrij en zelf oppakken blijven voor alertanalyse behouden; nieuwe cases vereisen senior-toewijzing voordat uitvoering kan starten. Casewijzigingen zijn voor de eigenaar of senior (klantreacties uitgezonderd). Leestoegang blijft scope-gebaseerd. De afzonderlijke opdrachtgeverrollen en exacte taakverdeling moeten nog met FO/TO worden afgestemd. ResearchCase vervult in de MVP de onderzoekstaak.
+De FIFO-wachtrij en zelf oppakken blijven voor alertanalyse behouden; nieuwe cases vereisen senior-toewijzing voordat uitvoering kan starten. Casewijzigingen zijn voor de eigenaar of senior (klantreacties uitgezonderd). Leestoegang blijft scope-gebaseerd, behalve de expliciete platformbrede leesrechten van de beheerder. De afzonderlijke opdrachtgeverrollen en exacte taakverdeling moeten nog met FO/TO worden afgestemd. ResearchCase vervult in de MVP de onderzoekstaak.
 
 ### Aanvullende eisen
 
@@ -478,7 +583,7 @@ Status: **Aanwezig** = functionaliteit in de broncode; **Deels** = onvolledig; *
 | 07 | Gebruikers koppelen aan klanten en/of rollen | Deels | Meerdere klanten/scopes mogelijk; één rol per account |
 | 08 | Verschillende gebruikersrollen | Deels | Vijf huidige rollen; gewenste procesrollen ontbreken deels |
 | 09 | Klanten aanmaken, wijzigen, deactiveren | Aanwezig | Inclusief heractiveren en naam wijzigen; nog testen |
-| 10 | Gebruikers aanmaken, wijzigen, deactiveren | Aanwezig | Inclusief wachtwoordreset en heractiveren; nog testen |
+| 10 | Gebruikers aanmaken, wijzigen, deactiveren | Aanwezig | Inclusief wachtwoordreset, heractiveren en soft delete; nog testen |
 | 11 | Functionaliteit bepalen via rollen | Aanwezig | Server-side rolcontroles en frontendnavigatie |
 | 12 | Zoeken op alerts, onderzoeken en observables | Aanwezig | Zoeken op alerts/cases en observables binnen bevoegde cases; client-side |
 | 13 | Filteren op klant, status, prioriteit en datum | Aanwezig | Client-side datumfilters en overige filters |
@@ -507,73 +612,45 @@ Status: **Aanwezig** = functionaliteit in de broncode; **Deels** = onvolledig; *
 - Overdracht, gestructureerde onderzoeksinformatie, toewijzing en afsluiting moeten de vijf processtappen aantoonbaar ondersteunen. Leg hiervoor acceptatiecriteria en workflowtransities vast.
 - NFR-07: maak SLA's instelbaar per organisatie, definieer verschillende termijnsoorten, leg wijzigingen historisch vast en test waarschuwingen en overschrijdingen.
 
-## 11. Demonstratie en vervolg
+## 11. Vragen van de docent
 
-1. Log in als analist en toon dashboard, prioriteiten en SLA.
-2. Log in als beheerder, maak een tijdelijk account aan, bewerk dit en deactiveer het. Toon klantbeheer en API-sleutels.
-3. Stuur een fictieve alert via de ingest-API. Vernieuw het dashboard als analist.
-4. Pak de alert op, triageer als bevestigd incident met motivatie en maak een case.
-5. Log in als senior analist, prioriteer de case en wijs deze toe aan de gewenste analist. Log als die analist in, voeg interne en klantzichtbare informatie toe en geef de case vrij.
-6. Log in als klant en toon de afgeschermde informatie. Zet de case daarna als toegewezen analist eerst op Opgelost en sluit af met samenvatting en conclusie.
-7. Toon de auditlog als beheerder en trek de tijdelijke sleutel in.
-
-Gebruik bij voorkeur niet de oorspronkelijke demoaccounts voor de accountbewerkingsdemo, zodat de smoketest bruikbaar blijft.
-
-### Prioriteiten voor vervolgontwikkeling
-
-1. Stem procesrollen, statussen, eigenaarschap en toegang af met het FO/TO en de opdrachtgever.
-2. Werk de formele roltoewijzing, onafhankelijke validatie en case-SLA verder uit.
-3. Voeg server-side zoeken/paginering en PDF/CSV-export toe.
-4. Voeg echte bronadapters en volledige OCSF-validatie toe; de simulator en OCSF-basismapping zijn aanwezig.
-5. Werk beveiliging, audit, retentie, TLS en databaseprovisioning uit; voer isolatie-, OWASP-, performance- en loadtests uit.
-6. Splits grote componenten/services op, voeg unit tests, CI en dependency-locks toe.
-
-De originele branches zijn geraadpleegd; delen zijn aangepast of opnieuw geïmplementeerd. `bash scripts/compare-branches.sh` haalt originele branchsnapshots read-only op in een nieuwe lokale map. De oorspronkelijke unit tests, alle oorspronkelijke entiteiten en alle componenten zijn niet letterlijk geïntegreerd. Deze demo mag niet worden gepresenteerd als volledig geaccepteerd eindproduct.
-
-### FO v1.1 en TO v1.3: aanvullende correcties
-
-De triage bevat vier uitkomsten, de claim is verplicht voor triage en FirstHandledAt wordt alleen bij oppakken gevuld. Een tweede claim wordt geweigerd. Een nieuwe case krijgt een eerste tijdlijnregel; herhaalde promotie geeft de bestaande koppeling terug. Cases kunnen wachten op een klant, worden pas definitief gesloten met samenvatting en conclusie en kunnen door een senior met reden worden heropend. Samenvatting en observablebeoordeling krijgen eigen velden; overdracht blijft een tijdlijnrecord. Bron-eventdeduplicatie met unieke index, oorspronkelijke JSON en SQL rowversion zijn toegevoegd. Een bestaande demodatabase krijgt bij opstart een additieve schema-update zonder verwijdering van data; productie-deployments vereisen apart beoordeelde scripts. Samengestelde scope-FK's zijn toegevoegd voor alert-case, case-events en observables. Gescheiden platform-/scoperollen, een afzonderlijke CaseObservable-koppeltabel, paginering en gecontroleerde productie-updates blijven open. Nieuwe wijzigingen zijn niet runtime-getest.
-
-Voor alert- en casewijzigingen is de base64 rowVersion uit de meest recente response verplicht. De frontend stuurt deze mee. Verouderde versies geven HTTP 409. Bij opnieuw promoveren van een al gekoppelde alert blijft de bestaande case behouden. Historische handmatige alerts en oudere bronmeldingen krijgen geen verzonnen externe event-ID's.
-
-De reactietermijn staat in platform.Tenants.ResponseMinutes en is via Klantenbeheer te wijzigen. Bij ontvangst wordt de deadline vastgelegd; wijzigingen in de instelling veranderen historische deadlines niet. De demo-update voegt de kolom toe met standaardwaarde 60. De waarschuwing blijft 15 minuten voor het verstrijken van de deadline.
-
-### Traceerbaarheid FO en TO
-
-| Ontwerponderdeel | Code / controle | Nog te valideren |
+| Vraag | Antwoord in eigen woorden | Waar in de code? |
 | --- | --- | --- |
-| FO FR-01/02, AC-01; TO 4.1, 7.2, T01–T03 | IngestController, SocService.Ingest, unieke bron/event-index | Integratietest inclusief simultane herhaling |
-| FO FR-03–08, AC-02–05; TO 4.2/5.1 | AlertAction, FIFO, claim, triage, promotie | Exacte enumnaamgeving wijkt af van TO; concurrentietest |
-| FO FR-09–11/13, AC-06–08; TO 5.2/5.3 | CaseAction, samenvatting, conclusie, observables, overdracht | Gestructureerde acties, notitierevisies en aparte CaseObservable |
-| FO FR-14/15, NFR-07; TO 9.1 | CreatedAt, FirstHandledAt, Deadline, ResponseMinutes | SLA-grenstesten; case-SLA aanvullend vereist |
-| FO FR-16–18/20, NFR-01–03; TO 6.2/8.1 | TenantDbFactory, modelcache, scope-controles, samengestelde case-FK's | Afzonderlijke platformrollen, per-scope rollen, SQL-principals en volledige negatieve tests |
-| FO FR-19, NFR-04–06/10; TO 8.3/8.4 | Identity, TOTP, CSRF, audit en API-key hashing | TLS-productie, auditintegriteit, complete auditdekking en 2FA-test |
-| FO NFR-11; TO 4.3 | Origineel JSON, bronmetadata en beperkte OCSF-basismapping | Volledige bronadapters en schema-validatie (Should) |
-| TO 7.3/10/11 | Trace-ID bij domeinfouten, demo schema-upgrade, smoketest | Serverpaginering, productie-migraties, backups, unit/load/securitytests |
+| Waarom is dit geen gewoon ticketsysteem? | Meerdere securityalerts kunnen één incidentonderzoek vormen. Observables, triage, brondata, SLA, overdracht en tenantisolatie staan centraal. | ResearchCase, Alert, CaseEvent, Observable |
+| Hoe loopt een request? | React stuurt HTTP/JSON naar een controller; de service controleert bedrijfsregels en rechten; EF Core voert SQL uit. | api.ts, CasesController.cs, SocService.cs, SocDbContext.cs |
+| Hoe komt een alert binnen? | IngestController ontvangt JSON en een bron-API-key. De service valideert en bepaalt de klant/scope. | AlertsController.cs (IngestController), SocService.Ingest |
+| Hoe voorkomen jullie duplicaten? | Unieke bron-ID plus extern event-ID, en hash van de oorspronkelijke bytes. Identiek opnieuw verzenden geeft 200; gewijzigde inhoud 409. | Ingest, SocDbContext.cs |
+| Hoe is klantenscheiding geregeld? | Eigen SQL-schema per klant, scope binnen de klant en server-side toegangscontrole. De beheerder is een expliciete uitzondering voor lezen. | TenantDbContext, ReadWorkspaces, Workspaces |
+| Waarom CaseId én ScopeId? | Een samengestelde foreign key voorkomt dat een onderzoeksrecord aan een case in een andere scope wordt gekoppeld. | SocDbContext.OnModelCreating |
+| Hoe werkt een notitie? | POST /cases/{id}/events; service zoekt de bevoegde case, controleert eigenaar en rowversion, voegt CaseEvent toe en slaat op. | CasesController, CaseAction |
+| Hoe werkt 2FA? | Een authenticator berekent tijdsgebonden codes met een gedeeld geheim; Identity valideert de code. QR is de configuratie van dat geheim, geen wachtwoord. | AuthController, TwoFactorSetup.tsx |
+| Waarom RowVersion? | SQL Server verandert de versie bij een update; een verouderde wijziging wordt geweigerd met 409. | Alert, ResearchCase, CheckVersion |
+| Wat is OCSF? | Open Cybersecurity Schema Framework, een gestandaardiseerd securitydatamodel. Onze mapping is gedeeltelijk; de originele payload blijft beschikbaar. | SecurityAlertDetails.cs |
+| Hoe meten jullie SLA? | Deadline minus eerste behandelmoment of huidige tijd; overschrijdingen blijven zichtbaar. | GetSlaStatus, domain.ts |
+| Waarom Docker? | Herhaalbare runtime met app en SQL Server; volumes bewaren data bij normale herstart. | compose.yaml, Dockerfile |
+| Wat is het verschil tussen audit en foutenlog? | Audit legt relevante handelingen vast; foutenlog ondersteunt technische diagnose met een trace-ID. | PlatformAudit, TenantAudit, ApiErrors.cs |
 
-De SQL-demo-upgrade voegt velden en constraints toe in een transactie. Bestaande childrecords krijgen de scope van hun case; een ongeldige alert-case-koppeling laat de upgrade falen in plaats van gegevens te verplaatsen. De wijziging is nog niet getest met SQL Server. Gebruik niet `docker compose down -v` om een fout te maskeren.
+### Probleemoplossing tijdens de demo
 
-### Securityuitbreiding en eenvoudige incidentworkflow
-
-De klasse SecurityAlertDetails leest vaste velden uit het bronbericht (categorie, IP-adressen, hostname, username, detectieregel en simulatie-indicator). De oorspronkelijke JSON blijft bewaard. Een afzonderlijk veld NormalizedPayload bevat een beperkte OCSF 1.8 Detection Finding-mapping (klasse 2004, activiteit Create, ernst, tijd en finding_info). Bron: https://github.com/ocsf/ocsf-schema/blob/main/events/findings/detection_finding.json. Dit is geen gevalideerde volledige OCSF-eventimplementatie; mapping per echte bron, schema-validatie en uitgebreidere observables ontbreken. Oudere records krijgen geen fictieve securityvelden of normalisatie.
-
-Het dashboard toont dreigingscategorieën, betrokken systemen en recente alerts. Filter op datum, categorie en eigen onderzoeken; zoek in zichtbare alerts en case-observables. Alle filtering gebeurt momenteel op reeds door de backend geautoriseerde gegevens in de frontend.
-
-De workflow gebruikt de bestaande rollen, niet de nog te bevestigen afzonderlijke opdrachtgeverrollen:
-
-| Processtap | Uitvoering |
+| Probleem | Controle |
 | --- | --- |
-| Ontvangst | Ingest-API of handmatige alert |
-| Analyse en classificatie | Analist claimt en triageert |
-| Prioritering en toewijzing | Senior analist wijst de open case toe en stelt prioriteit vast |
-| Uitvoering | Toegewezen analist of senior; notities, acties en observables, eventueel wachten op klant |
-| Validatie en afsluiting | Eerst status Opgelost, dan beoordeling/afsluiting met samenvatting en conclusie |
+| Website onbereikbaar | `docker compose ps`, healthcheck, daarna `docker compose logs --tail=100 app sqlserver` |
+| HTTP 401 | Controleer account, 2FA en sessie; log opnieuw in. |
+| HTTP 403 | Controleer rol, klant, scope en eigenaarschap. |
+| HTTP 409 | Vernieuw gegevens; controleer statusovergang en recordversie. |
+| Geen tickets zichtbaar | Controleer geselecteerde klant, status-tab, filters en klantzichtbaarheid. |
+| npm ci faalt | Controleer Node-versie en aanwezigheid van package-lock.json; zie hoofdstuk 9. |
+| SQL-verbinding geweigerd | Controleer SQL-container en localhost-poort 14333. |
 
-Open cases gaan via de toewijzing naar In onderzoek. Vanuit In onderzoek kan de case wachten op de klant of opgelost worden. Vanuit Opgelost volgt beoordeling, terug naar onderzoek of definitieve afsluiting. Een senior kan een gesloten case met reden heropenen. Andere analisten kunnen alleen lezen binnen hun scope; mutaties zijn voor de eigenaar of senior. De aparte Ticket Intake Officer-, Security Coordinator- en System Owner-rollen, afzonderlijke onafhankelijke eindvalidatie en case-SLA's zijn nog niet geïmplementeerd. De bestaande basisrollen en FO blijven voorlopig behouden. Deze uitbreiding moet nog op een echte draaiende SQL Server en in de browser worden getest.
+## 12. Status en herkomst
 
-### Wireframes en huisstijl
+Dit is een demonstratie-MVP, niet een productieklare of formeel geaccepteerde applicatie. De laatst bevestigde volledige smoke-run betreft commit e470595. Daarna is de code uitgebreid. Test de huidige versie opnieuw; een aanwezige test is geen bewijs dat deze slaagt.
 
-De oorspronkelijke kaartweergave uit FO v1.1 (figuren 1–4) is hersteld: drie kaarten naast elkaar, maximaal twaalf alerts per pagina, zoek- en filterbalk, driepuntjesmenu, apart triagepaneel, casebanner, observables en tijdlijn, en kaarten voor klantonderzoeken. De basis-index.css is overgenomen van de aangeleverde groepscode. De precieze ernstkleuren zijn in het FO nog niet definitief vastgelegd; deze versie gebruikt grijs voor laag/gemiddeld, oranje voor hoog, rood voor urgent en magenta voor kritiek, steeds met tekstlabels. Het latere FO v2.0 bevat ook een tabelvariant; de oorspronkelijke v1.1-kaarten zijn hier gekozen omdat die als visuele basis zijn aangewezen. De beheerder heeft leesrechten, geen analistenmutatierechten; dit wijkt af van de oorspronkelijke TO 6.2/8.2. Browser- en buildcontrole van deze nieuwe UI zijn nog nodig.
+Nog open of gedeeltelijk gerealiseerd: volledige OCSF-validatie en echte bronadapters, case-SLA, bestandsupload, PDF/CSV-export, afzonderlijke procesrollen en onafhankelijke validatie, notitierevisies, server-side paginering, volledige auditdekking, SQL-principalisolatie, productie-TLS, encryptie-at-rest, formele ISO/OWASP-toetsing en performance-/loadtests. Playbooks vallen buiten de huidige MVP-fase.
+
+De demonstratieversie is met AI aangepast en uitgebreid op basis van oorspronkelijke groepsbranches. Het is geen letterlijke merge. Presenteer alleen eigen aantoonbare bijdragen als eigen werk en vermeld AI-gebruik volgens de opleidingsregels. De originele groepsrepository blijft ongewijzigd.
+
+
 
 ### Hergebruik van originele groepsbranches (25 november 2026)
 
@@ -587,35 +664,3 @@ De oorspronkelijke kaartweergave uit FO v1.1 (figuren 1–4) is hersteld: drie k
 | feature/tg-us-31-frontend-navigatie | bb81c5a | AppShell, AppMenu, PageHeader, PageStates en responsieve CSS aangepast; klantbeheer gebruikt echte data, geen lokale mock |
 
 De databasebranch heeft integer-ID's, CustomerId in Alert en één-op-één Alert/Ticket/Research-relaties. Het TO vereist GUID's, afzonderlijke klantschema's en meerdere alerts per case. Daarom blijven Tenant, Scope, AppUser, ResearchCase, CaseEvent en Observable leidend. De oorspronkelijke Note en Evidence worden functioneel vertegenwoordigd door de tijdlijn (notitie/bewijsreferentie), niet door de originele afzonderlijke tabellen; Contract, CustomerOrganization, Employee en ClearanceLevel zijn niet letterlijk geïntegreerd. Het oorspronkelijke SlaStatus-enum wordt gebruikt voor de eerste-behandel-SLA; de deadlineconstraint wordt ook additief op bestaande klantschema's aangebracht. Geen tabellen of gegevens worden verwijderd.
-
-Ga naar Account → QR-code maken om de originele authenticatorinterface te gebruiken. De oorspronkelijke backend gebruikt een tijdelijke integer-user-ID en een in-memory repository zonder echte sessie-integratie. Die is bewust niet aangesloten: bestaande ASP.NET Core Identity, SQL Server, Data Protection en CSRF blijven verantwoordelijk voor verificatie. De frontend stuurt geen user-ID of e-mail naar setup/enable, het serveraccount bepaalt de identiteit. De branch bevat daarnaast eigen pending-setup-expiratie en TOTP-replaypreventie; deze zijn niet letterlijk overgenomen in de Identity-implementatie. Demoaccounts kunnen optioneel 2FA activeren; daarna is een code vereist bij opnieuw inloggen. Bewaar herstelcodes en activeer geen 2FA op de generieke smoketestaccounts. De oorspronkelijke backend-unit-tests voor in-memory diensten zijn niet uitgevoerd. De aangepaste SQL-constraint en 2FA-flow moeten nog runtime worden gevalideerd.
-
-### Foutafhandeling en onderzoek vastleggen
-
-API-fouten tonen nu een begrijpelijke melding, HTTP-status en foutreferentie. Ook lege 401/403/404/429-responses krijgen JSON. Onverwachte serverfouten krijgen een algemene gebruikersmelding; in Docker staan technische exceptiontypes en stacklocaties met dezelfde foutreferentie. Beheerder → Foutenlog toont maximaal 500 recente technische API-fouten in het geheugen, met tijd, status, route-template, veilige reden en trace-ID. Geen requestbody, API-key, wachtwoord, klantpayload of ruwe exceptionmelding. Dit overzicht verdwijnt bij herstart; auditlog en onderzoekstijdlijn blijven apart in SQL Server. Gebruik `docker compose logs --tail=100 app` voor diagnose. Browser-/netwerkfouten kunnen niet in de serverlog staan wanneer het verzoek de server niet bereikt.
-
-Open een onderzoek als toegewezen analist of senior. Gebruik + Notitie, + Observable, + Actie of + Bewijsreferentie. Dezelfde bestaande API en database-entiteiten worden gebruikt; alle toevoegingen krijgen een actor en tijdstip. Notities en acties zijn standaard intern en kunnen bewust worden vrijgegeven. Observables en bewijsreferenties blijven intern. Bewijsreferentie betekent verwijzing naar bewijs, niet daadwerkelijk bestand uploaden of opslaan.
-
-Projectintroductie en interview: dit is een MSSP-incidentcasemanagementplatform, geen eigen SIEM of detectiesysteem. De eerste behandeltermijn is standaard 60 minuten en de wachtrij FIFO. De huidige beperkte OCSF-mapping, SLA voor eerste behandeling, case-tijdlijn, observables, bron-API, klantenscheiding, 2FA en audit vormen de basis. Volledige OCSF-validatie, case-afhandel-SLA, echte bewijsbestanden, onafhankelijke validatie, SQL-principalisolatie en formele ISO-conformiteit zijn niet aangetoond; playbooks vallen volgens TO buiten deze fase.
-
-Notities, observables, acties en bewijsreferenties zijn per ticket/onderzoek gekoppeld via CaseId en ScopeId. De invoervensters tonen het ticketnummer. De smoketest controleert ook dat een unieke notitie niet in andere cases verschijnt.
-
-### Ticketarchief en klantregister
-
-Analisten en klantgebruikers hebben bij Tickets / onderzoeken de keuze Alle tickets, Lopend en Archief. Afgesloten cases blijven raadpleegbaar binnen toegewezen actieve tenant/scopes; klanten en accountmanagers zien uitsluitend vrijgegeven cases. Datum en klantfilters blijven beschikbaar. Er worden geen fictieve historische tickets toegevoegd. De beheerder krijgt een afzonderlijke administratieve route GET /api/v1/ticket-register met ticketnummer, klant, status en tijdstippen, ook voor inactieve klanten. Dit is een expliciete uitbreiding van de beheerrechten voor lifecycle-metadata; geen toegang tot titels, scope-ID, gekoppelde alerts of onderzoeksinhoud. Het afzonderlijke register blijft metadata-only. Op uitdrukkelijk verzoek is de reguliere GET API voor alerts en cases nu ook beschikbaar voor beheerders, inclusief volledige dossierinhoud en inactieve klanten. Dit is een wijziging ten opzichte van de TO-rollenmatrix en moet door de opdrachtgever worden bevestigd voordat echte klantgegevens worden gebruikt. De registertoegang wordt geaudit. De nieuwe archieftests zijn nog niet runtime uitgevoerd.
-
-### Uitgebreide beheerdersleesrechten
-
-Beheerder → Alerts en Tickets toont alle klantorganisaties, scopes en historische gegevens, ook van inactieve klanten. Klanten blijven beperkt tot hun eigen vrijgegeven onderzoeken. De backend verleent deze extra rechten alleen voor lezen; POST/PATCH-acties voor triage, notities en casebeheer blijven afgeschermd. Leesacties worden gelogd. De beheerdersrol is daardoor zeer vertrouwelijk en vereist sterke beveiliging; productie vereist 2FA en formele goedkeuring van deze afwijking van het TO. Demoaccounts behouden hun bestaande demo-uitzondering. Tests voor lees- en schrijfgrenzen zijn aangepast, nog niet uitgevoerd.
-
-### Werkvoorraden en gedeeld SOC-dashboard
-
-Analisten en beheerders gebruiken hetzelfde SOC-dashboard met echte alert-, SLA- en casegegevens binnen hun bevoegde klantcontext. Beheerder heeft daarnaast beheerknoppen en volledige leesrechten, geen operationele mutatierechten. De openstaande alertwachtrij is standaard FIFO. Gekoppelde alerts staan apart van afgehandelde alerts (Dismissed/Resolved). Tickets beginnen op Lopend; Resolved staat in Opgelost – nog afsluiten; Closed staat in Archief. Beide lijsten hebben een aparte Alles-tab, filters op klant, status, prioriteit, eigenaar, datum, zoektekst en sortering; alerts hebben ook bron, categorie en SLA-filter. Analisten kunnen hun eigen werk selecteren. De filters werken op reeds geautoriseerde data; er is geen wijziging van database of rechten. Browsercontrole is nog nodig.
-
-### Onderzoekscontext in demo-alerts
-
-De acht oorspronkelijke seedmeldingen ALT-1001 t/m ALT-1008 krijgen in demomodus fictieve, specifiek op het type incident afgestemde securitycontext, brongegevens en onderzoeksaandachtspunten. Bestaande oorspronkelijke records worden eenmalig aangevuld op startup, uitsluitend als ze geen ingest-bron, extern ID of payloadhash hebben. De oorspronkelijke demo-JSON wordt vervangen door expliciet gemarkeerde fictieve bron-JSON; statussen, koppelingen, eigenaren, deadlines en historie blijven staan. Ingest-payloads van echte bronnen worden niet aangepast. De nieuwe velden zijn optioneel. De analist ziet de context direct naast triage. Geen automatische incidentbevestiging of externe threat intelligence. Tests nog niet runtime uitgevoerd.
-
-### Dashboard en gebruikers verwijderen
-
-Wachtrij en recente openstaande alerts worden als verticale lijsten weergegeven. Alertvolume per prioriteit gebruikt ontvangen databaserecords in de laatste 24 uur of zeven kalenderdagen (inclusief vandaag), geen verzonnen meetreeks. De originele .gitignore uit main van soc3Managment is aangevuld met lokale projectbestanden. Gebruikers verwijderen is een soft delete: DeletedAt, inactief, toegang ingetrokken, security stamp vernieuwd, auditregistratie. Het account verdwijnt uit gebruikersbeheer; ticket- en auditgeschiedenis blijft intact. Het e-mailadres blijft gereserveerd en eigen account verwijderen is geblokkeerd. Een senior moet eventuele open toegewezen werkzaamheden overnemen. Bestaande demodatabases krijgen een additieve kolom; runtimecontrole nodig.
