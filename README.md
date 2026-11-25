@@ -375,7 +375,7 @@ De eerdere Docker-build en healthcheck zijn op een MacBook geslaagd. De nieuwe a
 
 ## 10. Opdrachtgever en eisenmatrix
 
-Bron: aangeleverde terugkoppeling van de opdrachtgever na het gesprek, inclusief de 27 aanvullende eisen. Onderstaande matrix beschrijft broncodefunctionaliteit, niet formele acceptatie of bewezen werking. De nummering is lokaal voor dit overzicht.
+Bron: aangeleverde terugkoppeling van de opdrachtgever na het gesprek, inclusief de 28 aanvullende eisen. Onderstaande matrix beschrijft broncodefunctionaliteit, niet formele acceptatie of bewezen werking. De nummering is lokaal voor dit overzicht.
 
 ### Gewenst proces
 
@@ -422,8 +422,9 @@ Status: **Aanwezig** = functionaliteit in de broncode; **Deels** = onvolledig; *
 | 23 | Reguliere acties binnen 2 seconden | Open | Geen representatieve performancetest |
 | 24 | Minimaal 50 gelijktijdige gebruikers | Open | Geen loadtest |
 | 25 | Schaalbare architectuur | Deels | Meerlagen en klantschema's; schaalbaarheid niet gemeten |
-| 26 | Leesbare code en codeconventies | Deels | Projectlagen aanwezig; grote App.tsx/SocService en ontbrekende lint/CI |
-| 27 | Geautomatiseerde unit- en integratietests | Deels | Smoketest aanwezig, volledige unit-testset ontbreekt |
+| 26 | Zoeken op alerts en onderzoeken binnen 3 seconden | Open | Geen representatieve zoekperformancetest |
+| 27 | Leesbare code en codeconventies | Deels | Projectlagen aanwezig; grote App.tsx/SocService en ontbrekende lint/CI |
+| 28 | Geautomatiseerde unit- en integratietests | Deels | Smoketest aanwezig, volledige unit-testset ontbreekt |
 
 ### Overige aandachtspunten uit het gesprek
 
