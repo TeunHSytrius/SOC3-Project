@@ -166,7 +166,7 @@ Alertstatussen: New, PendingReview, UnderReview, Escalated, Dismissed en Resolve
 
 ### SLA
 
-Nieuwe alerts krijgen standaard 60 minuten tot eerste behandeling (TO §9.1). Bij maximaal 15 minuten resterend verschijnt een waarschuwing. Alleen oppakken vult FirstHandledAt eenmalig. Bestaande deadlines worden niet herschreven. Per-klant instellingen en case-SLA ontbreken nog.
+Nieuwe alerts krijgen standaard 60 minuten tot eerste behandeling (TO §9.1). Bij maximaal 15 minuten resterend verschijnt een waarschuwing. Alleen oppakken vult FirstHandledAt eenmalig. Bestaande deadlines worden niet herschreven. Een beheerder kan de reactietermijn per klant instellen (1–10080 minuten). Bestaande deadlines blijven onveranderd. Case-SLA ontbreekt nog.
 
 ### Account, API-sleutels en audit
 
@@ -413,7 +413,7 @@ Status: **Aanwezig** = functionaliteit in de broncode; **Deels** = onvolledig; *
 | 03 | Eigen toegewezen onderzoeken bekijken | Deels | Eigenaar zichtbaar en doorzoekbaar; geen apart Mijn onderzoeken-filter |
 | 04 | Dreigende SLA signaleren | Aanwezig | Dashboard en alertdeadline; geen pushmelding |
 | 05 | Overschreden SLA's bij alerts en onderzoeken | Deels | Alert-SLA; geen aparte case-SLA |
-| 06 | SLA-instellingen per klant beheren | Open | Vaste standaardtermijn van 60 minuten |
+| 06 | SLA-instellingen per klant beheren | Aanwezig | Reactietermijn per klant; standaard 60 minuten, alleen nieuwe alerts |
 | 07 | Gebruikers koppelen aan klanten en/of rollen | Deels | Meerdere klanten/scopes mogelijk; één rol per account |
 | 08 | Verschillende gebruikersrollen | Deels | Vijf huidige rollen; gewenste procesrollen ontbreken deels |
 | 09 | Klanten aanmaken, wijzigen, deactiveren | Aanwezig | Inclusief heractiveren en naam wijzigen; nog testen |
@@ -461,7 +461,7 @@ Gebruik bij voorkeur niet de oorspronkelijke demoaccounts voor de accountbewerki
 ### Prioriteiten voor vervolgontwikkeling
 
 1. Stem procesrollen, statussen, eigenaarschap en toegang af met het FO/TO en de opdrachtgever.
-2. Implementeer expliciete overdracht met motivatie, ontvanger en historie; maak SLA's klantgebonden en voeg case-SLA toe.
+2. Implementeer expliciete overdracht met motivatie, ontvanger en historie; voeg case-SLA toe.
 3. Voeg datumfilters, zoeken op observables en PDF/CSV-export toe.
 4. Voeg een securitytool-simulator of werkelijke connector toe; realiseer volledige OCSF-normalisatie en opslag van het bronbericht.
 5. Werk beveiliging, audit, retentie, TLS en databaseprovisioning uit; voer isolatie-, OWASP-, performance- en loadtests uit.
@@ -474,3 +474,5 @@ De originele branches zijn geraadpleegd; delen zijn aangepast of opnieuw geïmpl
 De triage bevat vier uitkomsten, de claim is verplicht voor triage en FirstHandledAt wordt alleen bij oppakken gevuld. Een tweede claim wordt geweigerd. Een nieuwe case krijgt een eerste tijdlijnregel; herhaalde promotie geeft de bestaande koppeling terug. Cases kunnen wachten op een klant, worden pas definitief gesloten met samenvatting en conclusie en kunnen door een senior met reden worden heropend. Samenvatting en observablebeoordeling krijgen eigen velden; overdracht blijft een tijdlijnrecord. Bron-eventdeduplicatie met unieke index, oorspronkelijke JSON en SQL rowversion zijn toegevoegd. Een bestaande demodatabase krijgt bij opstart een additieve schema-update zonder verwijdering van data; productie-deployments vereisen apart beoordeelde scripts. Samengestelde scope-FK's, gescheiden platform-/scoperollen, paginering en gecontroleerde productie-updates blijven open. Nieuwe wijzigingen zijn niet runtime-getest. Nieuwe wijzigingen zijn nog niet uitgevoerd tegen de runtime.
 
 Voor alert- en casewijzigingen is de base64 rowVersion uit de meest recente response verplicht. De frontend stuurt deze mee. Verouderde versies geven HTTP 409. Bij opnieuw promoveren van een al gekoppelde alert blijft de bestaande case behouden. Historische handmatige alerts en oudere bronmeldingen krijgen geen verzonnen externe event-ID's.
+
+De reactietermijn staat in platform.Tenants.ResponseMinutes en is via Klantenbeheer te wijzigen. Bij ontvangst wordt de deadline vastgelegd; wijzigingen in de instelling veranderen historische deadlines niet. De demo-update voegt de kolom toe met standaardwaarde 60. De waarschuwing blijft 15 minuten voor het verstrijken van de deadline.

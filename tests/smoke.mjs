@@ -50,8 +50,8 @@ assert((await admin.ok('audit')).some(a=>a.action==='Gebruikersaccount gewijzigd
 
 // Organization rename uses the same stable tenant ID and does not reprovision its schema.
 const temporaryOrg=await admin.post('organizations',{name:'Tijdelijke klant '+unique});
-const renamed=await admin.ok(`organizations/${temporaryOrg.id}`,{method:'PATCH',body:{name:'Hernoemde klant '+unique}});
-assert.equal(renamed.id,temporaryOrg.id);assert.equal(renamed.name,'Hernoemde klant '+unique);
+const renamed=await admin.ok(`organizations/${temporaryOrg.id}`,{method:'PATCH',body:{name:'Hernoemde klant '+unique,responseMinutes:90}});
+assert.equal(renamed.id,temporaryOrg.id);assert.equal(renamed.name,'Hernoemde klant '+unique);assert.equal(renamed.responseMinutes,90);
 await admin.post(`organizations/${temporaryOrg.id}/deactivate`);
 assert.equal((await admin.ok(`organizations/${temporaryOrg.id}`)).isActive,false);
 const key=await admin.post('keys',{name:'Smoke test '+Date.now(),organizationId:north.id});assert(key.secret);assert(!(await admin.ok('keys')).some(k=>k.secret||k.hash));
