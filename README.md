@@ -463,7 +463,7 @@ Gebruik bij voorkeur niet de oorspronkelijke demoaccounts voor de accountbewerki
 1. Stem procesrollen, statussen, eigenaarschap en toegang af met het FO/TO en de opdrachtgever.
 2. Implementeer expliciete overdracht met motivatie, ontvanger en historie; voeg case-SLA toe.
 3. Voeg datumfilters, zoeken op observables en PDF/CSV-export toe.
-4. Voeg een securitytool-simulator of werkelijke connector toe; realiseer volledige OCSF-normalisatie en opslag van het bronbericht.
+4. Voeg een securitytool-simulator of werkelijke connector toe; realiseer volledige OCSF-normalisatie; de opslag van het originele bronbericht is aanwezig.
 5. Werk beveiliging, audit, retentie, TLS en databaseprovisioning uit; voer isolatie-, OWASP-, performance- en loadtests uit.
 6. Splits grote componenten/services op, voeg unit tests, CI en dependency-locks toe.
 
@@ -471,8 +471,23 @@ De originele branches zijn geraadpleegd; delen zijn aangepast of opnieuw geïmpl
 
 ### FO v1.1 en TO v1.3: aanvullende correcties
 
-De triage bevat vier uitkomsten, de claim is verplicht voor triage en FirstHandledAt wordt alleen bij oppakken gevuld. Een tweede claim wordt geweigerd. Een nieuwe case krijgt een eerste tijdlijnregel; herhaalde promotie geeft de bestaande koppeling terug. Cases kunnen wachten op een klant, worden pas definitief gesloten met samenvatting en conclusie en kunnen door een senior met reden worden heropend. Samenvatting en observablebeoordeling krijgen eigen velden; overdracht blijft een tijdlijnrecord. Bron-eventdeduplicatie met unieke index, oorspronkelijke JSON en SQL rowversion zijn toegevoegd. Een bestaande demodatabase krijgt bij opstart een additieve schema-update zonder verwijdering van data; productie-deployments vereisen apart beoordeelde scripts. Samengestelde scope-FK's, gescheiden platform-/scoperollen, paginering en gecontroleerde productie-updates blijven open. Nieuwe wijzigingen zijn niet runtime-getest. Nieuwe wijzigingen zijn nog niet uitgevoerd tegen de runtime.
+De triage bevat vier uitkomsten, de claim is verplicht voor triage en FirstHandledAt wordt alleen bij oppakken gevuld. Een tweede claim wordt geweigerd. Een nieuwe case krijgt een eerste tijdlijnregel; herhaalde promotie geeft de bestaande koppeling terug. Cases kunnen wachten op een klant, worden pas definitief gesloten met samenvatting en conclusie en kunnen door een senior met reden worden heropend. Samenvatting en observablebeoordeling krijgen eigen velden; overdracht blijft een tijdlijnrecord. Bron-eventdeduplicatie met unieke index, oorspronkelijke JSON en SQL rowversion zijn toegevoegd. Een bestaande demodatabase krijgt bij opstart een additieve schema-update zonder verwijdering van data; productie-deployments vereisen apart beoordeelde scripts. Samengestelde scope-FK's zijn toegevoegd voor alert-case, case-events en observables. Gescheiden platform-/scoperollen, een afzonderlijke CaseObservable-koppeltabel, paginering en gecontroleerde productie-updates blijven open. Nieuwe wijzigingen zijn niet runtime-getest.
 
 Voor alert- en casewijzigingen is de base64 rowVersion uit de meest recente response verplicht. De frontend stuurt deze mee. Verouderde versies geven HTTP 409. Bij opnieuw promoveren van een al gekoppelde alert blijft de bestaande case behouden. Historische handmatige alerts en oudere bronmeldingen krijgen geen verzonnen externe event-ID's.
 
 De reactietermijn staat in platform.Tenants.ResponseMinutes en is via Klantenbeheer te wijzigen. Bij ontvangst wordt de deadline vastgelegd; wijzigingen in de instelling veranderen historische deadlines niet. De demo-update voegt de kolom toe met standaardwaarde 60. De waarschuwing blijft 15 minuten voor het verstrijken van de deadline.
+
+### Traceerbaarheid FO en TO
+
+| Ontwerponderdeel | Code / controle | Nog te valideren |
+| --- | --- | --- |
+| FO FR-01/02, AC-01; TO 4.1, 7.2, T01–T03 | IngestController, SocService.Ingest, unieke bron/event-index | Integratietest inclusief simultane herhaling |
+| FO FR-03–08, AC-02–05; TO 4.2/5.1 | AlertAction, FIFO, claim, triage, promotie | Exacte enumnaamgeving wijkt af van TO; concurrentietest |
+| FO FR-09–11/13, AC-06–08; TO 5.2/5.3 | CaseAction, samenvatting, conclusie, observables, overdracht | Gestructureerde acties, notitierevisies en aparte CaseObservable |
+| FO FR-14/15, NFR-07; TO 9.1 | CreatedAt, FirstHandledAt, Deadline, ResponseMinutes | SLA-grenstesten; case-SLA aanvullend vereist |
+| FO FR-16–18/20, NFR-01–03; TO 6.2/8.1 | TenantDbFactory, modelcache, scope-controles, samengestelde case-FK's | Afzonderlijke platformrollen, per-scope rollen, SQL-principals en volledige negatieve tests |
+| FO FR-19, NFR-04–06/10; TO 8.3/8.4 | Identity, TOTP, CSRF, audit en API-key hashing | TLS-productie, auditintegriteit, complete auditdekking en 2FA-test |
+| FO NFR-11; TO 4.3 | Origineel JSON en bronmetadata | OCSF-mapping (Should) |
+| TO 7.3/10/11 | Trace-ID bij domeinfouten, demo schema-upgrade, smoketest | Serverpaginering, productie-migraties, backups, unit/load/securitytests |
+
+De SQL-demo-upgrade voegt velden en constraints toe in een transactie. Bestaande childrecords krijgen de scope van hun case; een ongeldige alert-case-koppeling laat de upgrade falen in plaats van gegevens te verplaatsen. De wijziging is nog niet getest met SQL Server. Gebruik niet `docker compose down -v` om een fout te maskeren.
