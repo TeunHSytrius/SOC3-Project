@@ -53,10 +53,35 @@ Verwachte healthcheck: `{"status":"ok"}`.
 | Website en API op host | 127.0.0.1:8081 |
 | ASP.NET Core in container | 8080 |
 | SQL Server binnen Docker | 1433 |
+| SQL Server vanaf DataGrip | 127.0.0.1:14333 |
 | SQL-data | volume socsql |
 | Data Protection-sleutels | volume sockeys |
 
-SQL Server wordt niet rechtstreeks op de host gepubliceerd.
+SQL Server is uitsluitend via localhost gepubliceerd voor lokaal ontwikkelwerk. De app maakt de database Soc3Demo, het platform-schema en de klantschema's automatisch aan bij het opstarten. DataGrip is een SQL-client; het draait geen eigen database.
+
+### DataGrip (Microsoft SQL Server)
+
+Maak een nieuwe data source van het type Microsoft SQL Server en gebruik:
+
+| Instelling | Waarde |
+| --- | --- |
+| Host | 127.0.0.1 |
+| Port | 14333 |
+| Authentication | User & Password |
+| User | sa |
+| Password | SocDemo!2026Local (of de ingestelde SOC_SQL_PASSWORD) |
+| Database | Soc3Demo |
+| Encrypt | true |
+| Trust server certificate | true (alleen lokale demo) |
+
+Download indien nodig de JDBC-driver en klik op Test Connection. Selecteer in het schema-overzicht platform en de tenant_...-schema's. Gebruik de console om de klantregistraties te koppelen aan de klantschema's:
+
+```sql
+SELECT Id, Name, SchemaName, IsActive, ResponseMinutes
+FROM platform.Tenants;
+```
+
+De bestaande Docker-volume socsql bewaart de database. Het is niet nodig om de database handmatig aan te maken of te verwijderen. Het sa-account en het standaardwachtwoord zijn uitsluitend bedoeld voor deze lokale ontwikkelomgeving.
 
 Stoppen en logs bekijken:
 
@@ -176,7 +201,7 @@ De seeddata bevat drie fictieve klanten (Northstar Finance, Delta Logistics, Atl
 
 ## 4. API-aanlevering
 
-Er is een echte ingest-API, maar geen live koppeling met Sentinel, Defender of Splunk. De namen van deze bronnen in de demodata zijn fictieve labels.
+Er is een echte ingest-API, maar geen live koppeling met Sentinel, Defender of Splunk. Een optionele simulator stuurt fictieve beveiligingsmeldingen via diezelfde API. De namen van deze bronnen in de demodata zijn fictieve labels.
 
 Maak als beheerder onder API-sleutels een sleutel voor Northstar Finance. Stuur daarna een fictieve melding via de terminal:
 
@@ -190,6 +215,24 @@ unset SOC_KEY
 ```
 
 Verwacht HTTP 201 bij een nieuw event-ID. Identieke herhaling geeft 200 met hetzelfde alert-ID; gewijzigde bytes onder hetzelfde event-ID geven 409. Gebruik een nieuw event-ID voor elke nieuwe melding. Klant-, scope- en andere niet-contractvelden worden geweigerd. Het oorspronkelijke JSON-bericht en de SHA-256-hash worden opgeslagen. De maximale berichtgrootte is 1 MiB. Vernieuw daarna het dashboard als analist. De API-key bepaalt server-side klant en scope; waarden uit de requestbody mogen dit niet overschrijven. Ongeldige of ingetrokken sleutels geven HTTP 401.
+
+### Alertsimulator
+
+Maak als beheerder een API-sleutel met bronnaam Demo securitytool voor een actieve klant. Kopieer de sleutel eenmalig. Start vervolgens vanuit de hoofdmap:
+
+```bash
+read -rs 'SOC_SIM_KEY?API-sleutel: '
+export SOC_SIM_KEY
+node scripts/simulate-alerts.mjs
+```
+
+Of voer na dezelfde export uit:
+
+```bash
+docker compose --profile simulator run --rm -e SOC_SIM_KEY simulator
+```
+
+De simulator stuurt iedere 30 seconden een fictieve alert naar de echte ingest-API. Stop met Ctrl+C en voer `unset SOC_SIM_KEY` uit. De simulator maakt geen netwerkverbindingen met de IP-adressen uit de voorbeelden en voert geen echte detectie uit. De API-sleutel bepaalt klant en scope. Start hem alleen voor de demo; hij is standaard uitgeschakeld. De voorbeeld-IP's zijn documentatieadressen.
 
 ## 5. Technische architectuur
 

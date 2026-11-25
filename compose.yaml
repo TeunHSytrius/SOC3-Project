@@ -6,6 +6,8 @@ services:
       ACCEPT_EULA: 'Y'
       MSSQL_PID: Developer
       MSSQL_SA_PASSWORD: '${SOC_SQL_PASSWORD:-SocDemo!2026Local}'
+    ports:
+      - '127.0.0.1:14333:1433'
     volumes:
       - socsql:/var/opt/mssql
   app:
@@ -21,6 +23,18 @@ services:
       - sockeys:/app/keys
     depends_on:
       - sqlserver
+  simulator:
+    profiles: ["simulator"]
+    image: node:24-bookworm-slim
+    working_dir: /demo
+    command: ["node", "simulate-alerts.mjs"]
+    environment:
+      SOC_URL: http://app:8080
+      SOC_SIM_KEY: '${SOC_SIM_KEY:-}'
+    volumes:
+      - ./scripts/simulate-alerts.mjs:/demo/simulate-alerts.mjs:ro
+    depends_on:
+      - app
 volumes:
   socsql:
   sockeys:
