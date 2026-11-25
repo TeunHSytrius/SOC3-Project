@@ -6,3 +6,18 @@
 .env
 
 branch-review/
+
+.env.*
+**/.idea
+**/.vs
+**/TestResults
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/appsettings.*.local.json
+**/secrets.json
+**/secrets/
+**/*.pfx
+**/*.p12
+**/*.key
+**/*.pem
+backend/Soc.Api/wwwroot

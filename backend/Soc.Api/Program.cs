@@ -48,6 +48,29 @@ app.Use(async (ctx,next)=>{
 });
 app.UseRateLimiter();
 app.Use(async (ctx,next)=>{if((HttpMethods.IsPost(ctx.Request.Method)||HttpMethods.IsPatch(ctx.Request.Method))&&ctx.Request.Path.StartsWithSegments("/api/v1")&&!ctx.Request.Path.StartsWithSegments("/api/v1/ingest")){try{await ctx.RequestServices.GetRequiredService<IAntiforgery>().ValidateRequestAsync(ctx);}catch(AntiforgeryValidationException){ctx.Response.StatusCode=400;await ctx.Response.WriteAsJsonAsync(new{message="Ongeldige CSRF-token. Vernieuw de pagina.",traceId=ctx.TraceIdentifier});return;}}await next();});
-app.UseAuthorization();app.MapControllers();app.MapOpenApi();app.MapGet("/api/v1/health",()=>Results.Ok(new{status="ok"}));app.MapFallback("/api/{**path}", (HttpContext ctx) => {ctx.Response.StatusCode=404;return Task.CompletedTask;});app.MapFallbackToFile("index.html");
-if(builder.Configuration.GetValue<bool>("Demo:Enabled")) { using var scope=app.Services.CreateScope();var service=scope.ServiceProvider.GetRequiredService<SocService>();for(var i=0;;i++){try{await service.InitializeAsync();break;}catch(Exception ex) when(i<29 && ex is not SocException){app.Logger.LogWarning(ex,"SQL Server nog niet gereed (poging {Attempt})",i+1);await Task.Delay(3000);}} }
+app.UseAuthorization();app.MapControllers();app.MapOpenApi();app.MapGet("/api/v1/health",async (SocDbContext db)=>await db.Database.CanConnectAsync()?Results.Ok(new{status="ok"}):Results.Json(new{status="unavailable",message="SQL Server niet bereikbaar."},statusCode:503));app.MapFallback("/api/{**path}", (HttpContext ctx) => {ctx.Response.StatusCode=404;return Task.CompletedTask;});app.MapFallbackToFile("index.html");
+if(demo)
+{
+    app.Logger.LogInformation("SOC-demo initialiseren: database, klantschema's en demoaccounts.");
+    for(var attempt=1; ;attempt++)
+    {
+        using var scope=app.Services.CreateScope();
+        try
+        {
+            await scope.ServiceProvider.GetRequiredService<SocService>().InitializeAsync();
+            app.Logger.LogInformation("SOC-demo gereed.");
+            break;
+        }
+        catch(Microsoft.Data.SqlClient.SqlException ex) when(attempt<30 && ex.Number is -2 or 53 or 64 or 233 or 258 or 10053 or 10054 or 10060 or 10061 or 11001)
+        {
+            app.Logger.LogWarning("SQL Server niet bereikbaar (poging {Attempt}/30, SQL-code {Code}).",attempt,ex.Number);
+            await Task.Delay(3000);
+        }
+        catch(Exception ex)
+        {
+            app.Logger.LogError(ex,"SOC-demo initialisatie mislukt. Controleer SQL-configuratie en bestaande schema's. Verwijder geen volumes om de fout te maskeren.");
+            throw;
+        }
+    }
+}
 app.Run();
