@@ -137,3 +137,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .archive-tabs button {border:1px solid #c7c7c7;border-radius:6px;background:#fff;color:#444;padding:10px 14px;font-weight:600;}
 .archive-tabs button[aria-pressed=true] {background:#444;color:#fff;border-color:#444;}
 @media(max-width:600px){.archive-tabs button{flex:1 1 130px;}}
+
+.queue-filters {padding:16px;display:flex;flex-direction:column;gap:12px;text-align:left;}
+.queue-filter-search {display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;}
+.queue-filter-search .field {flex:1 1 240px;min-width:0;}
+.queue-filter-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:12px;}
+.queue-filter-grid .field {min-width:0;margin:0;}
+.queue-filter-grid .field input,.queue-filter-grid .field select,.queue-filter-search .field input {width:100%;min-width:0;}
+.queue-filters .check {align-self:flex-start;}
+.wire-screen>.panel {margin-bottom:12px;}
+@media(max-width:600px){.queue-filters{padding:12px;}.queue-filter-search>button{width:100%;}}

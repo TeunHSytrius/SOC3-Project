@@ -15,3 +15,24 @@ export function nextCaseStates(status:ResearchCase['status']):string[] {
     default: return [];
   }
 }
+
+export function alertGroup(a:Alert){
+  if(a.status==='Escalated')return 'linked';
+  if(a.status==='Dismissed'||a.status==='Resolved')return 'closed';
+  return 'open';
+}
+export function caseGroup(c:ResearchCase){
+  if(c.status==='Closed')return 'closed';
+  if(c.status==='Resolved')return 'resolved';
+  return 'open';
+}
+export function sortRecords<T extends Alert|ResearchCase>(records:T[],sort:string,oldestFirst:boolean):T[]{
+  return records.slice().sort((a,b)=>{
+    if(sort==='priority'){
+      const difference=priorities.indexOf(b.priority)-priorities.indexOf(a.priority);
+      if(difference)return difference;
+    }
+    const difference=Date.parse(a.createdAt)-Date.parse(b.createdAt);
+    return sort==='oldest'||sort==='priority'||sort==='default'&&oldestFirst?difference:-difference;
+  });
+}

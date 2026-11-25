@@ -2,7 +2,7 @@ import React from 'react';
 import TwoFactorSetup from './features/auth/TwoFactorSetup';
 import {api,sessionKey} from './services/api';
 import type {State, User, Alert, ResearchCase} from './types/soc';
-import {labels,priorities,roles,states,caseStates,active,isClosed,fmt,sla,nextCaseStates} from './types/domain';
+import {labels,priorities,roles,states,caseStates,active,isClosed,fmt,sla,nextCaseStates,alertGroup,caseGroup,sortRecords} from './types/domain';
 import {Icon,Badge,Button,Field,Select,Table,Panel,PageHeader} from './components/Ui';
 import {LoadingState} from './components/PageStates';
 import LoginPage from './features/auth/LoginPage';
@@ -11,12 +11,11 @@ import './features/FeatureStyles.css';
 import {AlertSecurityDetails,SecurityOverview} from './features/alerts/SecurityDetails';
 import CaseWorkflow from './features/cases/CaseWorkflow';
 import {AlertCards,CaseCards,priorityColor} from './features/alerts/AlertCards';
-import AdminDashboard from './features/admin/AdminDashboard';
 import ErrorLog from './features/admin/ErrorLog';
 import TicketRegister from './features/admin/TicketRegister';
 function formData(e):Record<string,any>{e.preventDefault();return Object.fromEntries(new FormData(e.currentTarget));}
 class App extends React.Component<Record<string, never>,State> {
- constructor(p){super(p);this.state={user:null,loading:true,page:'dashboard',archiveFilter:'all',orgs:[],alerts:[],cases:[],users:[],keys:[],audit:[],errors:[],ticketRegister:[],analysts:[],org:'',search:'',filter:'',priority:'',category:'',fromDate:'',toDate:'',mine:false,selected:null,modal:null,error:'',notice:'',busy:false,secret:null,setup:null};}
+ constructor(p){super(p);this.state={user:null,loading:true,page:'dashboard',archiveFilter:'open',listSort:'default',ownerFilter:'',slaFilter:'',sourceFilter:'',orgs:[],alerts:[],cases:[],users:[],keys:[],audit:[],errors:[],ticketRegister:[],analysts:[],org:'',search:'',filter:'',priority:'',category:'',fromDate:'',toDate:'',mine:false,selected:null,modal:null,error:'',notice:'',busy:false,secret:null,setup:null};}
  private refreshTimer?:number;
  private refreshing=false;
  private refreshVersion=0;
@@ -49,7 +48,7 @@ class App extends React.Component<Record<string, never>,State> {
  get canReadInternal(){return this.isAnalyst||this.isAdmin;}
  get isAnalyst(){return this.state.user&&['Analist','Senior analist'].includes(this.state.user.role)}
  get isAdmin(){return this.state.user&&this.state.user.role==='Beheerder'}
- async enter(user:User){this.setState({user,loading:false,page:user.requiresTwoFactorSetup?'account':user.role==='Beheerder'?'dashboard':user.role==='Klant'||user.role==='Accountmanager'?'cases':'dashboard',org:'',selected:null,error:'',notice:'',secret:null,setup:null});if(!user.requiresTwoFactorSetup)await this.refresh(user)}
+ async enter(user:User){this.setState({user,loading:false,page:user.requiresTwoFactorSetup?'account':user.role==='Beheerder'?'dashboard':user.role==='Klant'||user.role==='Accountmanager'?'cases':'dashboard',org:'',selected:null,archiveFilter:'open',listSort:'default',ownerFilter:'',slaFilter:'',sourceFilter:'',search:'',filter:'',priority:'',category:'',fromDate:'',toDate:'',mine:false,error:'',notice:'',secret:null,setup:null});if(!user.requiresTwoFactorSetup)await this.refresh(user)}
  async refresh(u=this.state.user,automatic=false){
    if(!u||u.requiresTwoFactorSetup||(automatic&&this.refreshing))return;
    const version=++this.refreshVersion;
@@ -69,21 +68,28 @@ class App extends React.Component<Record<string, never>,State> {
  }
  fail(e){const message=e instanceof Error?e.message:'Onbekende fout. Probeer opnieuw.';if(e?.status===401&&this.state.user){sessionStorage.removeItem(sessionKey);this.setState({user:null,alerts:[],cases:[],users:[],keys:[],audit:[],errors:[],ticketRegister:[],orgs:[],analysts:[],secret:null,setup:null,error:message});return;}this.setState({error:message,notice:''})}
  async run(path:string,data:Record<string,unknown>,message:string,after?:(result:any)=>void){if(this.state.busy)return;this.setState({busy:true,error:'',notice:''});try{const item=this.state.alerts.find(x=>x.id===this.state.selected)||this.state.cases.find(x=>x.id===this.state.selected);const payload=item&&/^(alerts|cases)\//.test(path)?{...data,rowVersion:item.rowVersion}:data;const r=await api(path,payload,item?{workspaceId:item.organizationId,scopeId:item.scopeId}:undefined);const refreshed=await this.refresh();if(!this.state.user||!sessionStorage.getItem(sessionKey))return;this.setState({notice:refreshed?message:message+' Gegevens vernieuwen is mislukt; klik op Vernieuwen.',modal:null});if(after)after(r);}catch(e){this.fail(e)}finally{this.setState({busy:false})}}
- go(page:string,selected:string|null=null){this.setState({page,selected,archiveFilter:'all',search:'',filter:'',priority:'',category:'',fromDate:'',toDate:'',mine:false,error:'',notice:'',modal:null,secret:null});}
+ go(page:string,selected:string|null=null){
+   if(page===this.state.page&&(selected||this.state.selected)){
+     this.setState({selected,error:'',notice:'',modal:null,secret:null});return;
+   }
+   this.setState({page,selected,archiveFilter:'open',listSort:'default',ownerFilter:'',slaFilter:'',sourceFilter:'',search:'',filter:'',priority:'',category:'',fromDate:'',toDate:'',mine:false,error:'',notice:'',modal:null,secret:null});
+ }
  name(id){return this.state.orgs.find(o=>o.id===id)?.name||'Onbekende klant'}
  filtered<T extends Alert|ResearchCase>(items:T[]):T[]{
-   const {org,search,filter,priority,category,fromDate,toDate,mine,user}=this.state;
+   const {org,search,filter,priority,category,fromDate,toDate,mine,user,ownerFilter,slaFilter,sourceFilter}=this.state;
    const q=search.trim().toLowerCase();
    return items.filter(x=>{
      const date=new Date(x.createdAt);
      if(org&&x.organizationId!==org||filter&&x.status!==filter||priority&&x.priority!==priority)return false;
      if(fromDate&&date<new Date(fromDate+'T00:00:00'))return false;
      if(toDate&&date>new Date(toDate+'T23:59:59.999'))return false;
-     if(mine&&'ownerId' in x&&x.ownerId!==user?.id)return false;
+     if(mine&&('source' in x?x.owner!==user?.name:x.ownerId!==user?.id))return false;
+     if(ownerFilter==='unassigned'&&x.owner||ownerFilter&&ownerFilter!=='unassigned'&&x.owner!==ownerFilter)return false;
+     if('source' in x&&((slaFilter&&sla(x).kind!==slaFilter)||(sourceFilter&&x.source!==sourceFilter)))return false;
      if(category&&'source' in x&&(x.security?.category||'Niet geclassificeerd')!==category)return false;
      const values=[x.title,x.number,x.owner,this.name(x.organizationId)];
      if('source' in x)values.push(x.source,x.description,x.externalEventId,...Object.values(x.security||{}).map(String));
-     if('entries' in x)values.push(...x.entries.filter(e=>e.kind==='Observable'||e.kind==='Observablebeoordeling').map(e=>e.text));
+     if('entries' in x)values.push(...x.entries.map(e=>e.text));
      return !q||values.some(v=>String(v||'').toLowerCase().includes(q));
    });
  }
@@ -91,45 +97,60 @@ class App extends React.Component<Record<string, never>,State> {
  async logout(){this.refreshVersion++;this.refreshing=false;try{await api('auth/logout',{})}finally{sessionStorage.removeItem(sessionKey);this.setState({user:null,alerts:[],cases:[],users:[],keys:[],audit:[],errors:[],ticketRegister:[],orgs:[],analysts:[],error:'',notice:'',secret:null,setup:null})}}
  renderLogin(){return <LoginPage error={this.state.error} busy={this.state.busy} onSubmit={e=>this.login(e)}/>;}
  nav(){if(this.state.user?.requiresTwoFactorSetup)return [['account','Account']];return this.isAdmin?[['dashboard','Dashboard'],['alerts','Alerts'],['cases','Tickets'],['customers','Klanten'],['users','Gebruikers & rollen'],['keys','API-sleutels'],['audit','Auditlog'],['errors','Foutenlog'],['account','Account']]:this.isAnalyst?[['dashboard','Dashboard'],['alerts','Alerts'],['cases','Cases'],['account','Account']]:[['cases','Cases'],['account','Account']]}
- render(){const s=this.state;if(s.loading)return <LoadingState label="SOC3 laden…"/>;if(!s.user)return this.renderLogin();const pages={dashboard:()=>this.isAdmin?<AdminDashboard organizations={s.orgs} users={s.users} keys={s.keys} audit={s.audit} tickets={s.ticketRegister} alerts={s.alerts} navigate={page=>{this.go(page==='ticket-register'?'cases':page);this.setState({org:''});}} onCustomerTickets={id=>{this.go('cases');this.setState({org:id});}} onArchive={()=>{this.go('cases');this.setState({org:'',archiveFilter:'closed'});}}/>:this.dashboard(),alerts:()=>this.alerts(),cases:()=>this.cases(),customers:()=>this.customers(),'ticket-register':()=>this.isAdmin?<TicketRegister tickets={s.ticketRegister} organizations={s.orgs} organizationId={s.org} onOrganizationChange={id=>this.setState({org:id})} reload={()=>void this.refresh()}/>:null,users:()=>this.users(),keys:()=>this.keys(),audit:()=>this.audit(),errors:()=>this.isAdmin?<ErrorLog errors={s.errors} reload={()=>void this.refresh()}/>:null,account:()=>this.account()};const customerOptions=[{id:'',name:'Alle klanten'},...s.orgs.map(o=>({id:o.id,name:o.name}))];const customer=s.orgs.find(o=>o.id===s.org)||(s.orgs.length===1?s.orgs[0]:{id:'',name:'Alle klanten'});return <AppShell user={{displayName:s.user.name,role:s.user.role}} customer={customer} customerOptions={s.orgs.length>1?customerOptions:[]} onCustomerChange={id=>this.setState({org:id,selected:null})} navigationItems={this.nav().map(([id,label])=>({label,href:id==='dashboard'?'/':'/'+id}))} currentPath={s.page==='dashboard'?'/':'/'+s.page} onNavigate={href=>this.go(href==='/'?'dashboard':href.slice(1))} actions={<><Button onClick={()=>this.refresh()}><Icon name="refresh" size={16}/> Vernieuwen</Button><Button onClick={()=>this.logout()}><Icon name="logout" size={16}/> Uitloggen</Button></>}>
+ render(){const s=this.state;if(s.loading)return <LoadingState label="SOC3 laden…"/>;if(!s.user)return this.renderLogin();const pages={dashboard:()=>this.dashboard(),alerts:()=>this.alerts(),cases:()=>this.cases(),customers:()=>this.customers(),'ticket-register':()=>this.isAdmin?<TicketRegister tickets={s.ticketRegister} organizations={s.orgs} organizationId={s.org} onOrganizationChange={id=>this.setState({org:id})} reload={()=>void this.refresh()}/>:null,users:()=>this.users(),keys:()=>this.keys(),audit:()=>this.audit(),errors:()=>this.isAdmin?<ErrorLog errors={s.errors} reload={()=>void this.refresh()}/>:null,account:()=>this.account()};const customerOptions=[{id:'',name:'Alle klanten'},...s.orgs.map(o=>({id:o.id,name:o.name}))];const customer=s.orgs.find(o=>o.id===s.org)||(s.orgs.length===1?s.orgs[0]:{id:'',name:'Alle klanten'});return <AppShell user={{displayName:s.user.name,role:s.user.role}} customer={customer} customerOptions={s.orgs.length>1?customerOptions:[]} onCustomerChange={id=>this.setState({org:id,selected:null,ownerFilter:'',sourceFilter:'',category:''})} navigationItems={this.nav().map(([id,label])=>({label,href:id==='dashboard'?'/':'/'+id}))} currentPath={s.page==='dashboard'?'/':'/'+s.page} onNavigate={href=>this.go(href==='/'?'dashboard':href.slice(1))} actions={<><Button onClick={()=>this.refresh()}><Icon name="refresh" size={16}/> Vernieuwen</Button><Button onClick={()=>this.logout()}><Icon name="logout" size={16}/> Uitloggen</Button></>}>
 {s.error&&<div className="error" role="alert">{s.error}<button onClick={()=>this.setState({error:''})}>×</button></div>}{s.notice&&<div className="notice" role="status">{s.notice}<button onClick={()=>this.setState({notice:''})}>×</button></div>}{pages[s.page]&&pages[s.page]()} {s.modal&&this.modal()}</AppShell>}
 
  stats(items){return <div className="stats">{items.map(([label,value,desc,icon,tone])=><div className="stat" key={label}><div className="statline"><span>{label}</span><span className={'stat-icon '+tone}><Icon name={icon}/></span></div><strong>{value}</strong><small>{desc}</small></div>)}</div>}
- dashboard(){const a=this.state.alerts.filter(x=>!this.state.org||x.organizationId===this.state.org),r=this.state.cases.filter(x=>!this.state.org||x.organizationId===this.state.org),open=a.filter(active),breach=a.filter(x=>sla(x).kind==='danger'),risk=open.filter(x=>sla(x).kind==='warn');const handled=a.filter(x=>x.firstHandledAt);const pct=handled.length?Math.round(100*handled.filter(x=>sla(x).kind==='good').length/handled.length):null;return <div className="fragment"><PageHeader title="SOC dashboard" sub="Een actueel overzicht van meldingen, onderzoeken en servicetijden." action={<Button primary onClick={()=>this.setState({modal:'newAlert'})}><Icon name="plus"/> Alert toevoegen</Button>}/>{this.stats([['Open alerts',open.length,'Nog af te handelen','alerts','blue'],['Actieve cases',r.filter(x=>!isClosed(x)).length,'Lopende onderzoeken','cases','purple'],['SLA-risico',risk.length,'Binnen 15 minuten te behandelen','clock','warn'],['SLA overschreden',breach.length,'Eerste behandeling te laat','alerts','danger']])}<div className="dashgrid"><Panel title="Alerts per prioriteit" sub="Openstaande meldingen in de actieve klantcontext"><div className="bars">{priorities.slice().reverse().map(p=>{const n=open.filter(x=>x.priority===p).length;return <div className="barrow" key={p}><span>{labels[p]}</span><div className="track"><div className={'bar '+p} style={{width:(n/Math.max(1,open.length)*100)+'%'}}/></div><b>{n}</b></div>})}</div></Panel><Panel title="SLA-prestaties" sub="Op basis van de eerste behandeling"><div className="slaoverview"><div className="donut" style={{background:`conic-gradient(#14836c ${pct||0}%, #e6edf1 0)`}}><div><strong>{pct===null?'—':pct+'%'}</strong><small>op tijd</small></div></div><div><p><span className="dot green"/> Binnen SLA <b>{handled.filter(x=>sla(x).kind==='good').length}</b></p><p><span className="dot red"/> Overschreden <b>{handled.filter(x=>sla(x).kind==='danger').length}</b></p><p><span className="dot orange"/> Dreigend <b>{risk.length}</b></p></div></div></Panel></div><SecurityOverview alerts={open}/><Panel title="Recent ontvangen meldingen" sub="Nieuwste eerst · automatische vernieuwing iedere 15 seconden">{this.alertTable(a.slice().reverse().slice(0,5))}</Panel><Panel title="Alertwachtrij" sub="Oudste openstaande alerts eerst (FIFO)" action={<Button onClick={()=>this.go('alerts')}>Alle alerts <Icon name="arrow" size={16}/></Button>}><div className="bodypad"><AlertCards alerts={open.slice(0,6)} customerName={id=>this.name(id)} open={id=>this.go('alerts',id)} busy={this.state.busy}/></div></Panel><Panel title="Actieve onderzoeken" action={<><Button onClick={()=>this.go('cases')}>Alle tickets</Button><Button onClick={()=>{this.go('cases');this.setState({archiveFilter:'closed'});}}>Archief ({r.filter(isClosed).length})</Button></>}>{this.caseTable(r.filter(x=>!isClosed(x)).slice(0,5))}</Panel></div>}
- filters(type){
+ dashboard(){const a=this.state.alerts.filter(x=>!this.state.org||x.organizationId===this.state.org),r=this.state.cases.filter(x=>!this.state.org||x.organizationId===this.state.org),open=a.filter(active),breach=a.filter(x=>sla(x).kind==='danger'),risk=open.filter(x=>sla(x).kind==='warn');const handled=a.filter(x=>x.firstHandledAt);const pct=handled.length?Math.round(100*handled.filter(x=>sla(x).kind==='good').length/handled.length):null;return <div className="fragment"><PageHeader title="SOC dashboard" sub="Een actueel overzicht van meldingen, onderzoeken en servicetijden." action={this.isAnalyst&&<Button primary onClick={()=>this.setState({modal:'newAlert'})}><Icon name="plus"/> Alert toevoegen</Button>}/>{this.stats([['Open alerts',open.length,'Nog af te handelen','alerts','blue'],['Actieve cases',r.filter(x=>caseGroup(x)==='open').length,'Lopende onderzoeken','cases','purple'],['SLA-risico',risk.length,'Binnen 15 minuten te behandelen','clock','warn'],['SLA overschreden',breach.length,'Eerste behandeling te laat','alerts','danger']])}<div className="dashgrid"><Panel title="Alerts per prioriteit" sub="Openstaande meldingen in de actieve klantcontext"><div className="bars">{priorities.slice().reverse().map(p=>{const n=open.filter(x=>x.priority===p).length;return <div className="barrow" key={p}><span>{labels[p]}</span><div className="track"><div className={'bar '+p} style={{width:(n/Math.max(1,open.length)*100)+'%'}}/></div><b>{n}</b></div>})}</div></Panel><Panel title="SLA-prestaties" sub="Op basis van de eerste behandeling"><div className="slaoverview"><div className="donut" style={{background:`conic-gradient(#14836c ${pct||0}%, #e6edf1 0)`}}><div><strong>{pct===null?'—':pct+'%'}</strong><small>op tijd</small></div></div><div><p><span className="dot green"/> Binnen SLA <b>{handled.filter(x=>sla(x).kind==='good').length}</b></p><p><span className="dot red"/> Overschreden <b>{handled.filter(x=>sla(x).kind==='danger').length}</b></p><p><span className="dot orange"/> Dreigend <b>{risk.length}</b></p></div></div></Panel></div><SecurityOverview alerts={open}/>{this.isAdmin&&<Panel title="Platformbeheer" sub="Beheer klanten, accounts en integraties naast het SOC-overzicht."><div className="bodypad actions"><Button onClick={()=>this.go('customers')}>Klanten ({this.state.orgs.filter(o=>o.isActive).length})</Button><Button onClick={()=>this.go('users')}>Gebruikers ({this.state.users.filter(u=>u.isActive).length})</Button><Button onClick={()=>this.go('keys')}>API-sleutels</Button><Button onClick={()=>this.go('audit')}>Auditlog</Button><Button onClick={()=>this.go('errors')}>Foutenlog</Button></div></Panel>}<Panel title="Recent ontvangen openstaande meldingen" sub="Nieuwste eerst · automatische vernieuwing iedere 15 seconden">{this.alertTable(sortRecords(open,'newest',false).slice(0,5))}</Panel><Panel title="Alertwachtrij" sub="Oudste openstaande alerts eerst (FIFO)" action={<Button onClick={()=>this.go('alerts')}>Open alerts <Icon name="arrow" size={16}/></Button>}><div className="bodypad"><AlertCards alerts={open.slice(0,6)} customerName={id=>this.name(id)} open={id=>this.go('alerts',id)} busy={this.state.busy}/></div></Panel><Panel title="Ticketoverzicht" sub={r.filter(x=>caseGroup(x)==='open').length+' lopend · '+r.filter(x=>caseGroup(x)==='resolved').length+' opgelost · '+r.filter(isClosed).length+' afgesloten'} action={<><Button onClick={()=>{this.go('cases');this.setState({archiveFilter:'all'});}}>Alle tickets</Button><Button onClick={()=>{this.go('cases');this.setState({archiveFilter:'resolved'});}}>Opgelost ({r.filter(x=>caseGroup(x)==='resolved').length})</Button><Button onClick={()=>{this.go('cases');this.setState({archiveFilter:'closed'});}}>Archief ({r.filter(isClosed).length})</Button></>}>{this.caseTable(sortRecords(r.filter(x=>caseGroup(x)==='open'),'newest',false).slice(0,5))}</Panel></div>}
+ filters(type:'alerts'|'cases'){
    const s=this.state;
-   const categories=[...new Set(s.alerts.map(a=>a.security?.category||'Niet geclassificeerd'))].sort();
-   return <div className="fragment">
-     <div className="filters">
-       <div className="search"><Icon name="search"/><input aria-label="Zoeken" placeholder="Zoek op titel, IP, hostname of observable…" value={s.search} onChange={e=>this.setState({search:e.target.value})}/></div>
-       <Select options={type==='alerts'?states:caseStates} value={s.filter} placeholder="Alle statussen" onChange={e=>this.setState({filter:e.target.value})}/>
-       <Select options={priorities} value={s.priority} placeholder="Alle prioriteiten" onChange={e=>this.setState({priority:e.target.value})}/>
-       {type==='alerts'&&<Select options={categories} value={s.category} placeholder="Alle categorieën" onChange={e=>this.setState({category:e.target.value})}/>}
-       <Button onClick={()=>this.setState({search:'',filter:'',priority:'',category:'',fromDate:'',toDate:'',mine:false})}>Wissen</Button>
+   const isAlerts=type==='alerts';
+   const items=(isAlerts?s.alerts:s.cases).filter(x=>!s.org||x.organizationId===s.org);
+   const visibleStatuses=isAlerts?
+     states.filter(status=>s.archiveFilter==='all'||(s.archiveFilter==='open'?['New','PendingReview','UnderReview'].includes(status):s.archiveFilter==='linked'?status==='Escalated':['Dismissed','Resolved'].includes(status))):
+     caseStates.filter(status=>s.archiveFilter==='all'||(s.archiveFilter==='open'?status!=='Resolved'&&status!=='Closed':s.archiveFilter==='resolved'?status==='Resolved':status==='Closed'));
+   const alerts=s.alerts.filter(x=>!s.org||x.organizationId===s.org);
+   const categories=[...new Set(alerts.map(a=>a.security?.category||'Niet geclassificeerd'))].sort();
+   const sources=[...new Set(alerts.map(a=>a.source))].sort();
+   const owners=[...new Set(items.map(x=>x.owner).filter(Boolean))].sort();
+   return <div className="queue-filters">
+     <div className="queue-filter-search">
+       <Field label="Zoeken"><input placeholder={isAlerts?'Alertnummer, titel, IP of hostname':'Ticketnummer, titel, notitie of observable'} value={s.search} onChange={e=>this.setState({search:e.target.value})}/></Field>
+       <Button onClick={()=>this.setState({org:'',search:'',filter:'',priority:'',category:'',fromDate:'',toDate:'',mine:false,listSort:'default',ownerFilter:'',slaFilter:'',sourceFilter:''})}>Filters wissen</Button>
      </div>
-     <div className="filters">
-       <label>Vanaf <input aria-label="Vanaf datum" type="date" value={s.fromDate} onChange={e=>this.setState({fromDate:e.target.value})}/></label>
-       <label>Tot en met <input aria-label="Tot en met datum" type="date" value={s.toDate} onChange={e=>this.setState({toDate:e.target.value})}/></label>
-       {type==='cases'&&this.isAnalyst&&<label className="check"><input type="checkbox" checked={s.mine} onChange={e=>this.setState({mine:e.target.checked})}/> Mijn onderzoeken</label>}
+     <div className="queue-filter-grid">
+       <Field label="Klantorganisatie"><Select options={s.orgs.map(o=>({id:o.id,name:o.name+(o.isActive?'':' (inactief)')}))} value={s.org} placeholder="Alle klanten" onChange={e=>this.setState({org:e.target.value,ownerFilter:'',sourceFilter:'',category:''})}/></Field>
+       <Field label="Status"><Select options={visibleStatuses} value={s.filter} placeholder="Alle statussen" onChange={e=>this.setState({filter:e.target.value})}/></Field>
+       <Field label="Prioriteit"><Select options={priorities} value={s.priority} placeholder="Alle prioriteiten" onChange={e=>this.setState({priority:e.target.value})}/></Field>
+       {this.canReadInternal&&<Field label="Eigenaar"><Select options={[{id:'unassigned',name:'Niet toegewezen'},...owners.map(owner=>({id:owner,name:owner}))]} value={s.ownerFilter} placeholder="Alle eigenaren" onChange={e=>this.setState({ownerFilter:e.target.value})}/></Field>}
+       {isAlerts&&<>
+         <Field label="SLA"><Select options={[{id:'neutral',name:'Nog niet behandeld'},{id:'warn',name:'Bijna overschreden'},{id:'danger',name:'Overschreden'},{id:'good',name:'Binnen SLA'}]} value={s.slaFilter} placeholder="Alle SLA-statussen" onChange={e=>this.setState({slaFilter:e.target.value})}/></Field>
+         <Field label="Categorie"><Select options={categories} value={s.category} placeholder="Alle categorieën" onChange={e=>this.setState({category:e.target.value})}/></Field>
+         <Field label="Securitytool"><Select options={sources} value={s.sourceFilter} placeholder="Alle bronnen" onChange={e=>this.setState({sourceFilter:e.target.value})}/></Field>
+       </>}
+       <Field label="Vanaf datum"><input type="date" value={s.fromDate} onChange={e=>this.setState({fromDate:e.target.value})}/></Field>
+       <Field label="Tot en met"><input type="date" value={s.toDate} onChange={e=>this.setState({toDate:e.target.value})}/></Field>
+       <Field label="Sorteren"><Select options={[{id:'default',name:isAlerts&&s.archiveFilter==='open'?'Standaard: FIFO':'Standaard: nieuwste eerst'},{id:'oldest',name:'Oudste eerst'},{id:'newest',name:'Nieuwste eerst'},{id:'priority',name:'Hoogste prioriteit eerst'}]} value={s.listSort} onChange={e=>this.setState({listSort:e.target.value as State['listSort']})}/></Field>
      </div>
+     {this.isAnalyst&&<label className="check"><input type="checkbox" checked={s.mine} onChange={e=>this.setState({mine:e.target.checked})}/> Alleen {isAlerts?'mijn alerts':'mijn onderzoeken'}</label>}
    </div>;
  }
  alertTable(list:Alert[]){return <Table head={['Alert','Klant','Prioriteit','Status','Ontvangen','SLA','']} empty={!list.length}>{list.map(a=><tr key={a.id}><td><button className="rowlink" onClick={()=>this.go('alerts',a.id)}>{a.title}</button><small>{a.number} · {a.source}{a.security?.category?' · '+a.security.category:''}{a.security?.simulated?' · Simulatie':''}</small></td><td>{this.name(a.organizationId)}</td><td><Badge value={a.priority}/></td><td><Badge value={a.status}/></td><td>{fmt(a.createdAt)}</td><td><Badge value={sla(a).text} kind={sla(a).kind}/></td><td><button className="arrowbtn" aria-label={'Open '+a.number} onClick={()=>this.go('alerts',a.id)}>→</button></td></tr>)}</Table>}
  alerts(){
-   const a=this.state.alerts.find(x=>x.id===this.state.selected);
-   if(a)return this.alertDetail(a);
-   const list=this.filtered(this.state.alerts);
+   const s=this.state;
+   const selected=s.alerts.find(x=>x.id===s.selected);
+   if(selected)return this.alertDetail(selected);
+   const scoped=s.alerts.filter(x=>!s.org||x.organizationId===s.org);
+   const list=sortRecords(this.filtered(scoped).filter(x=>s.archiveFilter==='all'||alertGroup(x)===s.archiveFilter),s.listSort,s.archiveFilter==='open');
+   const tabs=[['open','Openstaand',scoped.filter(x=>alertGroup(x)==='open').length],['linked','Gekoppeld aan case',scoped.filter(x=>alertGroup(x)==='linked').length],['closed','Afgehandeld',scoped.filter(x=>alertGroup(x)==='closed').length],['all','Alle alerts',scoped.length]] as const;
    return <div className="wire-screen">
-     <PageHeader title="Alerts" sub={this.isAdmin?'Bekijk alle beveiligingsmeldingen van de geselecteerde klant.':'Beoordeel binnengekomen beveiligingsmeldingen.'}/>
-     <div className="wire-tools">
-       <Button onClick={()=>this.go('cases')}>Onderzoeken</Button>
-       <Button onClick={()=>this.setState({filter:'New'})}>Nieuwe meldingen</Button>
-       <Button onClick={()=>this.setState({filter:''})}>Alle meldingen</Button>
-       {this.isAnalyst&&<Button primary onClick={()=>this.setState({modal:'newAlert'})}>Alert toevoegen</Button>}
+     <PageHeader title="Alerts" sub="Nieuwe, lopende en afgehandelde beveiligingsmeldingen." action={this.isAnalyst&&<Button primary onClick={()=>this.setState({modal:'newAlert'})}>Alert toevoegen</Button>}/>
+     <div className="archive-tabs" role="group" aria-label="Alertstatus">
+       {tabs.map(([mode,label,count])=><button key={mode} aria-pressed={s.archiveFilter===mode} onClick={()=>this.setState({archiveFilter:mode,filter:'',listSort:'default'})}>{label} ({count})</button>)}
      </div>
-     {this.filters('alerts')}
-     <p className="wire-count">{list.length} meldingen · oudste eerst (FIFO)</p>
-     <AlertCards alerts={list} customerName={id=>this.name(id)} open={id=>this.go('alerts',id)} busy={this.state.busy}/>
+     <Panel title="Filters">{this.filters('alerts')}</Panel>
+     <p className="wire-count">{list.length} van {scoped.length} meldingen · {s.listSort==='priority'?'hoogste prioriteit eerst':s.listSort==='oldest'||s.listSort==='default'&&s.archiveFilter==='open'?'oudste eerst':'nieuwste eerst'}</p>
+     <AlertCards key={[s.org,s.archiveFilter,s.search,s.filter,s.priority,s.category,s.fromDate,s.toDate,s.mine,s.ownerFilter,s.slaFilter,s.sourceFilter,s.listSort].join('|')} alerts={list} customerName={id=>this.name(id)} open={id=>this.go('alerts',id)} busy={s.busy}/>
    </div>;
  }
  alertDetail(a:Alert){
@@ -189,18 +210,16 @@ class App extends React.Component<Record<string, never>,State> {
    const selected=s.cases.find(x=>x.id===s.selected);
    if(selected)return this.caseDetail(selected);
    const scoped=s.cases.filter(x=>!s.org||x.organizationId===s.org);
-   const closed=scoped.filter(isClosed);
-   const list=this.filtered(scoped).filter(x=>s.archiveFilter==='all'||(s.archiveFilter==='closed')===isClosed(x))
-     .sort((a,b)=>Date.parse(b.closedAt||b.createdAt)-Date.parse(a.closedAt||a.createdAt));
+   const list=sortRecords(this.filtered(scoped).filter(x=>s.archiveFilter==='all'||caseGroup(x)===s.archiveFilter),s.listSort,false);
+   const tabs=[['open','Lopend',scoped.filter(x=>caseGroup(x)==='open').length],['resolved','Opgelost – nog afsluiten',scoped.filter(x=>caseGroup(x)==='resolved').length],['closed','Archief',scoped.filter(x=>caseGroup(x)==='closed').length],['all','Alle tickets',scoped.length]] as const;
    return <div className="fragment">
-     <PageHeader title={this.canReadInternal?'Tickets / onderzoeken':'Mijn tickets'} sub={this.canReadInternal?'Bekijk lopende en afgesloten onderzoeken.':'Bekijk alle voor jou vrijgegeven onderzoeken, ook afgesloten tickets.'}/>
+     <PageHeader title={this.canReadInternal?'Tickets / onderzoeken':'Mijn tickets'} sub={this.canReadInternal?'Bekijk lopende, opgeloste en afgesloten onderzoeken.':'Bekijk alle voor jou vrijgegeven onderzoeken.'}/>
      <div className="archive-tabs" role="group" aria-label="Ticketstatus">
-       {([['all','Alle tickets',scoped.length],['open','Lopend',scoped.length-closed.length],['closed','Archief',closed.length]] as const).map(([mode,label,count])=><button key={mode} aria-pressed={s.archiveFilter===mode} onClick={()=>this.setState({archiveFilter:mode,filter:''})}>{label} ({count})</button>)}
+       {tabs.map(([mode,label,count])=><button key={mode} aria-pressed={s.archiveFilter===mode} onClick={()=>this.setState({archiveFilter:mode,filter:'',listSort:'default'})}>{label} ({count})</button>)}
      </div>
-     <Panel title={s.archiveFilter==='closed'?'Afgesloten tickets':'Tickets'} sub={list.length+' resultaten'}>
-       {s.orgs.length>1&&<div className="filters"><Field label="Klantorganisatie"><Select options={[{id:'',name:'Alle klanten'},...s.orgs]} value={s.org} onChange={e=>this.setState({org:e.target.value})}/></Field></div>}
-       {this.filters('cases')}
-       {!list.length&&<p className="bodypad">{s.archiveFilter==='closed'?'Geen afgesloten tickets gevonden binnen deze selectie.':'Geen tickets gevonden binnen deze selectie.'}{!this.canReadInternal?' Alleen vrijgegeven tickets zijn zichtbaar.':''}</p>}
+     <Panel title="Filters">{this.filters('cases')}</Panel>
+     <Panel title={s.archiveFilter==='closed'?'Afgesloten tickets':s.archiveFilter==='resolved'?'Opgeloste tickets':s.archiveFilter==='open'?'Lopende tickets':'Alle tickets'} sub={list.length+' van '+scoped.length+' tickets'}>
+       {!list.length&&<p className="bodypad">Geen tickets gevonden binnen deze selectie.{!this.canReadInternal?' Alleen vrijgegeven tickets zijn zichtbaar.':''}</p>}
        {this.canReadInternal?this.caseTable(list):<div className="bodypad"><CaseCards cases={list} customerName={id=>this.name(id)} open={id=>this.go('cases',id)}/></div>}
      </Panel>
    </div>;
@@ -211,7 +230,7 @@ class App extends React.Component<Record<string, never>,State> {
        <Button onClick={()=>this.setState({modal:'actionEntry',error:''})}>+ Actie</Button>
        <Button onClick={()=>this.setState({modal:'evidenceRef',error:''})}>+ Bewijsreferentie</Button>
      </div>}<div className="timeline">{!r.entries.length&&<p>Geen onderzoeksinformatie beschikbaar.</p>}{r.entries.slice().reverse().map(e=><div key={e.id}><span className="timeline-dot"/><strong>{e.kind} {this.canReadInternal&&<Badge value={e.visible?'Klantzichtbaar':'Intern'} kind={e.visible?'good':'neutral'}/>}</strong><p>{e.text}</p><small>{e.actor} · {fmt(e.at)}</small></div>)}</div></Panel></div></div>}
- customers(){return <div className="fragment"><PageHeader title="Klantenbeheer" sub="Beheer organisaties en hun actieve status." action={<Button primary onClick={()=>this.setState({modal:'customer'})}><Icon name="plus"/> Klant toevoegen</Button>}/><Panel title="Organisaties" sub={this.state.orgs.length+' geregistreerde organisaties'}><Table head={['Organisatie','Status','Reactie-SLA','Aangemaakt','Actie']}>{this.state.orgs.map(o=><tr key={o.id}><td><b>{o.name}</b></td><td><Badge value={o.isActive?'Actief':'Inactief'} kind={o.isActive?'good':'neutral'}/></td><td>{o.responseMinutes} min</td><td>{fmt(o.createdAt)}</td><td><div className="actions"><Button onClick={()=>{this.go('cases');this.setState({org:o.id});}}>Tickets ({this.state.ticketRegister.filter(t=>t.organizationId===o.id).length})</Button><Button onClick={()=>this.setState({modal:'customerEdit',selected:o.id})}>Bewerken</Button><Button onClick={()=>{if(window.confirm(o.isActive?'Klant deactiveren? Historische gegevens blijven behouden.':'Klant activeren?'))this.run(`organizations/${o.id}/${o.isActive?'deactivate':'activate'}`,{},'Klantstatus bijgewerkt.')}}>{o.isActive?'Deactiveren':'Activeren'}</Button></div></td></tr>)}</Table></Panel></div>}
+ customers(){return <div className="fragment"><PageHeader title="Klantenbeheer" sub="Beheer organisaties en hun actieve status." action={<Button primary onClick={()=>this.setState({modal:'customer'})}><Icon name="plus"/> Klant toevoegen</Button>}/><Panel title="Organisaties" sub={this.state.orgs.length+' geregistreerde organisaties'}><Table head={['Organisatie','Status','Reactie-SLA','Aangemaakt','Actie']}>{this.state.orgs.map(o=><tr key={o.id}><td><b>{o.name}</b></td><td><Badge value={o.isActive?'Actief':'Inactief'} kind={o.isActive?'good':'neutral'}/></td><td>{o.responseMinutes} min</td><td>{fmt(o.createdAt)}</td><td><div className="actions"><Button onClick={()=>{this.go('cases');this.setState({org:o.id,archiveFilter:'all'});}}>Tickets ({this.state.ticketRegister.filter(t=>t.organizationId===o.id).length})</Button><Button onClick={()=>this.setState({modal:'customerEdit',selected:o.id})}>Bewerken</Button><Button onClick={()=>{if(window.confirm(o.isActive?'Klant deactiveren? Historische gegevens blijven behouden.':'Klant activeren?'))this.run(`organizations/${o.id}/${o.isActive?'deactivate':'activate'}`,{},'Klantstatus bijgewerkt.')}}>{o.isActive?'Deactiveren':'Activeren'}</Button></div></td></tr>)}</Table></Panel></div>}
  users(){return <div className="fragment"><PageHeader title="Gebruikers & rollen" sub="Beheer accounts en klanttoegang." action={<Button primary onClick={()=>this.setState({modal:'user',selected:null})}><Icon name="plus"/> Gebruiker toevoegen</Button>}/><Panel title="Gebruikers"><Table head={['Naam','E-mail','Rol','Klanttoegang','Status','2FA','']}>{this.state.users.map(u=><tr key={u.id}><td><b>{u.name}</b></td><td>{u.email}</td><td>{u.role}</td><td>{u.organizationIds.map(x=>this.name(x)).join(', ')||'—'}</td><td><Badge value={u.isActive?'Actief':'Inactief'} kind={u.isActive?'good':'neutral'}/></td><td><Badge value={u.twoFactorEnabled?'Actief':'Niet actief'} kind={u.twoFactorEnabled?'good':'neutral'}/></td><td>{u.id!==this.state.user.id?<Button onClick={()=>this.setState({modal:'userAccess',selected:u.id})}>Bewerken</Button>:<small>Eigen account</small>}</td></tr>)}</Table></Panel></div>}
  keys(){return <div className="fragment"><PageHeader title="API-sleutels" sub="Beheer sleutels waarmee externe tools alerts kunnen aanleveren." action={<Button primary onClick={()=>this.setState({modal:'key'})}><Icon name="plus"/> Sleutel maken</Button>}/>{this.state.secret&&<Panel title="Nieuwe sleutel — eenmalig zichtbaar"><div className="bodypad"><code className="secret">{this.state.secret}</code><p>Gebruik deze sleutel in de HTTP-header X-API-Key bij POST /api/v1/ingest/alerts.</p><Button onClick={()=>this.setState({secret:null})}>Verbergen</Button></div></Panel>}<Panel title="Integraties"><Table head={['Tool','Klant','Sleutel','Status','']} empty={!this.state.keys.length}>{this.state.keys.map(k=><tr key={k.id}><td>{k.name}</td><td>{this.name(k.organizationId)}</td><td><code>{k.prefix}…</code></td><td><Badge value={k.isActive?'Actief':'Ingetrokken'} kind={k.isActive?'good':'neutral'}/></td><td>{k.isActive&&<Button onClick={()=>{if(confirm('Sleutel definitief intrekken?'))this.run(`keys/${k.id}/revoke`,{},'Sleutel ingetrokken.')}}>Intrekken</Button>}</td></tr>)}</Table></Panel></div>}
  audit(){const q=this.state.search.toLowerCase(),list=this.state.audit.filter(a=>[a.actor,a.action,a.target,this.name(a.organizationId)].some(x=>String(x||'').toLowerCase().includes(q)));return <div className="fragment"><PageHeader title="Auditlog" sub="Controleer geregistreerde acties in het SOC-platform."/><Panel title="Activiteit" sub={list.length+' gebeurtenissen'}><div className="filters"><input aria-label="Auditlog zoeken" placeholder="Zoek gebruiker, actie of klant" value={this.state.search} onChange={e=>this.setState({search:e.target.value})}/></div><Table head={['Tijd','Gebruiker','Actie','Klant','Object']} empty={!list.length}>{list.map(a=><tr key={a.id}><td>{fmt(a.createdAt)}</td><td>{a.actor}</td><td>{a.action}</td><td>{a.organizationId?this.name(a.organizationId):'—'}</td><td>{a.target||'—'}</td></tr>)}</Table></Panel></div>}

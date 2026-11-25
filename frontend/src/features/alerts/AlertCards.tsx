@@ -56,10 +56,10 @@ export function CaseCards({cases,customerName,open}:{cases:ResearchCase[];custom
   return <>
     {!cases.length&&<p className="empty">Geen onderzoeken gevonden.</p>}
     <div className="wire-card-grid">
-      {cases.map(research=><article key={research.id} className={'wire-alert-card '+(research.status==='Resolved'?'severity-high':'severity-low')}>
+      {cases.map(research=><article key={research.id} className={'wire-alert-card '+priorityColor(research.priority)}>
         <div className="wire-card-meta"><span>{customerName(research.organizationId)}</span><Badge value={research.status}/></div>
         <button className="wire-card-main" onClick={()=>open(research.id)}><strong>{research.number}</strong><span>{research.title}</span></button>
-        <div className="wire-card-meta"><span>Voortgang bekijken</span><Button onClick={()=>open(research.id)}>···</Button></div>
+        <div className="wire-card-meta"><span>{research.status==='Closed'?'Afgesloten '+fmt(research.closedAt):research.status==='Resolved'?'Opgelost · wacht op afsluiting':'Voortgang bekijken'}</span><Button onClick={()=>open(research.id)}>···</Button></div>
       </article>)}
     </div>
   </>;
