@@ -127,7 +127,8 @@ De volgende accounts blijven beschikbaar voor de smoketest en generieke presenta
 
 | Functionaliteit | Analist | Senior | Beheerder | Klant | Accountmanager |
 | --- | --- | --- | --- | --- | --- |
-| SOC-dashboard en alerts | Ja | Ja | Nee | Nee | Nee |
+| SOC-dashboard en interne alerts | Ja | Ja | Nee | Nee | Nee |
+| Beheerdashboard (auditmetadata) | Nee | Nee | Ja | Nee | Nee |
 | Alert oppakken, triage en escalatie | Ja | Ja | Nee | Nee | Nee |
 | Afgewezen/opgeloste alert zonder case heropenen | Nee | Ja | Nee | Nee | Nee |
 | Onderzoeken beheren | Ja | Ja | Nee | Nee | Nee |
@@ -154,6 +155,8 @@ Een beheerder kan klanten aanmaken, hun naam wijzigen, deactiveren en heractiver
 ## 3. Functionele werking
 
 ### Dashboard
+
+Beheerders starten op een eigen dashboard met actieve klanten, gebruikers, bronnen, aantallen geregistreerde alertontvangsten per klant en recente ontvangsten uit het bestaande auditlog. Het gaat niet om actuele aantallen openstaande alerts; die worden alleen binnen bevoegde analistenscopes getoond. Er wordt geen ruwe payload of interne case-inhoud aan de beheerder beschikbaar gesteld. Voor de analistenweergave log je in als analist of senior analist.
 
 Het dashboard toont open alerts, actieve cases, SLA-risico's, overschrijdingen, prioriteitsverdeling, SLA-prestaties, FIFO-wachtrij en actieve onderzoeken. De klantfilter beperkt de getoonde resultaten. De actieve analistenoverzichten vernieuwen automatisch elke 15 seconden. Details, formulieren en verborgen tabbladen worden niet automatisch vernieuwd. Het dashboard toont ook dreigingscategorieën, betrokken systemen en recent ontvangen meldingen; dit is polling, geen realtime push.
 
@@ -553,3 +556,7 @@ De workflow gebruikt de bestaande rollen, niet de nog te bevestigen afzonderlijk
 | Validatie en afsluiting | Eerst status Opgelost, dan beoordeling/afsluiting met samenvatting en conclusie |
 
 Open cases gaan via de toewijzing naar In onderzoek. Vanuit In onderzoek kan de case wachten op de klant of opgelost worden. Vanuit Opgelost volgt beoordeling, terug naar onderzoek of definitieve afsluiting. Een senior kan een gesloten case met reden heropenen. Andere analisten kunnen alleen lezen binnen hun scope; mutaties zijn voor de eigenaar of senior. De aparte Ticket Intake Officer-, Security Coordinator- en System Owner-rollen, afzonderlijke onafhankelijke eindvalidatie en case-SLA's zijn nog niet geïmplementeerd. De bestaande basisrollen en FO blijven voorlopig behouden. Deze uitbreiding moet nog op een echte draaiende SQL Server en in de browser worden getest.
+
+### Wireframes en huisstijl
+
+De oorspronkelijke kaartweergave uit FO v1.1 (figuren 1–4) is hersteld: drie kaarten naast elkaar, maximaal twaalf alerts per pagina, zoek- en filterbalk, driepuntjesmenu, apart triagepaneel, casebanner, observables en tijdlijn, en kaarten voor klantonderzoeken. De basis-index.css is overgenomen van de aangeleverde groepscode. De precieze ernstkleuren zijn in het FO nog niet definitief vastgelegd; deze versie gebruikt grijs voor laag/gemiddeld, oranje voor hoog, rood voor urgent en magenta voor kritiek, steeds met tekstlabels. Het latere FO v2.0 bevat ook een tabelvariant; de oorspronkelijke v1.1-kaarten zijn hier gekozen omdat die als visuele basis zijn aangewezen. De beheerder heeft geen automatische analisttoegang (TO 6.2/8.2). Browser- en buildcontrole van deze nieuwe UI zijn nog nodig.
