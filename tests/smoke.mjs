@@ -90,4 +90,4 @@ assert.equal((await analyst.request(`cases/${id}`,{method:'PATCH',body:{status:'
 const closed=await analyst.ok(`cases/${id}`,{method:'PATCH',body:{status:'Closed',summary:'Onderzoek en acties afgerond.',conclusion:'Demotest afgerond.'}});assert.equal(closed.status,'Closed');assert.equal((await analyst.ok(`alerts/${alert.id}`)).status,'Resolved');
 await admin.post(`keys/${key.id}/revoke`);assert.equal((await tool.request('ingest/alerts',{method:'POST',headers:{'X-API-Key':key.secret},body:payload})).status,401);
 assert((await admin.ok('audit')).some(a=>a.action==='Alert promote'&&a.target===alert.number));
-console.log('PASS: login, rollen, accountbewerking, ingest, CSRF, triage, case, afscherming, afsluiten, audit en intrekking sleutel.');
+console.log('PASS: login, rollen, accountbewerking, ingest, securitymapping, CSRF, triage, toewijzing, workflow, afscherming, afsluiten, audit en intrekking sleutel.');

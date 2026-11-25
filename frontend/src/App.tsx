@@ -15,13 +15,14 @@ class App extends React.Component<Record<string, never>,State> {
  constructor(p){super(p);this.state={user:null,loading:true,page:'dashboard',orgs:[],alerts:[],cases:[],users:[],keys:[],audit:[],analysts:[],org:'',search:'',filter:'',priority:'',category:'',fromDate:'',toDate:'',mine:false,selected:null,modal:null,error:'',notice:'',busy:false,secret:null,setup:null};}
  private refreshTimer?:number;
  private refreshing=false;
+ private refreshVersion=0;
  componentDidMount(){
    void this.restoreSession();
    this.refreshTimer=window.setInterval(()=>{
      const s=this.state;
      if(!document.hidden&&this.isAnalyst&&!s.loading&&!s.busy&&!s.modal&&!s.selected&&
         ['dashboard','alerts','cases'].includes(s.page)&&!this.refreshing){
-       void this.refresh();
+       void this.refresh(s.user,true);
      }
    },15000);
  }
@@ -44,19 +45,21 @@ class App extends React.Component<Record<string, never>,State> {
  get isAnalyst(){return this.state.user&&['Analist','Senior analist'].includes(this.state.user.role)}
  get isAdmin(){return this.state.user&&this.state.user.role==='Beheerder'}
  async enter(user:User){this.setState({user,loading:false,page:user.requiresTwoFactorSetup?'account':user.role==='Beheerder'?'customers':user.role==='Klant'||user.role==='Accountmanager'?'cases':'dashboard',org:'',selected:null,error:'',notice:'',secret:null,setup:null});if(!user.requiresTwoFactorSetup)await this.refresh(user)}
- async refresh(u=this.state.user){
-   if(!u||u.requiresTwoFactorSetup||this.refreshing)return;
+ async refresh(u=this.state.user,automatic=false){
+   if(!u||u.requiresTwoFactorSetup||(automatic&&this.refreshing))return;
+   const version=++this.refreshVersion;
    this.refreshing=true;
    const analyst=['Analist','Senior analist'].includes(u.role),admin=u.role==='Beheerder';
    try{
      const paths=['organizations',...(analyst?['alerts','cases','analysts']:admin?['users','keys','audit']:['portal/cases'])];
      const data=await Promise.all(paths.map(x=>api(x)));
-     if(sessionStorage.getItem(sessionKey)!==u.id)return;
+     if(version!==this.refreshVersion||sessionStorage.getItem(sessionKey)!==u.id)return;
+     if(automatic&&(this.state.selected||this.state.modal||this.state.busy))return;
      const state:Partial<State>={};
      paths.forEach((p,i)=>state[p==='organizations'?'orgs':p==='portal/cases'?'cases':p]=data[i]);
      this.setState(state as Pick<State,keyof State>);
-   }catch(e){if(sessionStorage.getItem(sessionKey)===u.id)this.fail(e)}
-   finally{this.refreshing=false;}
+   }catch(e){if(version===this.refreshVersion&&sessionStorage.getItem(sessionKey)===u.id)this.fail(e)}
+   finally{if(version===this.refreshVersion)this.refreshing=false;}
  }
  fail(e){if(e.status===401&&this.state.user){sessionStorage.removeItem(sessionKey);this.setState({user:null,alerts:[],cases:[],users:[],keys:[],audit:[],orgs:[],analysts:[],secret:null,setup:null,error:e.message});return;}this.setState({error:e.message,notice:''})}
  async run(path:string,data:Record<string,unknown>,message:string,after?:(result:any)=>void){if(this.state.busy)return;this.setState({busy:true,error:'',notice:''});try{const item=this.state.alerts.find(x=>x.id===this.state.selected)||this.state.cases.find(x=>x.id===this.state.selected);const payload=item&&/^(alerts|cases)\//.test(path)?{...data,rowVersion:item.rowVersion}:data;const r=await api(path,payload,item?{workspaceId:item.organizationId,scopeId:item.scopeId}:undefined);await this.refresh();this.setState({notice:message,modal:null});if(after)after(r);}catch(e){this.fail(e)}finally{this.setState({busy:false})}}
@@ -71,7 +74,7 @@ class App extends React.Component<Record<string, never>,State> {
      if(fromDate&&date<new Date(fromDate+'T00:00:00'))return false;
      if(toDate&&date>new Date(toDate+'T23:59:59.999'))return false;
      if(mine&&'ownerId' in x&&x.ownerId!==user?.id)return false;
-     if(category&&'security' in x&&(x.security?.category||'Niet geclassificeerd')!==category)return false;
+     if(category&&'source' in x&&(x.security?.category||'Niet geclassificeerd')!==category)return false;
      const values=[x.title,x.number,x.owner,this.name(x.organizationId)];
      if('source' in x)values.push(x.source,x.description,x.externalEventId,...Object.values(x.security||{}).map(String));
      if('entries' in x)values.push(...x.entries.filter(e=>e.kind==='Observable'||e.kind==='Observablebeoordeling').map(e=>e.text));
@@ -79,7 +82,7 @@ class App extends React.Component<Record<string, never>,State> {
    });
  }
  async login(e){const data=formData(e);this.setState({busy:true,error:''});try{const user:User=await api('auth/login',data);sessionStorage.setItem(sessionKey,user.id);await this.enter(user)}catch(err){this.fail(err)}finally{this.setState({busy:false})}}
- async logout(){try{await api('auth/logout',{})}finally{sessionStorage.removeItem(sessionKey);this.setState({user:null,alerts:[],cases:[],users:[],keys:[],audit:[],orgs:[],analysts:[],error:'',notice:'',secret:null,setup:null})}}
+ async logout(){this.refreshVersion++;this.refreshing=false;try{await api('auth/logout',{})}finally{sessionStorage.removeItem(sessionKey);this.setState({user:null,alerts:[],cases:[],users:[],keys:[],audit:[],orgs:[],analysts:[],error:'',notice:'',secret:null,setup:null})}}
  renderLogin(){return <LoginPage error={this.state.error} busy={this.state.busy} onSubmit={e=>this.login(e)}/>;}
  nav(){if(this.state.user?.requiresTwoFactorSetup)return [['account','Account']];return this.isAdmin?[['customers','Klanten'],['users','Gebruikers & rollen'],['keys','API-sleutels'],['audit','Auditlog'],['account','Account']]:this.isAnalyst?[['dashboard','Dashboard'],['alerts','Alerts'],['cases','Cases'],['account','Account']]:[['cases','Cases'],['account','Account']]}
  render(){const s=this.state;if(s.loading)return <LoadingState label="SOC3 laden…"/>;if(!s.user)return this.renderLogin();const pages={dashboard:()=>this.dashboard(),alerts:()=>this.alerts(),cases:()=>this.cases(),customers:()=>this.customers(),users:()=>this.users(),keys:()=>this.keys(),audit:()=>this.audit(),account:()=>this.account()};const customerOptions=[{id:'',name:'Alle klanten'},...s.orgs.map(o=>({id:o.id,name:o.name}))];const customer=s.orgs.find(o=>o.id===s.org)||(s.orgs.length===1?s.orgs[0]:{id:'',name:this.isAdmin?'Platformbeheer':'Alle klanten'});return <AppShell user={{displayName:s.user.name,role:s.user.role}} customer={customer} customerOptions={!this.isAdmin&&s.orgs.length>1?customerOptions:[]} onCustomerChange={id=>this.setState({org:id,selected:null})} navigationItems={this.nav().map(([id,label])=>({label,href:id==='dashboard'?'/':'/'+id}))} currentPath={s.page==='dashboard'?'/':'/'+s.page} onNavigate={href=>this.go(href==='/'?'dashboard':href.slice(1))} actions={<><Button onClick={()=>this.refresh()}><Icon name="refresh" size={16}/> Vernieuwen</Button><Button onClick={()=>this.logout()}><Icon name="logout" size={16}/> Uitloggen</Button></>}>

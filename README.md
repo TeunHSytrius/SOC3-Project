@@ -426,7 +426,7 @@ Voor de variant zonder Docker: `SOC_URL=http://localhost:8080 bash scripts/check
 
 De test wacht op de healthcheck en controleert authenticatie, rollen, tenantgrenzen, accountbewerking, wachtwoordreset, deactivering/heractivering, klantnaamwijziging, ingest, CSRF, triage, casepromotie, zichtbaarheid, afsluiten, audit en sleutelintrekking. De test schrijft fictieve records. Gebruik oorspronkelijke demoaccounts met de initiële wachtwoorden en zonder geactiveerde 2FA.
 
-De eerdere Docker-build en healthcheck zijn op een MacBook geslaagd. De nieuwe account- en klantbewerking en volledige smoketest zijn nog niet daadwerkelijk uitgevoerd. Een aanwezige test is geen bewijs dat deze slaagt.
+De Docker-build, database-upgrade en volledige smoketest voor commit e470595 zijn door een groepslid op een MacBook succesvol uitgevoerd. Sindsdien zijn sessiegedrag, simulator, securitymapping en workflow gewijzigd; de uitgebreide smoketest en browsercontroles moeten opnieuw worden uitgevoerd. Een aanwezige test is geen bewijs dat deze slaagt.
 
 ## 10. Opdrachtgever en eisenmatrix
 
@@ -439,12 +439,12 @@ De opdrachtgever beschrijft vijf stappen:
 | Stap | Gewenste procesrol | Huidige MVP / verschil |
 | --- | --- | --- |
 | 1. Ontvangst en registratie | Ticket Intake Officer | API-ingest en handmatige invoer; geen aparte intake-rol |
-| 2. Analyse en classificatie | Security Analyst | Analist kan triageren; geen formele procesfase |
-| 3. Prioritering en toewijzing | Security Coordinator | Prioriteit bij ontvangst, eigenaarschap/overdracht; geen coördinatorrol |
-| 4. Beoordeling en uitvoering | System Owner | Analist legt acties vast; geen afzonderlijke owner-rol of goedkeuringsstap |
-| 5. Validatie en afsluiting | Security Analyst | Analist sluit case met conclusie; onafhankelijke validatie niet afgedwongen |
+| 2. Analyse en classificatie | Security Analyst | Analist claimt en triageert vóór casevorming |
+| 3. Prioritering en toewijzing | Security Coordinator | Senior prioriteert en wijst open case toe; geen aparte coördinatorrol |
+| 4. Beoordeling en uitvoering | System Owner | Toegewezen analist legt acties vast; geen afzonderlijke System Owner-rol |
+| 5. Validatie en afsluiting | Security Analyst | Eerst opgelost, daarna afsluiten met samenvatting en conclusie; onafhankelijke validatie niet afgedwongen |
 
-De huidige FIFO-wachtrij en zelf oppakken zijn een tijdelijke MVP-keuze en wijken af van het gewenste toewijzingsproces. De opdrachtgever geeft aan dat samenwerken beperkt is tot overdracht/escalatie; huidige toegang is scope-gebaseerd en niet beperkt tot één toegewezen onderzoeker. Rollen, toestandsmachine, autorisatie en datamodel moeten daarom gezamenlijk met het FO/TO worden herzien. Er is geen afzonderlijke Ticket-entiteit; ResearchCase vervult in de MVP de onderzoekstaak.
+De FIFO-wachtrij en zelf oppakken blijven voor alertanalyse behouden; nieuwe cases vereisen senior-toewijzing voordat uitvoering kan starten. Casewijzigingen zijn voor de eigenaar of senior (klantreacties uitgezonderd). Leestoegang blijft scope-gebaseerd. De afzonderlijke opdrachtgeverrollen en exacte taakverdeling moeten nog met FO/TO worden afgestemd. ResearchCase vervult in de MVP de onderzoekstaak.
 
 ### Aanvullende eisen
 
@@ -496,8 +496,8 @@ Status: **Aanwezig** = functionaliteit in de broncode; **Deels** = onvolledig; *
 2. Log in als beheerder, maak een tijdelijk account aan, bewerk dit en deactiveer het. Toon klantbeheer en API-sleutels.
 3. Stuur een fictieve alert via de ingest-API. Vernieuw het dashboard als analist.
 4. Pak de alert op, triageer als bevestigd incident met motivatie en maak een case.
-5. Voeg interne en klantzichtbare informatie toe. Geef de case vrij.
-6. Log in als klant en toon de afgeschermde informatie. Sluit daarna als analist de case met conclusie.
+5. Log in als senior analist, prioriteer de case en wijs deze toe aan de gewenste analist. Log als die analist in, voeg interne en klantzichtbare informatie toe en geef de case vrij.
+6. Log in als klant en toon de afgeschermde informatie. Zet de case daarna als toegewezen analist eerst op Opgelost en sluit af met samenvatting en conclusie.
 7. Toon de auditlog als beheerder en trek de tijdelijke sleutel in.
 
 Gebruik bij voorkeur niet de oorspronkelijke demoaccounts voor de accountbewerkingsdemo, zodat de smoketest bruikbaar blijft.
@@ -505,7 +505,7 @@ Gebruik bij voorkeur niet de oorspronkelijke demoaccounts voor de accountbewerki
 ### Prioriteiten voor vervolgontwikkeling
 
 1. Stem procesrollen, statussen, eigenaarschap en toegang af met het FO/TO en de opdrachtgever.
-2. Implementeer expliciete overdracht met motivatie, ontvanger en historie; voeg case-SLA toe.
+2. Werk de formele roltoewijzing, onafhankelijke validatie en case-SLA verder uit.
 3. Voeg server-side zoeken/paginering en PDF/CSV-export toe.
 4. Voeg echte bronadapters en volledige OCSF-validatie toe; de simulator en OCSF-basismapping zijn aanwezig.
 5. Werk beveiliging, audit, retentie, TLS en databaseprovisioning uit; voer isolatie-, OWASP-, performance- en loadtests uit.
@@ -531,7 +531,7 @@ De reactietermijn staat in platform.Tenants.ResponseMinutes en is via Klantenbeh
 | FO FR-14/15, NFR-07; TO 9.1 | CreatedAt, FirstHandledAt, Deadline, ResponseMinutes | SLA-grenstesten; case-SLA aanvullend vereist |
 | FO FR-16–18/20, NFR-01–03; TO 6.2/8.1 | TenantDbFactory, modelcache, scope-controles, samengestelde case-FK's | Afzonderlijke platformrollen, per-scope rollen, SQL-principals en volledige negatieve tests |
 | FO FR-19, NFR-04–06/10; TO 8.3/8.4 | Identity, TOTP, CSRF, audit en API-key hashing | TLS-productie, auditintegriteit, complete auditdekking en 2FA-test |
-| FO NFR-11; TO 4.3 | Origineel JSON en bronmetadata | OCSF-mapping (Should) |
+| FO NFR-11; TO 4.3 | Origineel JSON, bronmetadata en beperkte OCSF-basismapping | Volledige bronadapters en schema-validatie (Should) |
 | TO 7.3/10/11 | Trace-ID bij domeinfouten, demo schema-upgrade, smoketest | Serverpaginering, productie-migraties, backups, unit/load/securitytests |
 
 De SQL-demo-upgrade voegt velden en constraints toe in een transactie. Bestaande childrecords krijgen de scope van hun case; een ongeldige alert-case-koppeling laat de upgrade falen in plaats van gegevens te verplaatsen. De wijziging is nog niet getest met SQL Server. Gebruik niet `docker compose down -v` om een fout te maskeren.
