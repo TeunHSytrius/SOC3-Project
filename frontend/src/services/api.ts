@@ -2,6 +2,7 @@ import {getAuthErrorMessage} from '../features/auth/authErrors';
 export class ApiError extends Error { constructor(message:string,public status:number){super(message);} }
 export async function api<T=any>(path:string,body?:Record<string,unknown>,context?:{workspaceId:string;scopeId?:string}):Promise<T>{
   let method=body===undefined?'GET':'POST';
+  if(body!==undefined && /^(users|organizations)\/[^/]+$/.test(path)) method='PATCH';
   // Match the API routes specified in TO v1.3.
   path=path.replace(/^(alerts\/[^/]+)\/case$/,'$1/promote');
   if(/^cases\/[^/]+\/(status|owner|visibility)$/.test(path)){path=path.replace(/\/(status|owner|visibility)$/,'');method='PATCH';}
