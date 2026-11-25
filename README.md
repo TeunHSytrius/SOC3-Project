@@ -87,10 +87,10 @@ Tijdens ontwikkeling kun je in een tweede terminal `cd frontend && npm run dev` 
 ## 6. Tests
 
 ```bash
-nodetests/smoke.mjs
+node tests/smoke.mjs
 ```
 
-Het script maakt enkele fictieve records aan en controleert de complete API-keten, CSRF, tenantgrenzen, klantzichtbaarheid, audit en API-key-intrekking. Het vereist een actieve verse demo met ongewijzigde demo-inloggegevens en Node 22+. Het script is **niet tegen een draaiende .NET/SQL Server-runtime uitgevoerd in de maakomgeving**. Zie `docs/VERANTWOORDING.md` voor de controlegrenzen. Als de tests falen: gebruik `docker compose logs app sqlserver` en los dit op voordat je zegt dat de demo werkt.
+Het script maakt enkele fictieve records aan en controleert de complete API-keten, CSRF, tenantgrenzen, klantzichtbaarheid, audit en API-key-intrekking. Het vereist een actieve verse demo met ongewijzigde demo-inloggegevens en Node 22+. Het script is **niet tegen een draaiende .NET/SQL Server-runtime uitgevoerd in de maakomgeving**. Als de tests falen: gebruik `docker compose logs app sqlserver` en los dit op voordat je zegt dat de demo werkt.
 
 ## 7. Structuur
 
@@ -107,16 +107,13 @@ frontend/
 compose.yaml         SQL Server + applicatie
 Dockerfile           Frontend-build + ASP.NET publicatie
 tests/              Lokale smoketest
-docs/               Afbakening en branchverantwoording
 ```
 
-De lokale code is een integratie-uitwerking van gelezen branchcontracten en TO, geen letterlijke merge of kopie van de branches. Zie de verantwoording voor wat wel en niet is meegenomen.
+De lokale code is een integratie-uitwerking van gelezen branchcontracten en TO, geen letterlijke merge of kopie van de branches.
 
-## 8. Presentatie en veilige branchintegratie
+## 8. Verder ontwikkelen
 
-- `docs/PRESENTATIE.md`: agenda van 20 minuten volgens de aankondiging, demo van drie minuten, traceability en voorbereiding.
-- `docs/INTEGRATIE.md`: alle zes actuele branches, de open PR en voorgestelde ontwikkelvolgorde.
-- `bash scripts/compare-branches.sh`: haalt de originele branchsnapshots en patches read-only op in een **nieuwe** lokale map. Geen merges of pushes. Internet vereist.
-- `bash scripts/check-demo.sh`: wacht op de health-endpoint en draait de bestaande end-to-end smoketest.
-
-Deze vervolgversie bevat ook de oorspronkelijke database-enums, het organisatie-DTO-contract en de auth-foutteksten. PageHeader/PageStates zijn aangepast overgenomen en gebruikt; gedeelde UI en het loginformulier staan los van App.tsx. De gehele codebasis is nog geen letterlijke branchmerge. Zie de integratienotities en runtimebeperkingen vóór een eventuele PR.
+- `bash scripts/compare-branches.sh`: haalt de originele branchsnapshots en patches read-only op in een nieuwe lokale map. Geen merges of pushes.
+- `bash scripts/check-demo.sh`: wacht op de health-endpoint en draait de smoketest.
+- De oorspronkelijke database-enums, het organisatie-DTO-contract, auth-foutteksten en aangepaste gedeelde UI-componenten zijn meegenomen. De broncode is geen letterlijke branchmerge.
+- Valideer de .NET-build, SQL Server-integratie en tenantisolatie voordat je deze demonstratie als afgerond increment beschouwt.
