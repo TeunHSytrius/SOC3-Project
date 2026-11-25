@@ -351,7 +351,7 @@ De backend bewaakt de toegestane statusovergangen. De afzonderlijke procesrollen
 
 ### Schermen en gegevens
 
-- **Dashboard:** hetzelfde voor analist en beheerder, met extra beheerknoppen voor beheerder. Alertvolume per prioriteit over 24 uur of zeven kalenderdagen; verticale FIFO-wachtrij en recente openstaande meldingen. Polling elke 15 seconden op actieve overzichten.
+- **Dashboard:** hetzelfde voor analist en beheerder, met extra beheerknoppen voor beheerder. Alertvolume per prioriteit over 24 uur of zeven kalenderdagen; FIFO-wachtrij en recente openstaande meldingen naast elkaar op brede schermen, onder elkaar op kleinere schermen. Polling elke 15 seconden op actieve overzichten.
 - **Alerts:** Openstaand, Gekoppeld aan case, Afgehandeld, Alle alerts. Zoek en filter op klant, status, prioriteit, eigenaar, datum, SLA, categorie en securitytool.
 - **Tickets:** Lopend, Opgelost – nog afsluiten, Archief, Alle tickets. Zoek ook op notities en observables. Afgesloten tickets blijven bewaard.
 - **Onderzoeksdossier:** meerdere alerts per case; eigen notities, observables, acties, bewijsreferenties en tijdlijn. Klantzichtbaarheid wordt server-side gefilterd.
