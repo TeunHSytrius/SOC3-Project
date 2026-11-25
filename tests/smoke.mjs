@@ -4,6 +4,12 @@ class Client {
   cookies=new Map();
   async request(path,{method='GET',body,headers={},csrf=true}={}) {
     if(csrf && ['POST','PATCH'].includes(method) && !path.startsWith('ingest/')) {const t=await this.request('auth/csrf');headers={...headers,'X-CSRF-TOKEN':t.data.token};}
+    // Use the last fetched version in explicit concurrency tests; otherwise fetch the current version.
+    const match=path.match(/^(alerts|cases)\/([^/]+)/);
+    if(csrf&&['POST','PATCH'].includes(method)&&match&&body&&!body.rowVersion){
+      const current=await this.request(match[1]+'/'+match[2]);
+      if(current.status===200)body={...body,rowVersion:current.data.rowVersion};
+    }
     const response=await fetch(`${base}/api/v1/${path}`,{method,headers:{...headers,...(body===undefined?{}:{'Content-Type':'application/json'}),Cookie:[...this.cookies].map(([k,v])=>`${k}=${v}`).join('; ')},body:body===undefined?undefined:JSON.stringify(body)});
     for(const cookie of response.headers.getSetCookie()){const [pair]=cookie.split(';');const eq=pair.indexOf('=');const key=pair.slice(0,eq);if(/max-age=0/i.test(cookie)||!pair.slice(eq+1))this.cookies.delete(key);else this.cookies.set(key,pair.slice(eq+1));}
     const data=await response.json().catch(()=>null);return {status:response.status,data};
@@ -49,9 +55,17 @@ assert.equal(renamed.id,temporaryOrg.id);assert.equal(renamed.name,'Hernoemde kl
 await admin.post(`organizations/${temporaryOrg.id}/deactivate`);
 assert.equal((await admin.ok(`organizations/${temporaryOrg.id}`)).isActive,false);
 const key=await admin.post('keys',{name:'Smoke test '+Date.now(),organizationId:north.id});assert(key.secret);assert(!(await admin.ok('keys')).some(k=>k.secret||k.hash));
-const tool=new Client();const alert=await tool.ok('ingest/alerts',{method:'POST',headers:{'X-API-Key':key.secret},body:{title:'MVP smoke test',description:'Fictieve melding voor de lokale test.',priority:'High',organizationId:delta.id}});assert.equal(alert.organizationId,north.id,'Bron bepaalt tenant, niet requestbody');
+const tool=new Client();
+const payload={externalEventId:'smoke-'+Date.now(),title:'MVP smoke test',occurredAt:new Date().toISOString(),severity:'High',payload:{description:'Fictieve melding voor de lokale test.'}};
+const ingestOpts={method:'POST',headers:{'X-API-Key':key.secret},body:payload};
+assert.equal((await tool.request('ingest/alerts',{...ingestOpts,body:{...payload,organizationId:delta.id}})).status,400);
+const first=await tool.request('ingest/alerts',ingestOpts);assert.equal(first.status,201);const alert=first.data;
+assert.equal(alert.organizationId,north.id);assert.equal(alert.rawPayload,JSON.stringify(payload));
+const replay=await tool.request('ingest/alerts',ingestOpts);assert.equal(replay.status,200);assert.equal(replay.data.id,alert.id);
+assert.equal((await tool.request('ingest/alerts',{...ingestOpts,body:{...payload,title:'Gewijzigd'}})).status,409);
 assert.equal((await analyst.request(`alerts/${alert.id}/claim`,{method:'POST',body:{},csrf:false})).status,400,'CSRF vereist');
 const claimed=await analyst.post(`alerts/${alert.id}/claim`);assert(claimed.firstHandledAt);assert.equal(claimed.status,'UnderReview');
+assert.equal((await analyst.request(`alerts/${alert.id}/triage`,{method:'POST',body:{rowVersion:alert.rowVersion,outcome:'Bevestigd incident',reason:'Verouderde versie'}})).status,409);
 assert.equal((await analyst.request(`alerts/${alert.id}/claim`,{method:'POST',body:{}})).status,409);
 await analyst.post(`alerts/${alert.id}/triage`,{outcome:'Bevestigd incident',reason:'Demotest'});
 const promoted=await analyst.post(`alerts/${alert.id}/promote`,{title:'Smoke test case'});assert(promoted.caseId);
@@ -65,6 +79,6 @@ const portal=await customer.ok(`portal/cases/${id}`);assert(portal.entries.some(
 assert.equal((await analyst.request(`alerts/${alert.id}`,{headers:{'X-Workspace-Id':delta.id}})).status,404);
 assert.equal((await analyst.request(`cases/${id}`,{method:'PATCH',body:{status:'Closed'}})).status,400);
 const closed=await analyst.ok(`cases/${id}`,{method:'PATCH',body:{status:'Closed',summary:'Onderzoek en acties afgerond.',conclusion:'Demotest afgerond.'}});assert.equal(closed.status,'Closed');assert.equal((await analyst.ok(`alerts/${alert.id}`)).status,'Resolved');
-await admin.post(`keys/${key.id}/revoke`);assert.equal((await tool.request('ingest/alerts',{method:'POST',headers:{'X-API-Key':key.secret},body:{title:'Ingetrokken sleutel',description:'Niet opslaan',priority:'Low'}})).status,401);
+await admin.post(`keys/${key.id}/revoke`);assert.equal((await tool.request('ingest/alerts',{method:'POST',headers:{'X-API-Key':key.secret},body:payload})).status,401);
 assert((await admin.ok('audit')).some(a=>a.action==='Alert promote'&&a.target===alert.number));
 console.log('PASS: login, rollen, accountbewerking, ingest, CSRF, triage, case, afscherming, afsluiten, audit en intrekking sleutel.');

@@ -185,11 +185,11 @@ read -rs 'SOC_KEY?API-sleutel: ' # zsh op macOS
 curl -X POST http://localhost:8081/api/v1/ingest/alerts \
   -H "X-API-Key: $SOC_KEY" \
   -H 'Content-Type: application/json' \
-  -d '{"title":"Testmelding","description":"Fictieve melding voor de demo","priority":"High"}'
+  -d '{"externalEventId":"demo-001","title":"Testmelding","occurredAt":"2026-11-25T12:00:00Z","severity":"High","payload":{"description":"Fictieve melding voor de demo"}}'
 unset SOC_KEY
 ```
 
-Verwacht HTTP 201. Vernieuw daarna het dashboard als analist. De API-key bepaalt server-side klant en scope; waarden uit de requestbody mogen dit niet overschrijven. Ongeldige of ingetrokken sleutels geven HTTP 401.
+Verwacht HTTP 201 bij een nieuw event-ID. Identieke herhaling geeft 200 met hetzelfde alert-ID; gewijzigde bytes onder hetzelfde event-ID geven 409. Gebruik een nieuw event-ID voor elke nieuwe melding. Klant-, scope- en andere niet-contractvelden worden geweigerd. Het oorspronkelijke JSON-bericht en de SHA-256-hash worden opgeslagen. De maximale berichtgrootte is 1 MiB. Vernieuw daarna het dashboard als analist. De API-key bepaalt server-side klant en scope; waarden uit de requestbody mogen dit niet overschrijven. Ongeldige of ingetrokken sleutels geven HTTP 401.
 
 ## 5. Technische architectuur
 
@@ -471,4 +471,6 @@ De originele branches zijn geraadpleegd; delen zijn aangepast of opnieuw geïmpl
 
 ### FO v1.1 en TO v1.3: aanvullende correcties
 
-De triage bevat vier uitkomsten, de claim is verplicht voor triage en FirstHandledAt wordt alleen bij oppakken gevuld. Een tweede claim wordt geweigerd. Een nieuwe case krijgt een eerste tijdlijnregel; herhaalde promotie geeft de bestaande koppeling terug. Cases kunnen wachten op een klant, worden pas definitief gesloten met samenvatting en conclusie en kunnen door een senior met reden worden heropend. De samenvatting, overdracht en observablebeoordeling worden in de interne tijdlijn bewaard; dit is nog niet het volledige afzonderlijke datamodel van het TO. Het TO vereist daarnaast bron-eventdeduplicatie, SQL rowversion, samengestelde scope-FK's, gescheiden platform-/scoperollen, paginering en gecontroleerde productie-updates. Deze punten zijn niet automatisch bewezen door de demo. Nieuwe wijzigingen zijn nog niet uitgevoerd tegen de runtime.
+De triage bevat vier uitkomsten, de claim is verplicht voor triage en FirstHandledAt wordt alleen bij oppakken gevuld. Een tweede claim wordt geweigerd. Een nieuwe case krijgt een eerste tijdlijnregel; herhaalde promotie geeft de bestaande koppeling terug. Cases kunnen wachten op een klant, worden pas definitief gesloten met samenvatting en conclusie en kunnen door een senior met reden worden heropend. Samenvatting en observablebeoordeling krijgen eigen velden; overdracht blijft een tijdlijnrecord. Bron-eventdeduplicatie met unieke index, oorspronkelijke JSON en SQL rowversion zijn toegevoegd. Een bestaande demodatabase krijgt bij opstart een additieve schema-update zonder verwijdering van data; productie-deployments vereisen apart beoordeelde scripts. Samengestelde scope-FK's, gescheiden platform-/scoperollen, paginering en gecontroleerde productie-updates blijven open. Nieuwe wijzigingen zijn niet runtime-getest. Nieuwe wijzigingen zijn nog niet uitgevoerd tegen de runtime.
+
+Voor alert- en casewijzigingen is de base64 rowVersion uit de meest recente response verplicht. De frontend stuurt deze mee. Verouderde versies geven HTTP 409. Bij opnieuw promoveren van een al gekoppelde alert blijft de bestaande case behouden. Historische handmatige alerts en oudere bronmeldingen krijgen geen verzonnen externe event-ID's.
