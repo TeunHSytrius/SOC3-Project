@@ -1,4 +1,6 @@
 import {getAuthErrorMessage} from '../features/auth/authErrors';
+// Only a user ID is stored in tab memory. The authentication secret stays in the HttpOnly cookie.
+export const sessionKey='soc3.activeUser';
 export class ApiError extends Error { constructor(message:string,public status:number){super(message);} }
 export async function api<T=any>(path:string,body?:Record<string,unknown>,context?:{workspaceId:string;scopeId?:string}):Promise<T>{
   let method=body===undefined?'GET':'POST';
@@ -8,6 +10,8 @@ export async function api<T=any>(path:string,body?:Record<string,unknown>,contex
   if(/^cases\/[^/]+\/(status|owner|visibility)$/.test(path)){path=path.replace(/\/(status|owner|visibility)$/,'');method='PATCH';}
   if(/^cases\/[^/]+\/entry$/.test(path))path=path.replace(/\/entry$/,body?.kind==='Observable'?'/observables':'/events');
   const headers:Record<string,string>={};
+  const activeUser=sessionStorage.getItem(sessionKey);
+  if(activeUser&&path!=='auth/login'&&path!=='auth/2fa')headers['X-SOC-User']=activeUser;
   if(body!==undefined){headers['Content-Type']='application/json';const csrf=await fetch('/api/v1/auth/csrf',{credentials:'same-origin',cache:'no-store'});if(!csrf.ok)throw new ApiError('Beveiligingstoken ophalen mislukt.',csrf.status);headers['X-CSRF-TOKEN']=(await csrf.json()).token;}
   if(context?.workspaceId)headers['X-Workspace-Id']=context.workspaceId;
   if(context?.scopeId)headers['X-Scope-Id']=context.scopeId;

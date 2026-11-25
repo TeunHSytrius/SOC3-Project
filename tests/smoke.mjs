@@ -26,6 +26,7 @@ for(const email of ['teun@soc.demo','dominique@soc.demo','sergio@soc.demo','hamz
 assert(!teamUsers.some(u=>u.email==='riza@soc.demo'&&u.isActive),'Voormalig groepsaccount mag niet actief zijn');
 const north=orgs.find(o=>o.name==='Northstar Finance');const delta=orgs.find(o=>o.name==='Delta Logistics');assert(north&&delta);
 const analyst=new Client();await analyst.login('analist');assert((await analyst.ok('alerts')).length>=8);
+assert.equal((await analyst.request('auth/me',{headers:{'X-SOC-User':'00000000-0000-0000-0000-000000000000'}})).status,401,'Wrong tab identity must not use the shared cookie');
 const customer=new Client();await customer.login('klant');assert.equal((await customer.request('alerts')).status,403);assert.equal((await customer.request('users')).status,403);assert.equal((await customer.request('organizations/'+delta.id)).status,403);
 
 // Account management: a separate test account preserves the seeded demo accounts.

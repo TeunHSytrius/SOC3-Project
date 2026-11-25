@@ -1,6 +1,6 @@
 import React from 'react';
 import {QRCodeSVG} from 'qrcode.react';
-import {api} from './services/api';
+import {api,sessionKey} from './services/api';
 import type {State, User, Alert, ResearchCase} from './types/soc';
 import {labels,priorities,roles,states,caseStates,active,isClosed,fmt,sla} from './types/domain';
 import {Icon,Badge,Button,Field,Select,Table,Panel,PageHeader} from './components/Ui';
@@ -11,18 +11,33 @@ import './features/FeatureStyles.css';
 function formData(e):Record<string,any>{e.preventDefault();return Object.fromEntries(new FormData(e.currentTarget));}
 class App extends React.Component<Record<string, never>,State> {
  constructor(p){super(p);this.state={user:null,loading:true,page:'dashboard',orgs:[],alerts:[],cases:[],users:[],keys:[],audit:[],analysts:[],org:'',search:'',filter:'',priority:'',selected:null,modal:null,error:'',notice:'',busy:false,secret:null,setup:null};}
- componentDidMount(){api('auth/me').then(u=>this.enter(u)).catch(()=>this.setState({loading:false}));}
+ componentDidMount(){void this.restoreSession();}
+ async restoreSession(){
+   const navigation=performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming|undefined;
+   const previous=sessionStorage.getItem(sessionKey);
+   try{
+     // Only refreshes of a tab with an explicit login restore the current session.
+     if(previous&&navigation?.type==='reload'){
+       const user:User=await api('auth/me');
+       if(user.id===previous){await this.enter(user);return;}
+     }
+     sessionStorage.removeItem(sessionKey);
+     // Identity cookies are shared across tabs; end the old cookie session.
+     try{await api('auth/logout',{});}catch(e){if(e.status!==401)throw e;}
+   }catch(e){sessionStorage.removeItem(sessionKey);if(e.status!==401)this.fail(e);}
+   finally{this.setState({loading:false});}
+ }
  get isAnalyst(){return this.state.user&&['Analist','Senior analist'].includes(this.state.user.role)}
  get isAdmin(){return this.state.user&&this.state.user.role==='Beheerder'}
  async enter(user:User){this.setState({user,loading:false,page:user.requiresTwoFactorSetup?'account':user.role==='Beheerder'?'customers':user.role==='Klant'||user.role==='Accountmanager'?'cases':'dashboard',org:'',selected:null,error:'',notice:'',secret:null,setup:null});if(!user.requiresTwoFactorSetup)await this.refresh(user)}
  async refresh(u=this.state.user){if(!u||u.requiresTwoFactorSetup)return;const analyst=['Analist','Senior analist'].includes(u.role),admin=u.role==='Beheerder';try{const paths=['organizations',...(analyst?['alerts','cases','analysts']:admin?['users','keys','audit']:['portal/cases'])];const data=await Promise.all(paths.map(x=>api(x)));const state:Partial<State>={};paths.forEach((p,i)=>state[p==='organizations'?'orgs':p==='portal/cases'?'cases':p]=data[i]);this.setState(state as Pick<State,keyof State>);}catch(e){this.fail(e)}}
- fail(e){if(e.status===401&&this.state.user){this.setState({user:null,error:e.message});return;}this.setState({error:e.message,notice:''})}
+ fail(e){if(e.status===401&&this.state.user){sessionStorage.removeItem(sessionKey);this.setState({user:null,alerts:[],cases:[],users:[],keys:[],audit:[],orgs:[],analysts:[],secret:null,setup:null,error:e.message});return;}this.setState({error:e.message,notice:''})}
  async run(path:string,data:Record<string,unknown>,message:string,after?:(result:any)=>void){if(this.state.busy)return;this.setState({busy:true,error:'',notice:''});try{const item=this.state.alerts.find(x=>x.id===this.state.selected)||this.state.cases.find(x=>x.id===this.state.selected);const payload=item&&/^(alerts|cases)\//.test(path)?{...data,rowVersion:item.rowVersion}:data;const r=await api(path,payload,item?{workspaceId:item.organizationId,scopeId:item.scopeId}:undefined);await this.refresh();this.setState({notice:message,modal:null});if(after)after(r);}catch(e){this.fail(e)}finally{this.setState({busy:false})}}
  go(page:string,selected:string|null=null){this.setState({page,selected,search:'',filter:'',priority:'',error:'',notice:'',modal:null,secret:null});}
  name(id){return this.state.orgs.find(o=>o.id===id)?.name||'Onbekende klant'}
  filtered<T extends Alert|ResearchCase>(items:T[]):T[]{const {org,search,filter,priority}=this.state;const q=search.toLowerCase();return items.filter(x=>(!org||x.organizationId===org)&&(!filter||x.status===filter)&&(!priority||x.priority===priority)&&(!q||[x.title,x.number,('source' in x?x.source:''),x.owner,this.name(x.organizationId)].some(v=>String(v||'').toLowerCase().includes(q))));}
- async login(e){const data=formData(e);this.setState({busy:true,error:''});try{await this.enter(await api('auth/login',data))}catch(err){this.fail(err)}finally{this.setState({busy:false})}}
- async logout(){try{await api('auth/logout',{})}finally{this.setState({user:null,alerts:[],cases:[],users:[],keys:[],audit:[],orgs:[],error:'',notice:'',secret:null,setup:null})}}
+ async login(e){const data=formData(e);this.setState({busy:true,error:''});try{const user:User=await api('auth/login',data);sessionStorage.setItem(sessionKey,user.id);await this.enter(user)}catch(err){this.fail(err)}finally{this.setState({busy:false})}}
+ async logout(){try{await api('auth/logout',{})}finally{sessionStorage.removeItem(sessionKey);this.setState({user:null,alerts:[],cases:[],users:[],keys:[],audit:[],orgs:[],analysts:[],error:'',notice:'',secret:null,setup:null})}}
  renderLogin(){return <LoginPage error={this.state.error} busy={this.state.busy} onSubmit={e=>this.login(e)}/>;}
  nav(){if(this.state.user?.requiresTwoFactorSetup)return [['account','Account']];return this.isAdmin?[['customers','Klanten'],['users','Gebruikers & rollen'],['keys','API-sleutels'],['audit','Auditlog'],['account','Account']]:this.isAnalyst?[['dashboard','Dashboard'],['alerts','Alerts'],['cases','Cases'],['account','Account']]:[['cases','Cases'],['account','Account']]}
  render(){const s=this.state;if(s.loading)return <LoadingState label="SOC3 laden…"/>;if(!s.user)return this.renderLogin();const pages={dashboard:()=>this.dashboard(),alerts:()=>this.alerts(),cases:()=>this.cases(),customers:()=>this.customers(),users:()=>this.users(),keys:()=>this.keys(),audit:()=>this.audit(),account:()=>this.account()};const customerOptions=[{id:'',name:'Alle klanten'},...s.orgs.map(o=>({id:o.id,name:o.name}))];const customer=s.orgs.find(o=>o.id===s.org)||(s.orgs.length===1?s.orgs[0]:{id:'',name:this.isAdmin?'Platformbeheer':'Alle klanten'});return <AppShell user={{displayName:s.user.name,role:s.user.role}} customer={customer} customerOptions={!this.isAdmin&&s.orgs.length>1?customerOptions:[]} onCustomerChange={id=>this.setState({org:id,selected:null})} navigationItems={this.nav().map(([id,label])=>({label,href:id==='dashboard'?'/':'/'+id}))} currentPath={s.page==='dashboard'?'/':'/'+s.page} onNavigate={href=>this.go(href==='/'?'dashboard':href.slice(1))} actions={<><Button onClick={()=>this.refresh()}><Icon name="refresh" size={16}/> Vernieuwen</Button><Button onClick={()=>this.logout()}><Icon name="logout" size={16}/> Uitloggen</Button></>}>

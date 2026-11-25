@@ -341,6 +341,7 @@ HTTP-statuscodes: 200 geslaagd, 201 aangemaakt, 400 ongeldige invoer/CSRF, 401 n
 
 - Identity verzorgt wachtwoordhashing, aanmeldcontrole en lockout na vijf mislukte wachtwoordpogingen.
 - Cookies zijn HttpOnly en SameSite=Lax; buiten demo is Secure vereist.
+- De website vraagt bij een nieuwe navigatie opnieuw om inloggen en beëindigt de vorige cookie-sessie. Bij een gewone refresh in een eerder ingelogd tabblad wordt de sessie hersteld zolang de server deze accepteert. De browser bewaart alleen de gebruikers-ID in sessionStorage; de authenticatiecookie blijft HttpOnly. Cookies worden gedeeld tussen tabbladen: een nieuw tabblad kan dus ook de sessie van het oude tabblad beëindigen. Een accountwisseling in een ander tabblad leidt tot HTTP 401 bij verzoeken vanuit het oude tabblad met een afwijkende X-SOC-User-header. Deze header is een aanvullende controle, geen authenticatiemiddel.
 - POST/PATCH onder /api/v1 vereisen een CSRF-token, behalve ingest. Een aanwezige Origin-header wordt gecontroleerd.
 - TOTP met authenticator, QR-code en herstelcodes; het authenticatorgeheim wordt via Data Protection beschermd.
 - Analisten, senior analisten en beheerders moeten 2FA instellen, behalve lokale @soc.demo-accounts in demomodus.
