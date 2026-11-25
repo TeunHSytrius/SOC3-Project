@@ -33,6 +33,7 @@ public sealed class KeysController(SocService service):ControllerBase
 [Authorize,ApiController,Route("api/v1")]
 public sealed class AdministrationController(SocService service):ControllerBase
 {
+    [HttpGet("ticket-register")] public async Task<IActionResult> Tickets()=>Ok(await service.TicketRegister(await service.UserAsync(User)));
     [HttpGet("audit")] public async Task<IActionResult> Audit()=>Ok(await service.Audit(await service.UserAsync(User)));
     [HttpGet("analysts")] public async Task<IActionResult> Analysts()=>Ok(await service.Analysts(await service.UserAsync(User)));
 }

@@ -90,6 +90,14 @@ assert.equal((await analyst.request(`cases/${id}`,{method:'PATCH',body:{status:'
 await analyst.ok(`cases/${id}`,{method:'PATCH',body:{status:'Resolved'}});
 assert.equal((await analyst.request(`cases/${id}`,{method:'PATCH',body:{status:'Closed'}})).status,400);
 const closed=await analyst.ok(`cases/${id}`,{method:'PATCH',body:{status:'Closed',summary:'Onderzoek en acties afgerond.',conclusion:'Demotest afgerond.'}});assert.equal(closed.status,'Closed');assert.equal((await analyst.ok(`alerts/${alert.id}`)).status,'Resolved');
+const archive=await admin.ok('ticket-register');
+const registered=archive.find(t=>t.id===id);
+assert(registered&&registered.status==='Closed'&&registered.closedAt&&registered.organizationId===north.id);
+assert(archive.every(t=>!('title' in t)&&!('entries' in t)&&!('scopeId' in t)&&!('alertIds' in t)));
+assert.equal((await admin.request(`cases/${id}`)).status,403);
+assert.equal((await customer.request('ticket-register')).status,403);
+assert((await customer.ok('portal/cases')).some(t=>t.id===id&&t.status==='Closed'));
+assert((await analyst.ok('cases')).some(t=>t.id===id&&t.status==='Closed'));
 await admin.post(`keys/${key.id}/revoke`);assert.equal((await tool.request('ingest/alerts',{method:'POST',headers:{'X-API-Key':key.secret},body:payload})).status,401);
 assert((await admin.ok('audit')).some(a=>a.action==='Alert promote'&&a.target===alert.number));
 console.log('PASS: login, rollen, accountbewerking, ingest, securitymapping, CSRF, triage, toewijzing, workflow, afscherming, afsluiten, audit en intrekking sleutel.');
