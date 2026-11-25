@@ -153,6 +153,7 @@ class App extends React.Component<Record<string, never>,State> {
      <AlertCards key={[s.org,s.archiveFilter,s.search,s.filter,s.priority,s.category,s.fromDate,s.toDate,s.mine,s.ownerFilter,s.slaFilter,s.sourceFilter,s.listSort].join('|')} alerts={list} customerName={id=>this.name(id)} open={id=>this.go('alerts',id)} busy={s.busy}/>
    </div>;
  }
+ prettyJson(raw:string){try{return JSON.stringify(JSON.parse(raw),null,2)}catch{return raw}}
  alertDetail(a:Alert){
    const senior=this.state.user.role==='Senior analist';
    const canTriage=this.isAnalyst&&active(a)&&!!a.owner&&(senior||a.owner===this.state.user.name);
@@ -176,8 +177,9 @@ class App extends React.Component<Record<string, never>,State> {
              <dt>Eerste behandeling</dt><dd>{fmt(a.firstHandledAt)}</dd>
              <dt>Eigenaar</dt><dd>{a.owner||'Niet toegewezen'}</dd>
            </dl>
-           <p>{a.description}</p>
-           <details><summary>Originele JSON</summary><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{a.rawPayload}</pre></details>
+           {!a.security?.description&&<p>{a.description}</p>}
+           <AlertSecurityDetails alert={a}/>
+           <details><summary>{a.security?.simulated?'Fictieve bron-JSON':'Originele JSON'}</summary><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{this.prettyJson(a.rawPayload)}</pre></details>
          </div>
        </Panel>
        <Panel title="Triage">
@@ -199,7 +201,6 @@ class App extends React.Component<Record<string, never>,State> {
        </Panel>
      </div>
      <div className="detailgrid">
-       <AlertSecurityDetails alert={a}/>
        <Panel title="Statusgeschiedenis"><div className="timeline">{a.history.slice().reverse().map((h,i)=><div key={i}><span className="timeline-dot"/><strong>{h.text}</strong><small>{h.actor} · {fmt(h.at)}</small></div>)}</div></Panel>
      </div>
    </div>;

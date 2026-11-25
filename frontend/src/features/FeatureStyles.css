@@ -147,3 +147,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .queue-filters .check {align-self:flex-start;}
 .wire-screen>.panel {margin-bottom:12px;}
 @media(max-width:600px){.queue-filters{padding:12px;}.queue-filter-search>button{width:100%;}}
+
+.security-demo,.security-description {margin-bottom:12px;line-height:1.55;}
+.security-section {border-top:1px solid #ddd;padding:12px 0;overflow-wrap:anywhere;}
+.security-section h3 {font-size:15px;margin:0 0 6px;}
+.security-section p {margin-bottom:6px;line-height:1.5;}
+.wire-detail-grid .bodypad>.panel {margin:12px 0;box-shadow:none;}

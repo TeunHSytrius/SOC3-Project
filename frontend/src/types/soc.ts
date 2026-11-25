@@ -4,7 +4,7 @@ export type AlertStatus='New'|'PendingReview'|'UnderReview'|'Escalated'|'Dismiss
 export type CaseStatus='Open'|'UnderInvestigation'|'WaitingForCustomer'|'UnderReview'|'Resolved'|'Closed';
 export interface User { id:string; name:string; email:string; role:Role; organizationIds:string[]; isActive:boolean; twoFactorEnabled:boolean;requiresTwoFactorSetup:boolean }
 export interface Organization {id:string;responseMinutes:number;name:string;isActive:boolean;createdAt:string;deactivatedAt:string|null}
-export interface SecurityDetails {category:string|null;description:string|null;sourceIp:string|null;destinationIp:string|null;hostname:string|null;username:string|null;detectionRule:string|null;simulated:boolean}
+export interface SecurityDetails {category:string|null;description:string|null;sourceIp:string|null;destinationIp:string|null;hostname:string|null;username:string|null;detectionRule:string|null;simulated:boolean;evidence?:string|null;investigation?:string|null}
 export type SlaStatus='Pending'|'Breached'|'Met';
 export interface Alert {id:string;slaStatus?:SlaStatus;security?:SecurityDetails;normalizedPayload?:string|null;rowVersion:string;externalEventId?:string;occurredAt?:string;organizationId:string;scopeId:string;number:string;title:string;description:string;source:string;rawPayload:string;priority:Priority;status:AlertStatus;createdAt:string;deadline:string;firstHandledAt:string|null;owner:string|null;triage:string|null;caseId:string|null;history:{at:string;actor:string;text:string}[]}
 export interface Entry {id:string;at:string;actor:string;kind:string;text:string;visible:boolean}

@@ -14,7 +14,9 @@ public sealed record SecurityAlertDetails(
     string? Hostname,
     string? Username,
     string? DetectionRule,
-    bool Simulated)
+    bool Simulated,
+    string? Evidence=null,
+    string? Investigation=null)
 {
     public static SecurityAlertDetails Read(JsonElement payload)
     {
@@ -34,7 +36,7 @@ public sealed record SecurityAlertDetails(
 
         return new(Get("category"), Get("description"), Get("sourceIp"),
             Get("destinationIp"), Get("hostname"), Get("username"),
-            Get("detectionRule"), simulated);
+            Get("detectionRule"), simulated,Get("evidence"),Get("investigation"));
     }
 
     public static SecurityAlertDetails FromRaw(string raw)

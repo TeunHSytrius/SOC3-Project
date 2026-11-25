@@ -25,7 +25,7 @@ const teamUsers=await admin.ok('users');
 for(const email of ['teun@soc.demo','dominique@soc.demo','sergio@soc.demo','hamza@soc.demo','ruben@soc.demo','thijs@soc.demo'])assert(teamUsers.some(u=>u.email===email),`Demoaccount ontbreekt: ${email}`);
 assert(!teamUsers.some(u=>u.email==='riza@soc.demo'&&u.isActive),'Voormalig groepsaccount mag niet actief zijn');
 const north=orgs.find(o=>o.name==='Northstar Finance');const delta=orgs.find(o=>o.name==='Delta Logistics');assert(north&&delta);
-const analyst=new Client();await analyst.login('analist');assert((await analyst.ok('alerts')).length>=8);
+const analyst=new Client();await analyst.login('analist');const demoAlerts=await analyst.ok('alerts');assert(demoAlerts.length>=8);const networkDemo=demoAlerts.find(a=>a.number==='ALT-1003');assert(networkDemo?.security?.simulated&&networkDemo.security.sourceIp&&networkDemo.security.destinationIp&&networkDemo.security.evidence,'Seed network alert must contain usable fictional evidence');
 assert.equal((await analyst.request('errors')).status,403);assert.equal((await analyst.request('auth/me',{headers:{'X-SOC-User':'00000000-0000-0000-0000-000000000000'}})).status,401,'Wrong tab identity must not use the shared cookie');
 const customer=new Client();await customer.login('klant');assert.equal((await customer.request('alerts')).status,403);assert.equal((await customer.request('users')).status,403);assert.equal((await customer.request('organizations/'+delta.id)).status,403);
 
