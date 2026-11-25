@@ -18,15 +18,15 @@ class Client {
   post(path,body={}){return this.ok(path,{method:'POST',body});}
   login(role){return this.post('auth/login',{username:`${role}@soc.demo`,password:'Demo2026!'});}
 }
-const guest=new Client();await guest.ok('health');assert.equal((await guest.request('alerts')).status,401);
-const admin=new Client();await admin.login('beheerder');const orgs=await admin.ok('organizations');assert(orgs.length>=3);assert.equal((await admin.request('alerts')).status,403);
+const guest=new Client();await guest.ok('health');const denied=await guest.request('alerts');assert.equal(denied.status,401);assert(denied.data.message&&denied.data.traceId,'401 must explain failure and include trace ID');
+const admin=new Client();await admin.login('beheerder');const orgs=await admin.ok('organizations');assert(orgs.length>=3);assert.equal((await admin.request('alerts')).status,403);const errors=await admin.ok('errors');assert(errors.some(e=>e.traceId===denied.data.traceId&&e.status===401));assert(errors.every(e=>!('body' in e)&&!('headers' in e)));
 // Group accounts are seeded once; their role/profile can be changed through user management.
 const teamUsers=await admin.ok('users');
 for(const email of ['teun@soc.demo','dominique@soc.demo','sergio@soc.demo','hamza@soc.demo','ruben@soc.demo','thijs@soc.demo'])assert(teamUsers.some(u=>u.email===email),`Demoaccount ontbreekt: ${email}`);
 assert(!teamUsers.some(u=>u.email==='riza@soc.demo'&&u.isActive),'Voormalig groepsaccount mag niet actief zijn');
 const north=orgs.find(o=>o.name==='Northstar Finance');const delta=orgs.find(o=>o.name==='Delta Logistics');assert(north&&delta);
 const analyst=new Client();await analyst.login('analist');assert((await analyst.ok('alerts')).length>=8);
-assert.equal((await analyst.request('auth/me',{headers:{'X-SOC-User':'00000000-0000-0000-0000-000000000000'}})).status,401,'Wrong tab identity must not use the shared cookie');
+assert.equal((await analyst.request('errors')).status,403);assert.equal((await analyst.request('auth/me',{headers:{'X-SOC-User':'00000000-0000-0000-0000-000000000000'}})).status,401,'Wrong tab identity must not use the shared cookie');
 const customer=new Client();await customer.login('klant');assert.equal((await customer.request('alerts')).status,403);assert.equal((await customer.request('users')).status,403);assert.equal((await customer.request('organizations/'+delta.id)).status,403);
 
 // Account management: a separate test account preserves the seeded demo accounts.
