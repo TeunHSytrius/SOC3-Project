@@ -223,7 +223,7 @@ export default class App extends React.Component<Record<string, never>, State> {
   };
 
   private navigate = (page: string, selected: string | null = null) => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    window.scrollTo({ top: 0, behavior: 'auto' });
     const clearMessages = { selected, error: '', notice: '', modal: null, secret: null };
     if (page === this.state.page && (selected || this.state.selected)) {
       this.setState(clearMessages);

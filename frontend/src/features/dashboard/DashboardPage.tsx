@@ -140,7 +140,7 @@ export default function DashboardPage({
         </div>
       </section>
       <section aria-label="Recente meldingen">
-          <Panel
+        <Panel
             title="Recent ontvangen meldingen"
             sub="Alle statussen · nieuwste eerst"
             action={
@@ -159,8 +159,7 @@ export default function DashboardPage({
               customerName={(id) => customerName(id)}
               open={(id) => navigate('alerts', id)}
             />
-          </Panel>
-
+        </Panel>
       </section>
       <div className="dashboard-report-link">
         <Button onClick={() => navigate('reports')}>Rapportages bekijken <Icon name="arrow" size={16} /></Button>

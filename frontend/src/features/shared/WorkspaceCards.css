@@ -284,3 +284,8 @@
   align-items: center;
   gap: 8px;
 }
+
+.wire-card-main:hover strong {
+  color: var(--info-text);
+  text-decoration: underline;
+}

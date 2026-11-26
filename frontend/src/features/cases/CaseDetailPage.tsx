@@ -31,7 +31,9 @@ interface CaseDetailProps {
 
 // Keep user identifiers in the saved audit history, but omit them from the readable handover.
 function formatTransfer(text: string): string {
-  return text.replace(/\s*\([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\)/gi, '');
+  const userId = '\\([0-9a-f-]{36}\\)';
+  const handover = new RegExp('^(Van .+?) ' + userId + ' (naar .+?) ' + userId, 'i');
+  return text.replace(handover, '$1 $2');
 }
 
 export default function CaseDetailPage({
@@ -110,7 +112,7 @@ export default function CaseDetailPage({
                       .filter((entry) => entry.kind === 'Observable')
                       .map((entry) => (
                         <div className="wire-observable" key={entry.id}>
-                          {entry.kind === 'Overdracht' ? formatTransfer(entry.text) : entry.text}
+                          {entry.text}
                         </div>
                       ))}
                     {!ticket.entries.some((entry) => entry.kind === 'Observable') && '—'}
@@ -198,7 +200,7 @@ export default function CaseDetailPage({
                       />
                     )}
                   </strong>
-                  <p>{entry.text}</p>
+                  <p>{entry.kind === 'Overdracht' ? formatTransfer(entry.text) : entry.text}</p>
                   <small>
                     {entry.actor} · {fmt(entry.at)}
                   </small>
