@@ -6,7 +6,7 @@ Laatste actualisatie: 26 november 2026.
 
 SOC3 is een webapplicatie voor het registreren, beoordelen en afhandelen van beveiligingsmeldingen binnen een Security Operations Centre (SOC). In Sprint 1 ligt de nadruk op het technische fundament: authenticatie, gebruikers- en klantenbeheer, navigatie, de database en de eerste schermen. De operationele verwerking van beveiligingsmeldingen wordt verder ontwikkeld in volgende sprints.
 
-[Taiga — sprintbord](https://tree.taiga.io/project/djominique-soc-groep-3/kanban) · [GitHub Actions](https://github.com/TeunHSytrius/SOC3-Project/actions) · [Installatie en problemen oplossen](docs/INSTALLATIE.md)
+[Trello — sprintbord](https://trello.com/b/wobeDwUi/soc3) · [Taiga — historisch bord](https://tree.taiga.io/project/djominique-soc-groep-3/kanban) · [GitHub Actions](https://github.com/TeunHSytrius/SOC3-Project/actions) · [Installatie en problemen oplossen](docs/INSTALLATIE.md)
 
 ## Inhoud
 
@@ -60,9 +60,30 @@ Stoppen: `docker compose down`. Gebruik **geen** `docker compose down -v`: daarm
 
 Werkt Docker niet op jouw laptop? Zie [de installatiehandleiding](docs/INSTALLATIE.md), ook voor Apple Silicon, een externe SQL Server en DataGrip.
 
+### Zonder Docker ontwikkelen
+
+Installeer .NET 10 SDK en Node.js 22.12+ en regel toegang tot een SQL Server 2022 (Developer of een eigen ontwikkel-database op een bereikbare SQL Server). De backend en frontend kunnen dan rechtstreeks op Windows, macOS of Linux draaien.
+
+Configureer vanuit de hoofdmap een lokale connection string via User Secrets, met je eigen server, database en account. Dit voorbeeld is uitsluitend voor een lokale testserver:
+
+```bash
+dotnet user-secrets set "ConnectionStrings:Soc" "Server=127.0.0.1,1433;Database=Soc3Dev;User Id=socdev;Password=VUL_EIGEN_WACHTWOORD_IN;Encrypt=True;TrustServerCertificate=True" --project backend/Soc.Api/Soc.Api.csproj
+dotnet run --project backend/Soc.Api/Soc.Api.csproj --launch-profile "Local Development"
+```
+
+Open een tweede terminal vanuit de hoofdmap:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:5173. De API draait op localhost:8081 en initialiseert de eigen lokale demodatabase. SQL Server blijft vereist: op macOS en ARM gebruik je zonder Docker een bereikbare SQL Server op een ondersteunde x64-host. Gebruik dezelfde databaseverbinding in DataGrip of SSMS (Windows). Zie [installatie zonder Docker en database bekijken](docs/INSTALLATIE.md#2-ontwikkelen-zonder-docker) voor Windows-authenticatie, externe SQL, certificaten, probleemoplossing en testen.
+
 ## 2. Huidige stand — Sprint 1
 
-De geïntegreerde database, login, 2FA en het vernieuwde alertoverzicht staan op `main`. [PR #12](https://github.com/TeunHSytrius/SOC3-Project/pull/12) is gemerged na een geslaagde [CI-run](https://github.com/TeunHSytrius/SOC3-Project/actions/runs/45782022014). De tabel hieronder beschrijft de technische voortgang; de actuele taakstatus en formele acceptatie staan in [Taiga](https://tree.taiga.io/project/djominique-soc-groep-3/kanban).
+De geïntegreerde database, login, 2FA en het vernieuwde alertoverzicht staan op `main`. [PR #12](https://github.com/TeunHSytrius/SOC3-Project/pull/12) is gemerged na een geslaagde [CI-run](https://github.com/TeunHSytrius/SOC3-Project/actions/runs/45782022014). De tabel hieronder beschrijft de technische voortgang; de actuele taakstatus en afgesproken scope staan in [Trello](https://trello.com/b/wobeDwUi/soc3). De Sprint 1-basisscope is als opgeleverd geregistreerd; resterende technische criteria en nieuwe eisen staan als vervolgwerk.
 
 | Onderdeel | Stand | Toelichting |
 | --- | --- | --- |
@@ -75,14 +96,14 @@ De geïntegreerde database, login, 2FA en het vernieuwde alertoverzicht staan op
 | Auditlog | Basis beschikbaar | Platformactiviteiten en paginering; geen volledige operationele audit |
 | Ingest, triage, tickets, SLA, onderzoeken en rapportages | Nog te realiseren | Operationele API's en workflows ontbreken |
 
-De alertschermen gebruiken herkenbaar gelabelde voorbeeldgegevens uit `frontend/src/features/demo`. De meldingen worden niet in SQL opgeslagen en zijn niet afkomstig uit securitytooling. De groep bepaalt aan de hand van het FO, TO en Taiga welke onderdelen aan de acceptatiecriteria voldoen.
+De alertschermen gebruiken herkenbaar gelabelde voorbeeldgegevens uit `frontend/src/features/demo`. De meldingen worden niet in SQL opgeslagen en zijn niet afkomstig uit securitytooling. De groep bepaalt aan de hand van het FO, TO en Trello welke onderdelen aan de acceptatiecriteria voldoen.
 
 ### Scrum-artifacts
 
 | Artifact | Waar te vinden |
 | --- | --- |
-| Product Backlog | Taiga: geprioriteerde user stories en acceptatiecriteria |
-| Sprint Backlog | Taiga: geselecteerde user stories, taken en actuele taakverdeling voor Sprint 1 |
+| Product Backlog | Trello: geprioriteerde user stories en acceptatiecriteria |
+| Sprint Backlog | Trello: geselecteerde user stories, taken en actuele taakverdeling voor Sprint 1 |
 | Increment | `main`: geïntegreerde en technisch geteste onderdelen; acceptatie aan de hand van de Definition of Done |
 
 Gebruik het actuele sprintbord tijdens het overleg en de Sprint Review. De README is geen tweede takenadministratie.
@@ -144,19 +165,19 @@ Het eerdere uitgebreide prototype is met AI-ondersteuning ontwikkeld en bewaard 
 
 ## 5. Samen verder ontwikkelen
 
-**Voorstel voor werkafspraken — gezamenlijk vaststellen tijdens het overleg.** Taiga bepaalt de sprintplanning; GitHub bevat de implementatie en reviews.
+**Voorstel voor werkafspraken — gezamenlijk vaststellen tijdens het overleg.** Trello bepaalt de sprintplanning; GitHub bevat de implementatie en reviews.
 
 1. Kies met het team een ticket en bespreek de acceptatiecriteria.
 2. Maak vanuit de actuele `main` een eigen featurebranch.
 3. Implementeer en test de afgesproken scope. Bespreek wijzigingen in gedeelde interfaces en datamodellen vooraf.
-4. Open een pull request naar `main`, met het Taiga-ticket, de wijziging, testresultaten en eventuele beperkingen.
+4. Open een pull request naar `main`, met de Trello-kaart, de wijziging, testresultaten en eventuele beperkingen.
 5. Laat een ander groepslid reviewen. De auteur verwerkt feedback.
-6. Merge pas wanneer de review, relevante tests en CI akkoord zijn. Sluit het Taiga-ticket volgens de teamafspraken.
+6. Merge pas wanneer de review, relevante tests en CI akkoord zijn. Sluit de Trello-kaart volgens de teamafspraken.
 
 ```bash
 git switch main
 git pull --ff-only origin main
-git switch -c feature/tg-123-korte-omschrijving
+git switch -c feature/us-123-korte-omschrijving
 ```
 
 Vervang het voorbeeldnummer door je eigen ticket. Werk niet rechtstreeks op `main` en voeg geen werk van anderen aan je branch toe zonder afstemming. Vermeld hergebruik en AI-ondersteuning eerlijk; ieder groepslid moet zijn eigen werk kunnen toelichten.
@@ -200,7 +221,7 @@ CI controleert de backendtests, Docker-build, HTTP-readiness, SQL-tabellen en AP
 
 ## 7. Openstaande keuzes en vervolg
 
-De volgende punten zijn nog niet definitief vastgesteld. Bespreek ze gezamenlijk en leg de uitkomsten vast in Taiga en het FO/TO.
+De volgende punten zijn nog niet definitief vastgesteld. Bespreek ze gezamenlijk en leg de uitkomsten vast in Trello en het FO/TO.
 
 | Onderwerp | Te bespreken besluit |
 | --- | --- |
@@ -212,7 +233,7 @@ De volgende punten zijn nog niet definitief vastgesteld. Bespreek ze gezamenlijk
 | Kwaliteit | Welke review-, test- en formatteringsregels spreken we af? |
 | Individueel bewijs | Hoe leggen we eigen werk, feedback, keuzes en AI-ondersteuning vast? |
 
-Leg de gemaakte afspraken vast in Taiga en werk FO/TO en README bij wanneer de gezamenlijke keuzes daarom vragen.
+Leg de gemaakte afspraken vast in Trello en werk FO/TO en README bij wanneer de gezamenlijke keuzes daarom vragen.
 
 ### Bekende beperkingen
 
