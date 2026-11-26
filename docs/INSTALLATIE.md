@@ -144,3 +144,118 @@ docker compose --profile test run --rm smoke
 
 Deze test gebruikt de Node-container en maakt fictieve testrecords aan. Gebruik de standaard generieke testaccounts; activeer daarop geen 2FA. GitHub Actions bevat daarnaast een automatische Docker-build en smoketest op een schone x86-64-runner. Controleer [Actions](https://github.com/TeunHSytrius/SOC3-Project/actions) voor het werkelijke resultaat; een workflowbestand betekent niet dat de build is geslaagd.
 
+
+## 2. Ontwikkelen zonder Docker
+
+De backend en frontend kunnen rechtstreeks op je laptop draaien. Je hebt dan wel een bereikbare Microsoft SQL Server nodig. Docker is niet vereist voor de applicatie en er is geen SQLite-fallback.
+
+### 2.1 Benodigdheden
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
+- [Node.js](https://nodejs.org/) 22.12 of hoger (bij voorkeur een ondersteunde LTS-versie).
+- [Git](https://git-scm.com/downloads).
+- Microsoft SQL Server 2022 Developer voor lokale ontwikkeling, of een bestaande bereikbare SQL Server.
+- Optioneel: [DataGrip](https://www.jetbrains.com/datagrip/) of [SQL Server Management Studio (SSMS)](https://learn.microsoft.com/en-us/ssms/install/install).
+
+Windows x64: installeer SQL Server Developer, activeer indien nodig TCP/IP en configureer de gekozen authenticatie. Linux x64: gebruik een ondersteunde Linux-distributie voor SQL Server. macOS en ARM: de .NET- en Node-applicatie kunnen lokaal draaien, maar SQL Server 2022 heeft geen native macOS/ARM-serverversie. Gebruik een bereikbare SQL Server op een ondersteunde x64-host, bijvoorbeeld een eigen database op een afgesproken groepsserver. SSMS is een Windows-client; DataGrip kan op macOS, Windows en Linux worden gebruikt. DataGrip en SSMS installeren op zichzelf geen databaseserver.
+
+### 2.2 Database instellen
+
+Maak op de gekozen SQL Server een eigen lege ontwikkel-database aan, bijvoorbeeld `Soc3DevTeun`, en regel een account met voldoende rechten voor schema- en tabelinitialisatie in uitsluitend die database. Gebruik geen productiegegevens of gezamenlijke database zonder overleg. Controleer host, poort (vaak 1433), authenticatie en certificaat.
+
+Voer vanuit de hoofdmap één van de onderstaande opdrachten uit. Vervang alle voorbeeldwaarden; bewaar geen echt wachtwoord in de repository.
+
+**SQL-authenticatie, lokale testserver:**
+
+```bash
+dotnet user-secrets set "ConnectionStrings:Soc" "Server=127.0.0.1,1433;Database=Soc3DevTeun;User Id=socdev;Password=VUL_EIGEN_WACHTWOORD_IN;Encrypt=True;TrustServerCertificate=True" --project backend/Soc.Api/Soc.Api.csproj
+```
+
+**Windows-authenticatie, lokale SQL Server (alleen wanneer je Windows-account toegang heeft):**
+
+```powershell
+dotnet user-secrets set "ConnectionStrings:Soc" "Server=localhost;Database=Soc3DevTeun;Integrated Security=True;Encrypt=True;TrustServerCertificate=True" --project backend/Soc.Api/Soc.Api.csproj
+```
+
+Bij een externe SQL Server gebruik je de werkelijke host en poort en een geldig vertrouwd certificaat: `Encrypt=True;TrustServerCertificate=False`. Gebruik een beveiligd netwerk of VPN en open de SQL-poort niet publiek. User Secrets worden per gebruiker buiten Git opgeslagen; ze zijn bedoeld voor ontwikkeling en niet versleuteld. Deel de uitvoer van `dotnet user-secrets list` niet.
+
+Je kunt ook de omgevingsvariabele `ConnectionStrings__Soc` gebruiken. De naam van de connection string blijft in alle omgevingen gelijk.
+
+### 2.3 Backend starten
+
+Open terminal 1 vanuit de hoofdmap:
+
+```bash
+dotnet restore SOC3.slnx
+dotnet run --project backend/Soc.Api/Soc.Api.csproj --launch-profile "Local Development"
+```
+
+Het ontwikkelprofiel start uitsluitend op localhost:8081 en zet `Demo__Enabled=true` voor de lokale initialisatie van de demo-database, schema's en accounts. De productiestandaard in appsettings.json blijft uitgeschakeld. De lokale sleutels voor Data Protection blijven in de standaard gebruikersopslag van ASP.NET Core; verwijder ze niet als je 2FA wilt behouden.
+
+Controleer [http://localhost:8081/api/v1/health](http://localhost:8081/api/v1/health): verwacht HTTP 200 met status ok. Als de database niet bereikbaar is, controleer eerst de SQL Server-service, TCP/IP, poort, account, database en certificaat.
+
+### 2.4 Frontend starten
+
+Open terminal 2 vanuit de hoofdmap:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173). Vite proxyt /api naar http://127.0.0.1:8081. Bij een afwijkende API-poort wijzig je de lokale `VITE_API_TARGET` in frontend/.env.local. Houd backend en frontend gelijktijdig actief. Gebruik de lokale demoaccounts uit de README.
+
+Stop beide processen met Ctrl+C. De SQL Server-data blijft behouden.
+
+### 2.5 Database bekijken in DataGrip of SSMS
+
+Maak een Microsoft SQL Server-verbinding met dezelfde server, poort, database en authenticatie als je backend:
+
+| Instelling | Native SQL Server | Docker SQL Server |
+| --- | --- | --- |
+| Host | localhost of afgesproken SQL-host | 127.0.0.1 |
+| Poort | doorgaans 1433; controleer werkelijke poort | 14333, tenzij aangepast |
+| Database | eigen gekozen database, bijv. Soc3DevTeun | Soc3Demo |
+| Authenticatie | eigen SQL-account of Windows-authenticatie | sa |
+| Encrypt | true | true |
+| Trust server certificate | uitsluitend true bij bewust gekozen lokale demo | true voor lokale demo |
+
+In DataGrip: New Data Source > Microsoft SQL Server > vul gegevens in > Download Driver indien nodig > Test Connection. Selecteer de juiste database en de schema's platform, domain en tenant_... in het schema-overzicht.
+
+In SSMS: Connect > Database Engine > servernaam (bij een afwijkende poort: host,poort) > authenticatie > Connect. Open Databases > gekozen database > Tables. SSMS is alleen voor Windows.
+
+Controleer de database bijvoorbeeld met:
+
+```sql
+SELECT DB_NAME() AS CurrentDatabase;
+
+SELECT TABLE_SCHEMA, TABLE_NAME
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_TYPE = 'BASE TABLE'
+ORDER BY TABLE_SCHEMA, TABLE_NAME;
+
+SELECT Id, Name, SchemaName, IsActive
+FROM platform.Tenants;
+```
+
+De huidige beheerfunctionaliteit gebruikt platform-tabellen. De oorspronkelijke domeinentiteiten zijn toegevoegd in domain; de operationele alertschermen bevatten nog voorbeeldgegevens. Zie de README voor de actuele Sprint 1-scope.
+
+### 2.6 Testen zonder Docker
+
+Voer de backendtests uit vanuit de hoofdmap:
+
+```bash
+dotnet test backend/Soc.Tests/Soc.Tests.csproj
+cd frontend
+npm run build
+cd ..
+```
+
+Start de backend met het ontwikkelprofiel en voer vervolgens vanuit de hoofdmap uit:
+
+```bash
+node tests/smoke.mjs
+```
+
+De smoketest gebruikt standaard http://localhost:8081 en maakt fictieve records aan. Gebruik een aparte demodatabase. Activeer geen 2FA op de generieke smoke-testaccounts. De route zonder Docker gebruikt hetzelfde SQL Server-datamodel als de Docker-route; de huidige database-initialisatie is nog geen volledige EF Core-migratiestrategie.
