@@ -1,3 +1,62 @@
-import {useState, type FormEvent} from 'react';
-import {Icon,Field,Button} from '../../components/Ui';
-export default function LoginPage({error,busy,onSubmit}:{error:string;busy:boolean;onSubmit:(e:FormEvent<HTMLFormElement>)=>void}){const [username,setUsername]=useState('analist@soc.demo');return <div className="loginlayout"><div className="loginart"><div className="brand"><div className="brandmark"><Icon name="shield" size={28}/></div><div>SOC3 <small>MANAGEMENT</small></div></div><div className="loginpitch"><div className="eyebrow">SECURITY OPERATIONS CENTER</div><h1>Van signaal<br/>naar zekerheid.</h1><p>Ontvang beveiligingsalerts, onderzoek incidenten en werk samen in één beveiligingswerkruimte.</p><div className="loginpills"><span>Alert triage</span><span>Case management</span><span>SLA monitoring</span></div></div><div className="loginfoot">SOC3 · Lokale demonstratieomgeving</div></div><div className="loginright"><div className="loginform"><div className="eyebrow">WELKOM TERUG</div><h1>Inloggen</h1><p>Log in met een demonstratieaccount.</p>{error&&<div className="error" role="alert">{error}</div>}<form onSubmit={onSubmit}><Field label="E-mailadres"><input name="username" type="email" value={username} onChange={e=>setUsername(e.target.value)} required/></Field><Field label="Wachtwoord"><input name="password" type="password" defaultValue="Demo2026!" required/></Field><Field label="2FA- of herstelcode (indien ingesteld)"><input name="code" autoComplete="one-time-code" placeholder="Optioneel"/></Field><Button primary type="submit" disabled={busy}>Inloggen <Icon name="arrow"/></Button></form><div className="demoaccounts"><strong>Demoaccounts</strong><p>Wachtwoord voor alle accounts: <code>Demo2026!</code></p>{['analist','senior','beheerder','klant','accountmanager'].map(x=><button key={x} onClick={()=>setUsername(x+'@soc.demo')}>{x}@soc.demo</button>)}</div></div></div></div>}
+import { useState, type FormEvent } from "react";
+import "./LoginPage.css";
+
+interface LoginPageProps {
+  error: string;
+  busy: boolean;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}
+
+export default function LoginPage({ error, busy, onSubmit }: LoginPageProps) {
+  const [username, setUsername] = useState("analist@soc.demo");
+  const [password, setPassword] = useState("Demo2026!");
+
+  return (
+    <main className="login-page">
+      <header className="login-header">
+        <div className="login-brand">
+          <span className="login-brand-icon" aria-hidden="true">SOC</span>
+          <span>SOC Management</span>
+        </div>
+        <span className="login-header-text">SOC-platform</span>
+      </header>
+
+      <section className="login-content">
+        <div className="login-intro">
+          <h1>Inloggen</h1>
+          <p>Log in om beveiligingsmeldingen en onderzoeken te beheren.</p>
+        </div>
+
+        <form className="login-form" onSubmit={onSubmit} aria-busy={busy}>
+          <div className="login-field">
+            <label htmlFor="username">Gebruikersnaam of e-mailadres</label>
+            <input id="username" name="username" type="text" autoComplete="username"
+              required value={username} onChange={event => setUsername(event.target.value)} />
+          </div>
+          <div className="login-field">
+            <label htmlFor="password">Wachtwoord</label>
+            <input id="password" name="password" type="password" autoComplete="current-password"
+              required value={password} onChange={event => setPassword(event.target.value)} />
+          </div>
+          <div className="login-field">
+            <label htmlFor="code">2FA- of herstelcode (indien ingesteld)</label>
+            <input id="code" name="code" autoComplete="one-time-code" placeholder="Optioneel" />
+          </div>
+          {error && <p className="login-error" role="alert">{error}</p>}
+          <button type="submit" disabled={busy}>{busy ? "Bezig met inloggen..." : "Inloggen"}</button>
+        </form>
+
+        <details className="login-demo">
+          <summary>Demonstratieaccounts</summary>
+          <p>Wachtwoord voor alle demoaccounts: <code>Demo2026!</code></p>
+          <div className="login-demo-options">
+            {["analist", "senior", "beheerder", "klant", "accountmanager"].map(role => (
+              <button type="button" key={role} onClick={() => setUsername(role + "@soc.demo")}>{role}</button>
+            ))}
+          </div>
+        </details>
+        <p className="login-footer">SOC Casemanagementplatform</p>
+      </section>
+    </main>
+  );
+}

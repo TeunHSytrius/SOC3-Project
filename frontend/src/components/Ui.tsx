@@ -11,4 +11,4 @@ export function Table({head,children,empty=false}:{head:string[];children:React.
 export function Panel({title,sub,children,action}:{title:string;sub?:string;children:React.ReactNode;action?:React.ReactNode}){return <section className="panel"><div className="panelhead"><div><h2>{title}</h2>{sub&&<p>{sub}</p>}</div>{action}</div>{children}</section>}
 
 import {PageHeader as NavigationPageHeader} from './PageHeader';
-export function PageHeader({title,sub,action}:{title:string;sub:string;action?:React.ReactNode}) {return <div className="pagehead"><NavigationPageHeader title={title} description={sub} breadcrumbs={['SECURITY OPERATIONS / WERKRUIMTE']} actions={action}/></div>;}
+export function PageHeader({title,sub,action}:{title:string;sub:string;action?:React.ReactNode}) {return <NavigationPageHeader title={title} description={sub} actions={action}/>;}
