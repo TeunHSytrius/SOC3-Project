@@ -57,8 +57,8 @@ export default function ErrorLog({
           head={['Tijd', 'HTTP', 'Route', 'Reden', 'Exception', 'Foutreferentie']}
           empty={!filtered.length}
         >
-          {filtered.map((e, i) => (
-            <tr key={entry.traceId + '-' + i}>
+          {filtered.map((entry, index) => (
+            <tr key={entry.traceId + '-' + index}>
               <td>{fmt(entry.at)}</td>
               <td>
                 <Badge value={String(entry.status)} kind={entry.status >= 500 ? 'danger' : 'warn'} />
