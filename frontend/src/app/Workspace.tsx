@@ -7,6 +7,8 @@ import UsersPage from '../features/admin/UsersPage';
 import AuditPage from '../features/admin/AuditPage';
 import ErrorLog from '../features/admin/ErrorLog';
 import DashboardPage from '../features/dashboard/DashboardPage';
+import DemoAlertsPage from '../features/demo/DemoAlertsPage';
+import { canViewDemoAlerts } from '../features/demo/demoAlerts';
 import AccountPage from '../features/auth/AccountPage';
 import ActionDialog from '../features/shared/ActionDialog';
 import { getNavigation } from './navigation';
@@ -27,6 +29,11 @@ function WorkspacePage({ state, actions, refresh, onTwoFactorEnabled, onError }:
   switch (state.page) {
     case 'dashboard':
       return <DashboardPage {...pageProps} />;
+    case 'alerts':
+      if (!canViewDemoAlerts(state.user)) {
+        return null;
+      }
+      return <DemoAlertsPage state={state} navigate={actions.navigate} />;
     case 'customers':
       return actions.isAdmin ? <CustomersPage {...pageProps} /> : null;
     case 'users':
@@ -36,9 +43,16 @@ function WorkspacePage({ state, actions, refresh, onTwoFactorEnabled, onError }:
     case 'errors':
       return actions.isAdmin ? <ErrorLog errors={state.errors} reload={() => void refresh()} /> : null;
     case 'account':
-      return state.user ? (
-        <AccountPage user={state.user} onTwoFactorEnabled={onTwoFactorEnabled} onSessionExpired={onError} />
-      ) : null;
+      if (!state.user) {
+        return null;
+      }
+      return (
+        <AccountPage
+          user={state.user}
+          onTwoFactorEnabled={onTwoFactorEnabled}
+          onSessionExpired={onError}
+        />
+      );
     default:
       return null;
   }
@@ -47,13 +61,16 @@ function WorkspacePage({ state, actions, refresh, onTwoFactorEnabled, onError }:
 export default function Workspace(props: WorkspaceProps) {
   const { state, actions, refresh, logout } = props;
   const { user, orgs, org } = state;
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
 
   const customerOptions = [
     { id: '', name: 'Alle klanten' },
     ...orgs.map((organization) => ({ id: organization.id, name: organization.name })),
   ];
-  const customer = orgs.find((organization) => organization.id === org) ||
+  const customer =
+    orgs.find((organization) => organization.id === org) ||
     (orgs.length === 1 ? orgs[0] : customerOptions[0]);
 
   return (

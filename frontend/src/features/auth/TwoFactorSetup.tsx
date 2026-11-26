@@ -34,7 +34,9 @@ function TwoFactorSetup({
     try {
       await request();
     } catch (caught) {
-      if (caught instanceof ApiError && caught.status === 401) onSessionExpired(caught);
+      if (caught instanceof ApiError && caught.status === 401) {
+        onSessionExpired(caught);
+      }
       setError(caught instanceof Error ? caught.message : 'Er ging iets mis.');
     } finally {
       setIsLoading(false);
@@ -62,8 +64,9 @@ function TwoFactorSetup({
     });
   }
 
-  if (initiallyEnabled && step === 'start')
+  if (initiallyEnabled && step === 'start') {
     return <p>Tweestapsverificatie is actief voor dit account.</p>;
+  }
 
   return (
     <section className="two-factor-setup">

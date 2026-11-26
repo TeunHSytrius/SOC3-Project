@@ -32,7 +32,7 @@ De geïntegreerde MVP is als referentie bewaard op [archive/full-mvp](https://gi
 
 In de actieve versie blijven database en klantschema's, inloggen, uitloggen, 2FA (oorspronkelijke bijdrage van Thijs, geïntegreerd met Identity), klantenbeheer, gebruikersbeheer, rol- en klanttoegang, navigatie en basis-auditregistratie beschikbaar. De database-entiteiten blijven staan als technische basis voor latere sprints. Er worden geen bestaande gegevens verwijderd.
 
-Alert-ingest, API-sleutels, alertwachtrij, triage, SLA-functionaliteit, cases, notities, observables, klantportaal, rapportages en de simulator zijn uit de actieve frontend en backend verwijderd. De bijbehorende user stories worden later door het team gerealiseerd en getest. De auditpagina is een eenvoudige inspectie van platformactiviteiten, geen volledige US-27-implementatie.
+Alert-ingest, API-sleutels, echte alertverwerking, triage, SLA-functionaliteit, cases, notities, observables, klantportaal, rapportages en de simulator zijn nog niet beschikbaar in de actieve versie. Beheerders en analisten zien een expliciet gemarkeerd klikbaar frontendprototype met fictieve meldingen, filters en details. De voorbeelden komen uitsluitend uit `frontend/src/features/demo`, worden niet in SQL opgeslagen en gebruiken geen alert-API. Ze tellen niet als gerealiseerde acceptatiecriteria voor de volgende sprints. De bijbehorende user stories worden later door het team gerealiseerd en getest. De auditpagina is een eenvoudige inspectie van platformactiviteiten, geen volledige US-27-implementatie.
 
 ## 1. Installatie — Windows, macOS en Linux
 
@@ -186,3 +186,20 @@ docker compose --profile test run --rm smoke
 ```
 
 De smoketest controleert het fundament en verifieert dat endpoints voor latere sprints niet beschikbaar zijn. De 2FA-unittests blijven behouden. Voor nieuwe 2FA-accounts moeten setup en aanmelding ook handmatig worden getest. Productie-deployment en EF Core-migraties zijn nog niet afgerond.
+
+## Codeconventies
+
+- C#: vier spaties, PascalCase voor publieke types en methoden, camelCase voor parameters en lokale variabelen. Gebruik accolades bij conditionals en lussen, ook bij één statement.
+- TypeScript/React: twee spaties, betekenisvolle namen, expliciete types aan modulegrenzen, kleine componenten en geen onnodig compacte conditionals. Gebruik Prettier volgens `frontend/.prettierrc.json`.
+- Scheid UI, data, presentatielogica en API-verzoeken. Plaats voorbeelddata uitsluitend in de demomodule. Vermijd onnodige abstracties en schrijf comments voor het waarom, niet voor iedere regel.
+- Controleer een wijziging met de formatter, compiler, relevante tests en review. De huidige CI test de werking; volledige formatteringscontrole is nog niet als verplichte CI-gate ingesteld.
+
+```bash
+cd frontend
+npm install
+npm run format:check
+npm run build
+# Gebruik npm run format om de bestanden volgens Prettier te formatteren.
+```
+
+Voor de backend: `dotnet format SOC3.slnx` vanuit de hoofdmap (met de .NET 10 SDK). Controleer de diff voordat je commit.

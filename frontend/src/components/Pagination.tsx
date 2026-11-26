@@ -19,7 +19,9 @@ export default function Pagination({
   totalRecords,
   setPage,
 }: PaginationProps) {
-  if (!totalRecords) return null;
+  if (!totalRecords) {
+    return null;
+  }
 
   return (
     <nav className="wire-pagination" aria-label={label}>
