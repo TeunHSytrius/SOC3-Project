@@ -61,7 +61,10 @@ export default function ErrorLog({
             <tr key={entry.traceId + '-' + index}>
               <td>{fmt(entry.at)}</td>
               <td>
-                <Badge value={String(entry.status)} kind={entry.status >= 500 ? 'danger' : 'warn'} />
+                <Badge
+                  value={String(entry.status)}
+                  kind={entry.status >= 500 ? 'danger' : 'warn'}
+                />
               </td>
               <td>
                 {entry.method} {entry.route}

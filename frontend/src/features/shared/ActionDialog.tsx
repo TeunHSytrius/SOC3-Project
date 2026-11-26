@@ -19,7 +19,12 @@ export default function ActionDialog(props: DialogProps) {
       <section className="dialog" role="dialog" aria-modal="true" aria-label={title}>
         <div className="dialoghead">
           <h2>{title}</h2>
-          <button type="button" aria-label="Sluiten" disabled={currentState.busy} onClick={() => update({ modal: null })}>
+          <button
+            type="button"
+            aria-label="Sluiten"
+            disabled={currentState.busy}
+            onClick={() => update({ modal: null })}
+          >
             ×
           </button>
         </div>
@@ -31,7 +36,9 @@ export default function ActionDialog(props: DialogProps) {
         <form onSubmit={(event) => submit(formData(event))}>
           {fields}
           <div className="actions">
-            <Button disabled={currentState.busy} onClick={() => update({ modal: null, error: '' })}>Annuleren</Button>
+            <Button disabled={currentState.busy} onClick={() => update({ modal: null, error: '' })}>
+              Annuleren
+            </Button>
             <Button primary type="submit" disabled={currentState.busy}>
               {currentState.busy ? 'Opslaan…' : 'Opslaan'}
             </Button>

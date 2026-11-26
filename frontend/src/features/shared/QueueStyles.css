@@ -70,4 +70,6 @@
   }
 }
 
-.archive-tabs button:not([aria-pressed='true']):hover { background: var(--surface-hover); }
+.archive-tabs button:not([aria-pressed='true']):hover {
+  background: var(--surface-hover);
+}

@@ -1,11 +1,13 @@
 namespace Soc.Data.Entities;
 
-    public class AlertEvent
+public class AlertEvent
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
     public Guid AlertId
-    { get; set; }
+    {
+        get; set;
+    }
 
     public DateTimeOffset At { get; set; } = DateTimeOffset.UtcNow;
 

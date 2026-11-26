@@ -7,7 +7,16 @@ interface PageProps extends WorkspaceActions {
   state: State;
 }
 
-export default function UsersPage({ state, update, navigate, customerName, run, isAnalyst, canReadInternal, isAdmin }: PageProps) {
+export default function UsersPage({
+  state,
+  update,
+  navigate,
+  customerName,
+  run,
+  isAnalyst,
+  canReadInternal,
+  isAdmin,
+}: PageProps) {
   return (
     <div className="fragment">
       <PageHeader
@@ -28,7 +37,11 @@ export default function UsersPage({ state, update, navigate, customerName, run, 
               </td>
               <td>{account.email}</td>
               <td>{account.role}</td>
-              <td>{account.organizationIds.map((organizationId) => customerName(organizationId)).join(', ') || '—'}</td>
+              <td>
+                {account.organizationIds
+                  .map((organizationId) => customerName(organizationId))
+                  .join(', ') || '—'}
+              </td>
               <td>
                 <Badge
                   value={account.isActive ? 'Actief' : 'Inactief'}
@@ -44,9 +57,7 @@ export default function UsersPage({ state, update, navigate, customerName, run, 
               <td>
                 {account.id !== state.user.id ? (
                   <div className="actions">
-                    <Button
-                      onClick={() => update({ modal: 'userAccess', selected: account.id })}
-                    >
+                    <Button onClick={() => update({ modal: 'userAccess', selected: account.id })}>
                       Bewerken
                     </Button>
                     <button
@@ -77,5 +88,4 @@ export default function UsersPage({ state, update, navigate, customerName, run, 
       </Panel>
     </div>
   );
-  
 }

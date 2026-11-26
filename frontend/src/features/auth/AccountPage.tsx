@@ -8,7 +8,11 @@ interface AccountPageProps {
   onSessionExpired: (error: unknown) => void;
 }
 
-export default function AccountPage({ user, onTwoFactorEnabled, onSessionExpired }: AccountPageProps) {
+export default function AccountPage({
+  user,
+  onTwoFactorEnabled,
+  onSessionExpired,
+}: AccountPageProps) {
   return (
     <div className="fragment">
       <PageHeader title="Mijn account" sub="Accountgegevens en tweestapsverificatie." />

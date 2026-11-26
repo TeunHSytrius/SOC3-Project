@@ -16,7 +16,9 @@ export function Table({
         <thead>
           <tr>
             {head.map((heading, columnIndex) => (
-              <th scope="col" key={columnIndex}>{heading}</th>
+              <th scope="col" key={columnIndex}>
+                {heading}
+              </th>
             ))}
           </tr>
         </thead>

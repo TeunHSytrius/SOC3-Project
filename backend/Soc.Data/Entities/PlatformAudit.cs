@@ -1,6 +1,6 @@
 namespace Soc.Data.Entities;
 
-    public class PlatformAudit
+public class PlatformAudit
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
@@ -11,8 +11,12 @@ namespace Soc.Data.Entities;
     public string Action { get; set; } = "";
 
     public Guid? TenantId
-    { get; set; }
+    {
+        get; set;
+    }
 
     public string? Target
-    { get; set; }
+    {
+        get; set;
+    }
 }

@@ -13,7 +13,9 @@ export function getAdminDialog({ state: currentState, run }: DialogProps): Dialo
     case 'customer':
     case 'customerEdit': {
       const editing = currentState.modal === 'customerEdit';
-      const org = currentState.orgs.find((organization) => organization.id === currentState.selected);
+      const org = currentState.orgs.find(
+        (organization) => organization.id === currentState.selected,
+      );
       if (editing && !org) {
         return null;
       }

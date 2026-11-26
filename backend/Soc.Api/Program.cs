@@ -163,11 +163,18 @@ app.MapGet("/api/v1/health", async (SocDbContext database) =>
 {
     if (await database.Database.CanConnectAsync())
     {
-        return Results.Ok(new { status = "ok" });
+        return Results.Ok(new
+        {
+            status = "ok"
+        });
     }
 
     return Results.Json(
-        new { status = "unavailable", message = "SQL Server niet bereikbaar." },
+        new
+        {
+            status = "unavailable",
+            message = "SQL Server niet bereikbaar."
+        },
         statusCode: 503);
 });
 app.MapFallback("/api/{**path}", (HttpContext context) =>
