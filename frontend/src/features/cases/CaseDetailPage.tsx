@@ -29,6 +29,11 @@ interface CaseDetailProps {
   update: UpdateState;
 }
 
+// Keep user identifiers in the saved audit history, but omit them from the readable handover.
+function formatTransfer(text: string): string {
+  return text.replace(/\s*\([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\)/gi, '');
+}
+
 export default function CaseDetailPage({
   ticket,
   state,
@@ -45,14 +50,14 @@ export default function CaseDetailPage({
   return (
     <div className="fragment">
       <button className="back" onClick={() => navigate('cases')}>
-        ← Terug naar cases
+        ← Terug naar tickets
       </button>
       <PageHeader
-        title="Onderzoek / Case"
+        title="Ticketdetails"
         sub={
           isAdmin
             ? 'Beheerder · volledig dossier, alleen lezen'
-            : 'Casegegevens en onderzoekstijdlijn'
+            : 'Ticketgegevens en onderzoekstijdlijn'
         }
       />
       <div className={'wire-banner case-banner ' + priorityColor(ticket.priority)}>
@@ -69,7 +74,7 @@ export default function CaseDetailPage({
       </div>
       {canReadInternal && <CaseWorkflow research={ticket} />}
       <div className="detailgrid">
-        <Panel title="Casegegevens">
+        <Panel title="Ticketgegevens">
           <div className="bodypad">
             <dl>
               <dt>Prioriteit</dt>
@@ -105,7 +110,7 @@ export default function CaseDetailPage({
                       .filter((entry) => entry.kind === 'Observable')
                       .map((entry) => (
                         <div className="wire-observable" key={entry.id}>
-                          {entry.text}
+                          {entry.kind === 'Overdracht' ? formatTransfer(entry.text) : entry.text}
                         </div>
                       ))}
                     {!ticket.entries.some((entry) => entry.kind === 'Observable') && '—'}

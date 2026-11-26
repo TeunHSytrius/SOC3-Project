@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Alert, ResearchCase } from '../../types/soc';
-import { active, fmt, labels, sla } from '../../types/domain';
+import { active, fmt, sla } from '../../types/domain';
 import { Badge, Button } from '../../components/Ui';
 
 export function priorityColor(priority: Alert['priority']) {
@@ -30,7 +30,7 @@ export function AlertCards({ alerts, customerName, open, busy }: AlertCardsProps
             </div>
             <div className="wire-card-meta">
               <Badge value={alert.status} />
-              <span>{sla(alert).text}</span>
+              <Badge value={sla(alert).text} kind={sla(alert).kind} />
             </div>
             <button className="wire-card-main" onClick={() => open(alert.id)} disabled={busy}>
               <strong>{alert.title}</strong>
@@ -49,7 +49,7 @@ export function AlertCards({ alerts, customerName, open, busy }: AlertCardsProps
               </details>
             </div>
             <span className="wire-card-priority">
-              {labels[alert.priority]} · {alert.number}
+              <Badge value={alert.priority} /> {alert.number}
             </span>
           </article>
         ))}
@@ -82,7 +82,7 @@ export function CaseCards({
 }) {
   return (
     <>
-      {!cases.length && <p className="empty">Geen onderzoeken gevonden.</p>}
+      {!cases.length && <p className="empty">Geen tickets gevonden.</p>}
       <div className="wire-card-grid">
         {cases.map((research) => (
           <article
@@ -96,6 +96,7 @@ export function CaseCards({
             <button className="wire-card-main" onClick={() => open(research.id)}>
               <strong>{research.number}</strong>
               <span>{research.title}</span>
+              <Badge value={research.priority} />
             </button>
             <div className="wire-card-meta">
               <span>

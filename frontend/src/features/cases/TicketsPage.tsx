@@ -3,9 +3,8 @@ import type { WorkspaceActions } from '../../types/workspace';
 
 import { Panel, PageHeader } from '../../components/Ui';
 import { caseMatchesView, sortRecords } from '../../types/domain';
-import { CaseCards } from '../alerts/AlertCards';
 import CaseDetailPage from './CaseDetailPage';
-import TicketTable from './TicketTable';
+import TicketResults from './TicketResults';
 import QueueFilters from '../shared/QueueFilters';
 import { filterRecords } from '../shared/filterRecords';
 
@@ -45,10 +44,10 @@ export default function TicketsPage({ state, update, navigate, customerName, run
   return (
     <div className="fragment">
       <PageHeader
-        title={canReadInternal ? 'Tickets / onderzoeken' : 'Mijn tickets'}
+        title={canReadInternal ? 'Tickets' : 'Mijn tickets'}
         sub={
           canReadInternal
-            ? 'Selecteer de fase van het onderzoek. Nieuw betekent nog te prioriteren, niet recent aangemaakt.'
+            ? 'Bekijk, filter en open tickets per onderzoeksfase.'
             : 'Bekijk alle voor jou vrijgegeven onderzoeken.'
         }
       />
@@ -73,17 +72,17 @@ export default function TicketsPage({ state, update, navigate, customerName, run
         title={current[1]}
         sub={current[2] + ' · ' + list.length + ' van ' + selectedTickets.length + ' tickets'}
       >
-        {canReadInternal ? (
-          <TicketTable tickets={list} customerName={customerName} onOpen={id => navigate('cases', id)} />
-        ) : (
-          <div className="bodypad">
-            <CaseCards
-              cases={list}
-              customerName={(id) => customerName(id)}
-              open={(id) => navigate('cases', id)}
-            />
-          </div>
-        )}
+        <TicketResults
+          key={JSON.stringify([
+            state.org, state.archiveFilter, state.search, state.filter, state.priority,
+            state.listSort, state.ownerFilter, state.slaFilter, state.sourceFilter,
+            state.category, state.fromDate, state.toDate, state.mine,
+          ])}
+          tickets={list}
+          canReadInternal={canReadInternal}
+          customerName={customerName}
+          onOpen={(id) => navigate('cases', id)}
+        />
       </Panel>
     </div>
   );
