@@ -55,9 +55,9 @@ export function AppShell({
             }}
           >
             <span className="AppShell__brandMark" aria-hidden="true">
-              S3
+              SOC
             </span>
-            <span>SOC3</span>
+            <span>SOC Management</span>
           </a>
           <AppMenu items={navigationItems} currentPath={currentPath} onNavigate={onNavigate} />
         </div>
@@ -67,6 +67,7 @@ export function AppShell({
             <span className="AppShell__role">{user.role}</span>
           </div>
           <div className="AppShell__customer">
+            {canSwitchCustomer ? <label htmlFor={customerSelectId}>Klant</label> : <span className="AppShell__customerLabel">Klant</span>}
             {canSwitchCustomer ? (
               <>
                 <select

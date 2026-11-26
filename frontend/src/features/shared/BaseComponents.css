@@ -1,10 +1,4 @@
-/* Additional styles for MVP screens without a corresponding original wireframe component.
-   Shared colors, typography and layout are defined by the original index.css and App.css. */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+/* Shared workspace controls, tables, panels and feedback. */
 button,
 input,
 select,
@@ -29,7 +23,6 @@ textarea:focus-visible {
   width: 100%;
   font-size: 14px;
   line-height: 1.5;
-  --line: var(--border);
 }
 .AppShell__content h2 {
   font-size: 16px;
@@ -45,7 +38,7 @@ textarea:focus-visible {
   color: var(--muted);
 }
 .fragment {
-  display: contents;
+  min-width: 0;
 }
 .workspace-actions {
   display: flex;
@@ -91,7 +84,7 @@ textarea:focus-visible {
   color: var(--text);
 }
 .secondary:hover {
-  background: var(--surface-raised);
+  background: var(--surface-hover);
 }
 .stats {
   display: grid;
@@ -102,9 +95,8 @@ textarea:focus-visible {
 .stat,
 .panel {
   background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  box-shadow: 0 2px 4px #00000006;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 .stat {
   padding: 18px 19px;
@@ -149,7 +141,7 @@ textarea:focus-visible {
   margin: 6px 0;
 }
 .stat small {
-  font-size: 11px;
+  font-size: 12px;
 }
 .dashgrid,
 .detailgrid {
@@ -195,22 +187,22 @@ textarea:focus-visible {
 .bar {
   height: 100%;
   border-radius: 5px;
-  background: #68a1bd;
+  background: var(--severity-moderate);
 }
 .bar.Immediate {
-  background: #c93b47;
+  background: var(--severity-immediate);
 }
 .bar.Urgent {
-  background: #e0734b;
+  background: var(--severity-urgent);
 }
 .bar.High {
-  background: #dca13b;
+  background: var(--severity-high);
 }
 .bar.Moderate {
-  background: #548cbe;
+  background: var(--severity-moderate);
 }
 .bar.Low {
-  background: #59a496;
+  background: var(--severity-low);
 }
 .slaoverview {
   display: flex;
@@ -261,7 +253,7 @@ textarea:focus-visible {
   background: var(--sla-late);
 }
 .dot.orange {
-  background: #dca13b;
+  background: var(--severity-high);
 }
 .tablewrap {
   width: 100%;
@@ -273,7 +265,6 @@ textarea:focus-visible {
 table {
   width: 100%;
   border-collapse: collapse;
-  white-space: nowrap;
   font-size: 13px;
 }
 th {
@@ -283,12 +274,16 @@ th {
   font-weight: 650;
   font-size: 12px;
   padding: 10px 14px;
+  white-space: nowrap;
 }
 td {
   padding: 12px 14px;
   border-top: 1px solid var(--border);
   vertical-align: middle;
+  overflow-wrap: anywhere;
 }
+td .rowlink { min-width: min(160px, 100%); }
+td .badge { white-space: nowrap; }
 td:first-child,
 th:first-child {
   padding-left: 20px;
@@ -330,8 +325,8 @@ tr:hover td {
   align-items: center;
   padding: 3px 8px;
   border-radius: 5px;
-  font-size: 10px;
-  font-weight: 750;
+  font-size: 11px;
+  font-weight: 650;
   white-space: nowrap;
 }
 .badge.danger {
@@ -381,7 +376,7 @@ textarea {
   border: 1px solid var(--border);
   border-radius: 7px;
   padding: 9px 11px;
-  background: var(--bg);
+  background: var(--code-bg);
   color: var(--text-h);
   min-width: 0;
 }
@@ -392,7 +387,7 @@ textarea::placeholder {
 .field {
   display: grid;
   gap: 6px;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   font-weight: 650;
 }
 .field > span {
@@ -509,7 +504,7 @@ dd {
 .overlay {
   position: fixed;
   inset: 0;
-  background: #0008;
+  background: rgb(5 10 18 / 76%);
   display: grid;
   place-items: center;
   z-index: 10;
@@ -522,7 +517,8 @@ dd {
   background: var(--bg);
   border-radius: 12px;
   padding: 22px;
-  box-shadow: 0 18px 60px #0003;
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow);
 }
 .dialoghead {
   display: flex;

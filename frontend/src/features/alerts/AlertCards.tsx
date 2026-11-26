@@ -43,7 +43,7 @@ export function AlertCards({ alerts, customerName, open, busy }: AlertCardsProps
               </span>
               <details className="wire-card-menu">
                 <summary aria-label={'Acties voor ' + alert.number}>···</summary>
-                <button onClick={() => open(alert.id)}>
+                <button type="button" onClick={() => open(alert.id)} disabled={busy}>
                   {active(alert) ? 'Openen / beoordelen' : 'Details bekijken'}
                 </button>
               </details>
@@ -55,17 +55,17 @@ export function AlertCards({ alerts, customerName, open, busy }: AlertCardsProps
         ))}
       </div>
       {pageCount > 1 && (
-        <div className="wire-pagination">
+        <nav className="wire-pagination" aria-label="Alertpaginering">
           <Button disabled={current === 0} onClick={() => setPage(current - 1)}>
             Vorige
           </Button>
-          <span>
-            Pagina {current + 1} van {pageCount}
+          <span aria-live="polite">
+            Pagina {current + 1} van {pageCount} · {current * 12 + 1}–{Math.min((current + 1) * 12, alerts.length)} van {alerts.length}
           </span>
           <Button disabled={current === pageCount - 1} onClick={() => setPage(current + 1)}>
             Volgende
           </Button>
-        </div>
+        </nav>
       )}
     </>
   );
