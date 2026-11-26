@@ -12,9 +12,12 @@ class Client {
     }
     const response=await fetch(`${base}/api/v1/${path}`,{method,headers:{...headers,...(body===undefined?{}:{'Content-Type':'application/json'}),Cookie:[...this.cookies].map(([k,v])=>`${k}=${v}`).join('; ')},body:body===undefined?undefined:JSON.stringify(body)});
     for(const cookie of response.headers.getSetCookie()){const [pair]=cookie.split(';');const eq=pair.indexOf('=');const key=pair.slice(0,eq);if(/max-age=0/i.test(cookie)||!pair.slice(eq+1))this.cookies.delete(key);else this.cookies.set(key,pair.slice(eq+1));}
-    const data=await response.json().catch(()=>null);return {status:response.status,data};
+    const raw=await response.text();
+    let data=null;
+    try{data=JSON.parse(raw);}catch{/* Host filtering and proxies can return non-JSON errors. */}
+    return {status:response.status,data,diagnostic:data===null?raw.slice(0,500):undefined};
   }
-  async ok(path,opts={}){const {status,data}=await this.request(path,opts);assert(status>=200&&status<300,`${path}: ${status} ${JSON.stringify(data)}`);assert(data!==null,`${path}: JSON verwacht`);return data;}
+  async ok(path,opts={}){const {status,data,diagnostic}=await this.request(path,opts);assert(status>=200&&status<300,`${path}: ${status} ${diagnostic??JSON.stringify(data)}`);assert(data!==null,`${path}: JSON verwacht`);return data;}
   post(path,body={}){return this.ok(path,{method:'POST',body});}
   login(role){return this.post('auth/login',{username:`${role}@soc.demo`,password:'Demo2026!'});}
 }

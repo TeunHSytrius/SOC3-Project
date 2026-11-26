@@ -26,6 +26,18 @@ export function caseGroup(c:ResearchCase){
   if(c.status==='Resolved')return 'resolved';
   return 'open';
 }
+// Ticket tabs represent workflow stages, not the age of a ticket.
+export function caseMatchesView(ticket:ResearchCase,view:string):boolean {
+  switch(view){
+    case 'all': return true;
+    case 'new': return ticket.status==='Open';
+    case 'working': return ticket.status==='UnderInvestigation';
+    case 'waiting': return ticket.status==='WaitingForCustomer';
+    case 'resolved': return ticket.status==='Resolved'||ticket.status==='UnderReview';
+    case 'closed': return ticket.status==='Closed';
+    default: return ticket.status!=='Closed'&&ticket.status!=='Resolved'&&ticket.status!=='UnderReview';
+  }
+}
 export function sortRecords<T extends Alert|ResearchCase>(records:T[],sort:string,oldestFirst:boolean):T[]{
   return records.slice().sort((a,b)=>{
     if(sort==='priority'){

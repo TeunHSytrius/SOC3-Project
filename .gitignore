@@ -1,7 +1,9 @@
 # SOC3 - .gitignore
-# .NET 10 | ASP.NET Core | React | TypeScript | Vite | SQL Server
+# .NET 10 / React / TypeScript / Vite / SQL Server / Docker
+# Commit source, migrations, package-lock.json, project/solution files,
+# shared configuration examples, Compose files and CI workflows.
 
-# .NET - Buildbestanden
+# .NET / MSBuild / generated output
 [Bb]in/
 [Oo]bj/
 [Dd]ebug/
@@ -9,10 +11,30 @@
 artifacts/
 publish/
 *.binlog
+*.pdb
+*.mdb
+*.dll
+*.exe
+*.app
+*.ilk
+*.obj
+*.pch
+*.ipch
+*.tlog
+*.lastbuildstate
+/backend/Soc.Api/wwwroot/
 
-# Visual Studio / Rider / ReSharper
+# NuGet package caches (keep package manifests and lockfiles)
+*.nupkg
+*.snupkg
+packages/
+.nuget/packages/
+.nuget/http-cache/
+
+# Visual Studio / Rider / IntelliJ / ReSharper / VS Code
 .vs/
 .idea/
+*.iml
 *.suo
 *.user
 *.userosscache
@@ -20,62 +42,55 @@ publish/
 *.DotSettings.user
 _ReSharper*/
 *.[Rr]e[Ss]harper
-
-# VS Code - Lokale instellingen
 .vscode/*
 !.vscode/extensions.json
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
+# Other VS Code files are local by default; review before force-adding.
+.history/
+*.code-workspace
 
-# Node.js / npm / React / Vite
+# Node.js / npm / pnpm / Yarn / Vite / TypeScript
 node_modules/
 dist/
 dist-ssr/
 .vite/
 .npm/
 .pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/install-state.gz
+.yarn/build-state.yml
 *.tsbuildinfo
 vite.config.*.timestamp-*.mjs
-
-# ESLint / caches
 .eslintcache
+.stylelintcache
 .cache/
 .parcel-cache/
 .turbo/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# Logs en tijdelijke bestanden
-*.log
-*.tmp
-*.temp
-*.bak
-*.cache
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
-Desktop.ini
-
-# Tests en coverage
+# Tests / coverage / profiling
 TestResults/
 coverage/
 coverage-report/
 .nyc_output/
 playwright-report/
+playwright/.cache/
 test-results/
 BenchmarkDotNet.Artifacts/
 *.trx
 *.coverage
 *.coveragexml
+*.profraw
+*.profdata
+*.diagsession
+*.nettrace
+*.gcdump
+*.dmp
 
-# NuGet
-*.nupkg
-*.snupkg
-packages/
-.nuget/packages/
-
-# Lokale configuratie en geheimen
+# Local configuration and secrets
 appsettings.Development.json
 appsettings.Local.json
 appsettings.*.local.json
@@ -88,43 +103,86 @@ secrets.json
 **/secrets/
 *.secret
 *.secrets
+*.secret.json
+*.secrets.json
+*.credentials.json
+.npmrc.local
+# Keep shared .npmrc and NuGet.Config only if they contain no credentials.
 
-# SQL Server en lokale databases
+# Local databases / backups / exports
 *.mdf
 *.ldf
 *.ndf
 *.db
+*.db-journal
+*.db-wal
+*.db-shm
 *.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
 *.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+*.bak
+*.trn
 *.bacpac
 *.dacpac
+# Keep SQL source scripts and EF migrations tracked.
 
-# Certificaten en private keys
+# Certificates / private keys / Data Protection
 *.pfx
 *.p12
 *.key
 *.pem
+*.jks
+*.keystore
+*.snk
+**/keys/key-*.xml
+**/DataProtection-Keys/
 
-# Deployment en publicatie-instellingen
+# Deployment / local Docker overrides / runtime data
 *.publishsettings
 *.pubxml
 *.pubxml.user
 *.azurePubxml
 PublishProfiles/
 PublishScripts/
-
-# Runtimebestanden en uploads
+docker-compose.override.yml
+docker-compose.override.yaml
+compose.override.yaml
+compose.override.yml
+docker-compose.local.yml
+docker-compose.local.yaml
+compose.local.yml
+compose.local.yaml
 logs/
 Logs/
 uploads/
 private-storage/
 temp-uploads/
 
-# Lokale containers en overrides
-docker-compose.override.yml
-compose.override.yaml
-compose.override.yml
+# Temporary files and operating-system metadata
+*.log
+*.tmp
+*.temp
+*.cache
+*.swp
+*.swo
+*~
+~$*
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.stackdump
 
-# Lokaal gegenereerde projectbestanden
+# Local branch comparisons
 /branch-review/
-/backend/Soc.Api/wwwroot/

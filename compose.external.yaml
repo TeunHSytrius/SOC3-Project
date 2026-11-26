@@ -1,0 +1,25 @@
+# Alternative for an ARM laptop that cannot run the SQL Server container.
+# Requires a reachable, dedicated SQL Server demo database supplied by the group.
+# Use independently: docker compose -f compose.external.yaml up --build --wait
+services:
+  app:
+    build: .
+    ports:
+      - '127.0.0.1:${SOC_APP_PORT:-8081}:8080'
+    environment:
+      ConnectionStrings__Soc: '${SOC_EXTERNAL_SQL_CONNECTION:?Set SOC_EXTERNAL_SQL_CONNECTION in .env for a dedicated demo database}'
+      Demo__Enabled: 'true'
+      ASPNETCORE_ENVIRONMENT: Development
+      DataProtection__KeyPath: /app/keys
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - externalkeys:/app/keys
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "--max-time", "5", "http://127.0.0.1:8080/api/v1/health"]
+      interval: 10s
+      timeout: 8s
+      retries: 30
+      start_period: 60s
+volumes:
+  externalkeys:
