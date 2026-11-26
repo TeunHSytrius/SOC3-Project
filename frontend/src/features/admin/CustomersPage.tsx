@@ -8,7 +8,7 @@ interface PageProps extends WorkspaceActions {
   state: State;
 }
 
-export default function CustomersPage({ state, update, navigate, customerName, run, isAnalyst, canReadInternal, isAdmin }: PageProps) {
+export default function CustomersPage({ state, update, run }: PageProps) {
   return (
     <div className="fragment">
       <PageHeader
@@ -21,7 +21,7 @@ export default function CustomersPage({ state, update, navigate, customerName, r
         }
       />
       <Panel title="Organisaties" sub={state.orgs.length + ' geregistreerde organisaties'}>
-        <Table head={['Organisatie', 'Status', 'Reactie-SLA', 'Aangemaakt', 'Actie']}>
+        <Table head={['Organisatie', 'Status', 'Aangemaakt', 'Actie']}>
           {state.orgs.map((organization) => (
             <tr key={organization.id}>
               <td>
@@ -33,19 +33,9 @@ export default function CustomersPage({ state, update, navigate, customerName, r
                   kind={organization.isActive ? 'good' : 'neutral'}
                 />
               </td>
-              <td>{organization.responseMinutes} min</td>
               <td>{fmt(organization.createdAt)}</td>
               <td>
                 <div className="actions">
-                  <Button
-                    onClick={() => {
-                      navigate('cases');
-                      update({ org: organization.id, archiveFilter: 'all' });
-                    }}
-                  >
-                    Tickets (
-                    {state.ticketRegister.filter((t) => t.organizationId === organization.id).length})
-                  </Button>
                   <Button
                     onClick={() => update({ modal: 'customerEdit', selected: organization.id })}
                   >
