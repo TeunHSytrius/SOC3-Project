@@ -56,7 +56,16 @@ public sealed partial class SocService
         {
             if (await users.FindByNameAsync(member.Login) != null || await users.FindByEmailAsync(member.Login) != null)
                 continue;
-            var user = new AppUser { Id = Guid.NewGuid(), Name = member.Name, Email = member.Login, UserName = member.Login, EmailConfirmed = true, Role = member.Role, LockoutEnabled = true };
+            var user = new AppUser
+            {
+                Id = Guid.NewGuid(),
+                Name = member.Name,
+                Email = member.Login,
+                UserName = member.Login,
+                EmailConfirmed = true,
+                Role = member.Role,
+                LockoutEnabled = true
+            };
             var result = await users.CreateAsync(user, "Demo2026!");
             Require(result.Succeeded, string.Join(" ", result.Errors.Select(x => x.Description)), 500);
             await SetGrants(user, member.Role, member.Role switch
@@ -79,14 +88,14 @@ public sealed partial class SocService
     {
         foreach (var tenant in await db.Tenants.Where(t => t.Name == "Northstar Finance" || t.Name == "Delta Logistics" || t.Name == "Atlas Health").ToListAsync())
         {
-            await using var td = factory.Open(tenant);
-            var candidates = await td.Alerts.Where(a => a.SourceIntegrationId == null && a.ExternalEventId == null && a.PayloadHash == null).ToListAsync();
+            await using var tenantDb = factory.Open(tenant);
+            var candidates = await tenantDb.Alerts.Where(a => a.SourceIntegrationId == null && a.ExternalEventId == null && a.PayloadHash == null).ToListAsync();
             foreach (var alert in candidates)
             {
                 if (DemoAlertContext.Enrich(alert))
-                    LogTenant(td, alert.ScopeId, "Demo-initialisatie", "Fictieve securitycontext aangevuld", alert.Number);
+                    LogTenant(tenantDb, alert.ScopeId, "Demo-initialisatie", "Fictieve securitycontext aangevuld", alert.Number);
             }
-            await td.SaveChangesAsync();
+            await tenantDb.SaveChangesAsync();
         }
     }
     public async Task InitializeAsync()
@@ -103,61 +112,133 @@ public sealed partial class SocService
             await EnrichOriginalDemoAlertsAsync();
             return;
         }
-        var ts = new List<Tenant>();
+        var demoTenants = new List<Tenant>();
         foreach (var name in new[] { "Northstar Finance", "Delta Logistics", "Atlas Health" })
-            ts.Add(await CreateTenant(name));
-        var ids = ts.Select(x => x.Id).ToArray();
-        var a = new AppUser { Id = Guid.NewGuid(), Name = "Alex Morgan", Email = "analist@soc.demo", UserName = "analist@soc.demo", EmailConfirmed = true, Role = "Analist", LockoutEnabled = true };
-        var accounts = new[] { a, new AppUser { Id = Guid.NewGuid(), Name = "Sam de Vries", Email = "senior@soc.demo", UserName = "senior@soc.demo", Role = "Senior analist", EmailConfirmed = true, LockoutEnabled = true }, new AppUser { Id = Guid.NewGuid(), Name = "Robin Peters", Email = "beheerder@soc.demo", UserName = "beheerder@soc.demo", Role = "Beheerder", EmailConfirmed = true, LockoutEnabled = true }, new AppUser { Id = Guid.NewGuid(), Name = "Jamie Bakker", Email = "klant@soc.demo", UserName = "klant@soc.demo", Role = "Klant", EmailConfirmed = true, LockoutEnabled = true }, new AppUser { Id = Guid.NewGuid(), Name = "Kim Jansen", Email = "accountmanager@soc.demo", UserName = "accountmanager@soc.demo", Role = "Accountmanager", EmailConfirmed = true, LockoutEnabled = true } };
-        foreach (var u in accounts)
-        {
-            var r = await users.CreateAsync(u, "Demo2026!");
-            Require(r.Succeeded, string.Join(" ", r.Errors.Select(x => x.Description)), 500);
-            await SetGrants(u, u.Role, u.Role switch
+            demoTenants.Add(await CreateTenant(name));
+        var organizationIds = demoTenants.Select(x => x.Id).ToArray();
+        var demoAnalyst = new AppUser
             {
-                "Klant" => ids[..1],
-                "Accountmanager" => ids[..2],
+                Id = Guid.NewGuid(),
+                Name = "Alex Morgan",
+                Email = "analist@soc.demo",
+                UserName = "analist@soc.demo",
+                EmailConfirmed = true,
+                Role = "Analist",
+                LockoutEnabled = true
+            };
+        var accounts = new[]
+        {
+            demoAnalyst,
+            new AppUser
+            {
+                Id = Guid.NewGuid(),
+                Name = "Sam de Vries",
+                Email = "senior@soc.demo",
+                UserName = "senior@soc.demo",
+                Role = "Senior analist",
+                EmailConfirmed = true,
+                LockoutEnabled = true
+            },
+            new AppUser
+            {
+                Id = Guid.NewGuid(),
+                Name = "Robin Peters",
+                Email = "beheerder@soc.demo",
+                UserName = "beheerder@soc.demo",
+                Role = "Beheerder",
+                EmailConfirmed = true,
+                LockoutEnabled = true
+            },
+            new AppUser
+            {
+                Id = Guid.NewGuid(),
+                Name = "Jamie Bakker",
+                Email = "klant@soc.demo",
+                UserName = "klant@soc.demo",
+                Role = "Klant",
+                EmailConfirmed = true,
+                LockoutEnabled = true
+            },
+            new AppUser
+            {
+                Id = Guid.NewGuid(),
+                Name = "Kim Jansen",
+                Email = "accountmanager@soc.demo",
+                UserName = "accountmanager@soc.demo",
+                Role = "Accountmanager",
+                EmailConfirmed = true,
+                LockoutEnabled = true
+            }
+        };
+        foreach (var account in accounts)
+        {
+            var creationResult = await users.CreateAsync(account, "Demo2026!");
+            Require(creationResult.Succeeded, string.Join(" ", creationResult.Errors.Select(x => x.Description)), 500);
+            await SetGrants(account, account.Role, account.Role switch
+            {
+                "Klant" => organizationIds[..1],
+                "Accountmanager" => organizationIds[..2],
                 "Beheerder" => [],
-                _ => ids
+                _ => organizationIds
             });
         }
-        var samples = new (string Title, string Description, string Source, string Priority, double Hours, int Tenant)[] { ("Verdachte inlogpogingen", "Meerdere mislukte aanmeldingen op een serviceaccount.", "Microsoft Sentinel", "Urgent", -5, 0), ("Malware gedetecteerd", "Endpointbeveiliging heeft een verdacht bestand geblokkeerd.", "Defender", "High", -7, 1), ("Ongebruikelijke dataoverdracht", "Afwijkend uitgaand netwerkverkeer gedetecteerd.", "Splunk", "Immediate", -.4, 0), ("Phishingmelding", "Gebruiker meldt een verdachte e-mail.", "Defender", "Moderate", -3, 2), ("Afwijkende VPN-login", "Inloggen vanaf een onbekende locatie.", "Sentinel", "High", -2, 0), ("Poortscan gedetecteerd", "Ongebruikelijke scans op een interne host.", "Suricata", "Low", -1, 1), ("Verdacht PowerShell-proces", "Endpoint heeft afwijkende uitvoering gemeld.", "Defender", "Urgent", -.6, 2), ("Geblokkeerde verbinding", "Firewall heeft ongebruikelijk verkeer geblokkeerd.", "Firewall", "Moderate", -.2, 1) };
-        for (int n = 0; n < samples.Length; n++)
+        var samples = new (string Title, string Description, string Source, string Priority, double Hours, int Tenant)[]
         {
-            var s = samples[n];
-            var t = ts[s.Tenant];
-            var scope = await db.Scopes.FirstAsync(x => x.TenantId == t.Id);
-            await using var td = factory.Open(t);
-            var alert = AlertService.NewAlert(scope.Id, new CreateAlertRequest { Title = s.Title, Description = s.Description, Priority = s.Priority }, s.Source, DateTimeOffset.UtcNow.AddHours(s.Hours));
-            alert.Number = $"ALT-{1001 + n}";
+            ("Verdachte inlogpogingen", "Meerdere mislukte aanmeldingen op een serviceaccount.", "Microsoft Sentinel", "Urgent", -5, 0),
+            ("Malware gedetecteerd", "Endpointbeveiliging heeft een verdacht bestand geblokkeerd.", "Defender", "High", -7, 1),
+            ("Ongebruikelijke dataoverdracht", "Afwijkend uitgaand netwerkverkeer gedetecteerd.", "Splunk", "Immediate", -.4, 0),
+            ("Phishingmelding", "Gebruiker meldt een verdachte e-mail.", "Defender", "Moderate", -3, 2),
+            ("Afwijkende VPN-login", "Inloggen vanaf een onbekende locatie.", "Sentinel", "High", -2, 0),
+            ("Poortscan gedetecteerd", "Ongebruikelijke scans op een interne host.", "Suricata", "Low", -1, 1),
+            ("Verdacht PowerShell-proces", "Endpoint heeft afwijkende uitvoering gemeld.", "Defender", "Urgent", -.6, 2),
+            ("Geblokkeerde verbinding", "Firewall heeft ongebruikelijk verkeer geblokkeerd.", "Firewall", "Moderate", -.2, 1)
+        };
+        for (int sampleIndex = 0; sampleIndex < samples.Length; sampleIndex++)
+        {
+            var sample = samples[sampleIndex];
+            var tenant = demoTenants[sample.Tenant];
+            var scope = await db.Scopes.FirstAsync(x => x.TenantId == tenant.Id);
+            await using var tenantDb = factory.Open(tenant);
+            var alert = AlertService.NewAlert(scope.Id, new CreateAlertRequest { Title = sample.Title, Description = sample.Description, Priority = sample.Priority }, sample.Source, DateTimeOffset.UtcNow.AddHours(sample.Hours));
+            alert.Number = $"ALT-{1001 + sampleIndex}";
             DemoAlertContext.Enrich(alert);
-            td.Alerts.Add(alert);
-            if (n == 4)
+            tenantDb.Alerts.Add(alert);
+            if (sampleIndex == 4)
             {
-                var c = new ResearchCase { ScopeId = scope.Id, Number = "CASE-201", Title = "Onderzoek afwijkende VPN-login", Priority = alert.Priority, Status = TicketStatus.UnderInvestigation, OwnerId = a.Id, Owner = a.Name, CustomerVisible = true };
-                c.Entries.Add(new()
+                var researchCase = new ResearchCase
                 {
-                    Actor = a.Name,
+                    ScopeId = scope.Id,
+                    Number = "CASE-201",
+                    Title = "Onderzoek afwijkende VPN-login",
+                    Priority = alert.Priority,
+                    Status = TicketStatus.UnderInvestigation,
+                    OwnerId = demoAnalyst.Id,
+                    Owner = demoAnalyst.Name,
+                    CustomerVisible = true
+                };
+                researchCase.Entries.Add(new()
+                {
+                    Actor = demoAnalyst.Name,
                     Kind = "Notitie",
                     Text = "Loginlog gecontroleerd; aanvullend onderzoek nodig.",
                     Visible = false
                 });
-                c.Entries.Add(new()
+                researchCase.Entries.Add(new()
                 {
-                    Actor = a.Name,
+                    Actor = demoAnalyst.Name,
                     Kind = "Actie",
                     Text = "Klant geïnformeerd over het onderzoek.",
                     Visible = true
                 });
-                td.Cases.Add(c);
-                alert.CaseId = c.Id;
+                tenantDb.Cases.Add(researchCase);
+                alert.CaseId = researchCase.Id;
                 alert.Triage = "True positive";
                 alert.Status = AlertStatus.Escalated;
                 alert.FirstHandledAt = DateTimeOffset.UtcNow.AddHours(-1.5);
-                alert.OwnerId = a.Id;
-                alert.Owner = a.Name;
+                alert.OwnerId = demoAnalyst.Id;
+                alert.Owner = demoAnalyst.Name;
             }
-            if (n == 7)
+            if (sampleIndex == 7)
             {
                 alert.Status = AlertStatus.Dismissed;
                 alert.Triage = "False positive";
@@ -165,9 +246,9 @@ public sealed partial class SocService
                 alert.OwnerId = accounts[1].Id;
                 alert.Owner = accounts[1].Name;
             }
-            await td.SaveChangesAsync();
+            await tenantDb.SaveChangesAsync();
         }
-        await Log(a, "Demonstratiegegevens aangemaakt");
+        await Log(demoAnalyst, "Demonstratiegegevens aangemaakt");
         await InitializeTeamAccountsAsync();
     }
 }

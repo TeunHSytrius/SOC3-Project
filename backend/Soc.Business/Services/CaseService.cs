@@ -103,13 +103,13 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
     {
         Require(CanReadInternal(currentUser) || currentUser.Role is "Klant" or "Accountmanager");
         var result = new List<object>();
-        foreach (var (t, scopes) in await platform.ReadWorkspaces(currentUser, workspace, scope))
+        foreach (var (tenant, scopes) in await platform.ReadWorkspaces(currentUser, workspace, scope))
         {
-            await using var tenantDb = factory.Open(t);
-            foreach (var c in await CaseQuery(tenantDb).Where(x => scopes.Contains(x.ScopeId) && (CanReadInternal(currentUser) || x.CustomerVisible)).ToListAsync())
-                result.Add(CaseDto(c, t.Id, CanReadInternal(currentUser)));
-            foreach (var sid in scopes)
-                LogTenant(tenantDb, sid, currentUser.Name, "Caseoverzicht bekeken", "Cases");
+            await using var tenantDb = factory.Open(tenant);
+            foreach (var researchCase in await CaseQuery(tenantDb).Where(record => scopes.Contains(record.ScopeId) && (CanReadInternal(currentUser) || record.CustomerVisible)).ToListAsync())
+                result.Add(CaseDto(researchCase, tenant.Id, CanReadInternal(currentUser)));
+            foreach (var scopeId in scopes)
+                LogTenant(tenantDb, scopeId, currentUser.Name, "Caseoverzicht bekeken", "Cases");
             await tenantDb.SaveChangesAsync();
         }
         return result;

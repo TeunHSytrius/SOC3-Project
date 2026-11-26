@@ -44,7 +44,7 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0
             }));
 });
-builder.Services.AddDbContext<SocDbContext>(o => o.UseSqlServer(connection));
+builder.Services.AddDbContext<SocDbContext>(options => options.UseSqlServer(connection));
 builder.Services.AddSingleton(new TenantDbFactory(connection));
 builder.Services.AddIdentity<AppUser, IdentityRole<Guid>>(options =>
 {
@@ -73,10 +73,11 @@ builder.Services.ConfigureApplicationCookie(options =>
         return Task.CompletedTask;
     };
 });
-builder.Services.AddControllers().AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
+builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<SocService>();
 builder.Services.AddScoped<AlertService>();
+builder.Services.AddScoped<AlertIngestService>();
 builder.Services.AddScoped<CaseService>();
 builder.Services.AddSingleton<ApiErrorLog>();
 var app = builder.Build();

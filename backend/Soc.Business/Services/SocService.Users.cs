@@ -28,13 +28,13 @@ public sealed partial class SocService
         return result;
     }
 
-    async Task SetGrants(AppUser user, string role, Guid[] ids)
+    async Task SetGrants(AppUser user, string role, Guid[] organizationIds)
     {
         Require(Roles.Contains(role), "Ongeldige rol.", 400);
-        ids = ids.Distinct().ToArray();
-        Require(role != "Klant" || ids.Length == 1, "Een klantaccount moet precies één klant hebben.", 400);
-        Require(await db.Tenants.CountAsync(t => ids.Contains(t.Id)) == ids.Length, "Ongeldige klant.", 400);
-        var desired = await db.Scopes.Where(x => ids.Contains(x.TenantId)).ToListAsync();
+        organizationIds = organizationIds.Distinct().ToArray();
+        Require(role != "Klant" || organizationIds.Length == 1, "Een klantaccount moet precies één klant hebben.", 400);
+        Require(await db.Tenants.CountAsync(t => organizationIds.Contains(t.Id)) == organizationIds.Length, "Ongeldige klant.", 400);
+        var desired = await db.Scopes.Where(x => organizationIds.Contains(x.TenantId)).ToListAsync();
         var existing = await db.Assignments.Where(x => x.UserId == user.Id).ToListAsync();
         var desiredIds = desired.Select(x => x.Id).ToHashSet();
         db.Assignments.RemoveRange(existing.Where(x => !desiredIds.Contains(x.ScopeId)));
@@ -55,8 +55,8 @@ public sealed partial class SocService
         var email = Required(input.Email, 120);
         Require(email.Contains('@'), "Ongeldig e-mailadres.", 400);
         var role = Required(input.Role, 30);
-        var ids = input.OrganizationIds ?? [];
-        Require(Roles.Contains(role) && (role != "Klant" || ids.Distinct().Count() == 1) && await db.Tenants.CountAsync(t => ids.Contains(t.Id)) == ids.Distinct().Count(), "Ongeldige rol of klant.", 400);
+        var organizationIds = input.OrganizationIds ?? [];
+        Require(Roles.Contains(role) && (role != "Klant" || organizationIds.Distinct().Count() == 1) && await db.Tenants.CountAsync(t => organizationIds.Contains(t.Id)) == organizationIds.Distinct().Count(), "Ongeldige rol of klant.", 400);
         var account = new AppUser
         {
             Id = Guid.NewGuid(),
@@ -69,7 +69,7 @@ public sealed partial class SocService
         };
         var result = await users.CreateAsync(account, Required(input.Password, 200));
         Require(result.Succeeded, string.Join(" ", result.Errors.Select(x => x.Description)), 400);
-        await SetGrants(account, role, ids);
+        await SetGrants(account, role, organizationIds);
         await Log(currentUser, "Gebruiker aangemaakt", target: email);
         return await PublicUser(account);
     }
@@ -112,8 +112,8 @@ public sealed partial class SocService
         Require(System.Net.Mail.MailAddress.TryCreate(email, out var address) && string.Equals(address.Address, email, StringComparison.OrdinalIgnoreCase), "Ongeldig e-mailadres.", 400);
         var role = Required(input.Role, 30);
         Require(input.OrganizationIds != null && input.IsActive.HasValue, "Klanttoegang en accountstatus zijn verplicht.", 400);
-        var ids = input.OrganizationIds!.Distinct().ToArray();
-        Require(Roles.Contains(role) && (role != "Klant" || ids.Length == 1) && await db.Tenants.CountAsync(t => ids.Contains(t.Id)) == ids.Length, "Ongeldige rol of klant.", 400);
+        var organizationIds = input.OrganizationIds!.Distinct().ToArray();
+        Require(Roles.Contains(role) && (role != "Klant" || organizationIds.Length == 1) && await db.Tenants.CountAsync(t => organizationIds.Contains(t.Id)) == organizationIds.Length, "Ongeldige rol of klant.", 400);
         Require(input.Password == null || input.Password.Length <= 200, "Ongeldig wachtwoord.", 400);
         await using var transaction = await db.Database.BeginTransactionAsync();
         var user = await users.FindByIdAsync(id.ToString()) ?? throw new SocException(404, "Gebruiker niet gevonden.");
@@ -138,7 +138,7 @@ public sealed partial class SocService
             await users.ResetAccessFailedCountAsync(user);
             await users.SetLockoutEndDateAsync(user, null);
         }
-        await SetGrants(user, role, ids);
+        await SetGrants(user, role, organizationIds);
         var stamp = await users.UpdateSecurityStampAsync(user);
         Require(stamp.Succeeded, string.Join(" ", stamp.Errors.Select(x => x.Description)), 500);
         await Log(actor, "Gebruikersaccount gewijzigd", target: user.Id.ToString());
@@ -154,12 +154,12 @@ public sealed partial class SocService
         var list = new List<object>();
         foreach (var a in await users.Users.Where(x => x.IsActive && (x.Role == "Analist" || x.Role == "Senior analist")).ToListAsync())
         {
-            var ids = await db.Assignments.Where(x => x.UserId == a.Id).Select(x => x.TenantId).Distinct().ToListAsync();
+            var organizationIds = await db.Assignments.Where(x => x.UserId == a.Id).Select(x => x.TenantId).Distinct().ToListAsync();
             list.Add(new
             {
                 id = a.Id,
                 a.Name,
-                organizationIds = ids.Where(permitted.Contains)
+                organizationIds = organizationIds.Where(permitted.Contains)
             });
         }
         return list;

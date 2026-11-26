@@ -54,9 +54,9 @@ public sealed class TenantDbFactory(string connectionString)
             IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('{alerts}') AND name='IX_Alerts_SourceIntegrationId_ExternalEventId')
                 EXEC(N'CREATE UNIQUE INDEX [IX_Alerts_SourceIntegrationId_ExternalEventId] ON {alerts} ([SourceIntegrationId],[ExternalEventId]) WHERE [SourceIntegrationId] IS NOT NULL AND [ExternalEventId] IS NOT NULL');
             """;
-        await using var tx = await db.Database.BeginTransactionAsync();
+        await using var transaction = await db.Database.BeginTransactionAsync();
         await db.Database.ExecuteSqlRawAsync(sql);
-        await tx.CommitAsync();
+        await transaction.CommitAsync();
     }
     // Called on provision only; platform and tenant schemas share one database.
     public async Task ProvisionAsync(Tenant tenant)
