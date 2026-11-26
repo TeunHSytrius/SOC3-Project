@@ -237,7 +237,6 @@
   color: var(--muted);
 }
 
-
 .wire-card-main:hover strong {
   color: var(--info-text);
   text-decoration: underline;

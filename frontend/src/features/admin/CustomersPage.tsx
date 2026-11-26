@@ -67,5 +67,4 @@ export default function CustomersPage({ state, update, run }: PageProps) {
       </Panel>
     </div>
   );
-  
 }

@@ -91,7 +91,9 @@
   .AppShell__content .stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .AppShell__content .statline { flex-wrap: wrap; }
+  .AppShell__content .statline {
+    flex-wrap: wrap;
+  }
   .AppShell__content .stat {
     min-width: 0;
   }

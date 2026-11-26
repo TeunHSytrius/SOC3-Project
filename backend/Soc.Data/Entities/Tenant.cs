@@ -1,6 +1,6 @@
 namespace Soc.Data.Entities;
 
-    public class Tenant
+public class Tenant
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
@@ -15,5 +15,7 @@ namespace Soc.Data.Entities;
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public DateTimeOffset? DeactivatedAt
-    { get; set; }
+    {
+        get; set;
+    }
 }

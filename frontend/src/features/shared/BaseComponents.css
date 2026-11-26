@@ -40,7 +40,9 @@ textarea:focus-visible {
 .fragment {
   min-width: 0;
 }
-dl > .fragment { display: contents; }
+dl > .fragment {
+  display: contents;
+}
 .workspace-actions {
   display: flex;
   gap: 8px;

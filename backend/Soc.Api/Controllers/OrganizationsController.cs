@@ -30,7 +30,10 @@ public sealed class OrganizationsController(SocService service, OrganizationServ
     {
         var currentUser = await service.UserAsync(User);
         var organization = await organizations.CreateOrganization(currentUser, input);
-        return CreatedAtAction(nameof(GetById), new { id = organization.Id }, ToResponse(organization));
+        return CreatedAtAction(nameof(GetById), new
+        {
+            id = organization.Id
+        }, ToResponse(organization));
     }
 
     [HttpPatch("{id:guid}")]

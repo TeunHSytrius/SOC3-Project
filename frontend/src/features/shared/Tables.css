@@ -25,8 +25,12 @@ td {
   vertical-align: middle;
   overflow-wrap: anywhere;
 }
-td .rowlink { min-width: min(160px, 100%); }
-td .badge { white-space: nowrap; }
+td .rowlink {
+  min-width: min(160px, 100%);
+}
+td .badge {
+  white-space: nowrap;
+}
 td:first-child,
 th:first-child {
   padding-left: 20px;

@@ -17,7 +17,10 @@ public sealed class TenantDbContext : DbContext
         Schema = schema;
     }
 
-    public string Schema { get; }
+    public string Schema
+    {
+        get;
+    }
 
     public DbSet<Alert> Alerts => Set<Alert>();
     public DbSet<ResearchCase> Cases => Set<ResearchCase>();

@@ -41,7 +41,9 @@ function WorkspacePage({ state, actions, refresh, onTwoFactorEnabled, onError }:
     case 'audit':
       return actions.isAdmin ? <AuditPage {...pageProps} /> : null;
     case 'errors':
-      return actions.isAdmin ? <ErrorLog errors={state.errors} reload={() => void refresh()} /> : null;
+      return actions.isAdmin ? (
+        <ErrorLog errors={state.errors} reload={() => void refresh()} />
+      ) : null;
     case 'account':
       if (!state.user) {
         return null;

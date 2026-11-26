@@ -173,7 +173,9 @@
   margin-bottom: 14px;
 }
 
-.soc-dashboard .PageHeader { margin-bottom: 16px; }
+.soc-dashboard .PageHeader {
+  margin-bottom: 16px;
+}
 
 .soc-dashboard .dashboard-queues .panelhead h2 {
   font-size: 15px;
@@ -186,5 +188,10 @@
 }
 
 /* Keep section headings consistent with shared panels. */
-.AppShell__content .dashboard-section-title { font-size: 17px; margin-bottom: 12px; }
-.dashboard-ticket-links > button { flex: 1 1 auto; }
+.AppShell__content .dashboard-section-title {
+  font-size: 17px;
+  margin-bottom: 12px;
+}
+.dashboard-ticket-links > button {
+  flex: 1 1 auto;
+}

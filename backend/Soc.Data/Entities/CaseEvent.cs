@@ -1,14 +1,18 @@
 namespace Soc.Data.Entities;
 
-    public class CaseEvent
+public class CaseEvent
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
     public Guid ScopeId
-    { get; set; }
+    {
+        get; set;
+    }
 
     public Guid CaseId
-    { get; set; }
+    {
+        get; set;
+    }
 
     public DateTimeOffset At { get; set; } = DateTimeOffset.UtcNow;
 
@@ -19,5 +23,7 @@ namespace Soc.Data.Entities;
     public string Text { get; set; } = "";
 
     public bool Visible
-    { get; set; }
+    {
+        get; set;
+    }
 }

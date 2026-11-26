@@ -67,7 +67,11 @@ export function AppShell({
             <span className="AppShell__role">{user.role}</span>
           </div>
           <div className="AppShell__customer">
-            {canSwitchCustomer ? <label htmlFor={customerSelectId}>Klant</label> : <span className="AppShell__customerLabel">Klant</span>}
+            {canSwitchCustomer ? (
+              <label htmlFor={customerSelectId}>Klant</label>
+            ) : (
+              <span className="AppShell__customerLabel">Klant</span>
+            )}
             {canSwitchCustomer ? (
               <>
                 <select
@@ -90,9 +94,7 @@ export function AppShell({
           {actions && <div className="workspace-actions">{actions}</div>}
         </div>
       </header>
-      <main className="AppShell__content">
-        {children}
-      </main>
+      <main className="AppShell__content">{children}</main>
     </div>
   );
 }

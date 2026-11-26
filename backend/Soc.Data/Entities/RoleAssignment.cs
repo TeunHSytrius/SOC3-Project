@@ -1,15 +1,21 @@
 namespace Soc.Data.Entities;
 
-    public class RoleAssignment
+public class RoleAssignment
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
     public Guid UserId
-    { get; set; }
+    {
+        get; set;
+    }
 
     public Guid TenantId
-    { get; set; }
+    {
+        get; set;
+    }
 
     public Guid ScopeId
-    { get; set; }
+    {
+        get; set;
+    }
 }
