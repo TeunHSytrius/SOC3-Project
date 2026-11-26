@@ -8,8 +8,8 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ error, busy, onSubmit }: LoginPageProps) {
-  const [username, setUsername] = useState("analist@soc.demo");
-  const [password, setPassword] = useState("Demo2026!");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
   return (
     <main className="login-page">
@@ -58,7 +58,7 @@ export default function LoginPage({ error, busy, onSubmit }: LoginPageProps) {
           <p>Algemene testaccounts</p>
           <div className="login-demo-options">
             {["analist", "senior", "beheerder", "klant", "accountmanager"].map(role => (
-              <button type="button" key={role} onClick={() => setUsername(role + "@soc.demo")}>{role}</button>
+              <button type="button" key={role} onClick={() => { setUsername(role + "@soc.demo"); setPassword("Demo2026!"); }}>{role}</button>
             ))}
           </div>
         </details>

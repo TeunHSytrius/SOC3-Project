@@ -26,6 +26,7 @@ for(const email of ['teun@soc.demo','dominique@soc.demo','sergio@soc.demo','hamz
 assert(!teamUsers.some(u=>u.email==='riza@soc.demo'&&u.isActive),'Voormalig groepsaccount mag niet actief zijn');
 const north=orgs.find(o=>o.name==='Northstar Finance');const delta=orgs.find(o=>o.name==='Delta Logistics');assert(north&&delta);
 const analyst=new Client();await analyst.login('analist');assert((await analyst.ok('alerts')).length>=8);
+assert.equal((await analyst.request('auth/me',{headers:{'X-SOC-User':'00000000-0000-0000-0000-000000000000'}})).status,401,'Wrong tab identity must not use the shared cookie');
 const customer=new Client();await customer.login('klant');assert.equal((await customer.request('alerts')).status,403);assert.equal((await customer.request('users')).status,403);assert.equal((await customer.request('organizations/'+delta.id)).status,403);
 
 // Account management: a separate test account preserves the seeded demo accounts.
@@ -64,7 +65,8 @@ assert.equal(alert.organizationId,north.id);assert.equal(alert.rawPayload,JSON.s
 const replay=await tool.request('ingest/alerts',ingestOpts);assert.equal(replay.status,200);assert.equal(replay.data.id,alert.id);
 assert.equal((await tool.request('ingest/alerts',{...ingestOpts,body:{...payload,title:'Gewijzigd'}})).status,409);
 assert.equal((await analyst.request(`alerts/${alert.id}/claim`,{method:'POST',body:{},csrf:false})).status,400,'CSRF vereist');
-const claimed=await analyst.post(`alerts/${alert.id}/claim`);assert(claimed.firstHandledAt);assert.equal(claimed.status,'UnderReview');
+const claimed=await analyst.post(`alerts/${alert.id}/claim`);assert(claimed.firstHandledAt);assert.equal(claimed.status,'UnderReview');assert.notEqual(claimed.rowVersion,alert.rowVersion,'Claim must update rowversion');assert(claimed.history.some(h=>h.text==='Alert opgepakt'),'Claim history must be inserted');
+const persistedClaim=await analyst.ok(`alerts/${alert.id}`);assert.equal(persistedClaim.rowVersion,claimed.rowVersion);assert(persistedClaim.history.some(h=>h.text==='Alert opgepakt'),'Claim history must persist');
 assert.equal((await analyst.request(`alerts/${alert.id}/triage`,{method:'POST',body:{rowVersion:alert.rowVersion,outcome:'Bevestigd incident',reason:'Verouderde versie'}})).status,409);
 assert.equal((await analyst.request(`alerts/${alert.id}/claim`,{method:'POST',body:{}})).status,409);
 await analyst.post(`alerts/${alert.id}/triage`,{outcome:'Bevestigd incident',reason:'Demotest'});
@@ -72,6 +74,7 @@ const promoted=await analyst.post(`alerts/${alert.id}/promote`,{title:'Smoke tes
 const id=promoted.caseId;
 await analyst.post(`cases/${id}/events`,{kind:'Notitie',text:'Interne testnotitie',visible:false});
 await analyst.post(`cases/${id}/observables`,{value:'192.0.2.25',type:'IP',assessment:'Verdacht'});
+const persistedCase=await analyst.ok(`cases/${id}`);assert(persistedCase.entries.some(e=>e.text==='Interne testnotitie'));assert(persistedCase.entries.some(e=>e.kind==='Observable'&&e.text.includes('192.0.2.25')));
 assert.equal((await customer.request(`portal/cases/${id}`)).status,404);
 await analyst.ok(`cases/${id}`,{method:'PATCH',body:{visible:true}});
 await analyst.post(`cases/${id}/events`,{kind:'Actie',text:'Klantzichtbare actie',visible:true});
