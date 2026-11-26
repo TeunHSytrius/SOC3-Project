@@ -10,14 +10,24 @@ namespace Soc.Business.Services;
 
 public sealed partial class SocService
 {
-    public async Task<List<object>> ListUsers(AppUser u)
+    public async Task<List<object>> ListUsers(AppUser currentUser)
     {
-        Admin(u);
-        var r = new List<object>();
-        foreach (var x in await users.Users.Where(x => x.DeletedAt == null).OrderBy(x => x.Name).ToListAsync())
-            r.Add(await PublicUser(x));
-        return r;
+        Admin(currentUser);
+
+        var activeAccounts = await users.Users
+            .Where(account => account.DeletedAt == null)
+            .OrderBy(account => account.Name)
+            .ToListAsync();
+
+        var result = new List<object>();
+        foreach (var account in activeAccounts)
+        {
+            result.Add(await PublicUser(account));
+        }
+
+        return result;
     }
+
     async Task SetGrants(AppUser user, string role, Guid[] ids)
     {
         Require(Roles.Contains(role), "Ongeldige rol.", 400);
@@ -39,31 +49,40 @@ public sealed partial class SocService
         user.Role = role;
         await db.SaveChangesAsync();
     }
-    public async Task<object> CreateUser(AppUser u, Input i)
+    public async Task<object> CreateUser(AppUser currentUser, CreateUserRequest input)
     {
-        Admin(u);
-        var email = Required(i.Email, 120);
+        Admin(currentUser);
+        var email = Required(input.Email, 120);
         Require(email.Contains('@'), "Ongeldig e-mailadres.", 400);
-        var role = Required(i.Role, 30);
-        var ids = i.OrganizationIds ?? [];
+        var role = Required(input.Role, 30);
+        var ids = input.OrganizationIds ?? [];
         Require(Roles.Contains(role) && (role != "Klant" || ids.Distinct().Count() == 1) && await db.Tenants.CountAsync(t => ids.Contains(t.Id)) == ids.Distinct().Count(), "Ongeldige rol of klant.", 400);
-        var x = new AppUser { Id = Guid.NewGuid(), Name = Required(i.Name, 120), UserName = email, Email = email, EmailConfirmed = true, Role = role, LockoutEnabled = true };
-        var result = await users.CreateAsync(x, Required(i.Password, 200));
+        var account = new AppUser
+        {
+            Id = Guid.NewGuid(),
+            Name = Required(input.Name, 120),
+            UserName = email,
+            Email = email,
+            EmailConfirmed = true,
+            Role = role,
+            LockoutEnabled = true
+        };
+        var result = await users.CreateAsync(account, Required(input.Password, 200));
         Require(result.Succeeded, string.Join(" ", result.Errors.Select(x => x.Description)), 400);
-        await SetGrants(x, role, ids);
-        await Log(u, "Gebruiker aangemaakt", target: email);
-        return await PublicUser(x);
+        await SetGrants(account, role, ids);
+        await Log(currentUser, "Gebruiker aangemaakt", target: email);
+        return await PublicUser(account);
     }
-    public async Task<object> ChangeAccess(AppUser u, Guid id, Input i)
+    public async Task<object> ChangeAccess(AppUser currentUser, Guid id, ChangeUserAccessRequest input)
     {
-        Admin(u);
-        Require(u.Id != id, "Eigen rechten wijzigen is niet toegestaan.", 400);
-        var x = await users.FindByIdAsync(id.ToString()) ?? throw new SocException(404, "Gebruiker niet gevonden.");
-        Require(x.DeletedAt == null, "Gebruiker is verwijderd.", 404);
-        await SetGrants(x, Required(i.Role, 30), i.OrganizationIds ?? []);
-        await users.UpdateSecurityStampAsync(x);
-        await Log(u, "Gebruikersrechten gewijzigd", target: x.Email);
-        return await PublicUser(x);
+        Admin(currentUser);
+        Require(currentUser.Id != id, "Eigen rechten wijzigen is niet toegestaan.", 400);
+        var account = await users.FindByIdAsync(id.ToString()) ?? throw new SocException(404, "Gebruiker niet gevonden.");
+        Require(account.DeletedAt == null, "Gebruiker is verwijderd.", 404);
+        await SetGrants(account, Required(input.Role, 30), input.OrganizationIds ?? []);
+        await users.UpdateSecurityStampAsync(account);
+        await Log(currentUser, "Gebruikersrechten gewijzigd", target: account.Email);
+        return await PublicUser(account);
     }
     public async Task<object> RemoveUser(AppUser actor, Guid id)
     {
@@ -128,10 +147,10 @@ public sealed partial class SocService
         await transaction.CommitAsync();
         return await PublicUser(user);
     }
-    public async Task<List<object>> Analysts(AppUser u)
+    public async Task<List<object>> Analysts(AppUser currentUser)
     {
-        Require(Analyst(u));
-        var permitted = (await Workspaces(u)).Select(x => x.Tenant.Id).ToHashSet();
+        Require(Analyst(currentUser));
+        var permitted = (await Workspaces(currentUser)).Select(x => x.Tenant.Id).ToHashSet();
         var list = new List<object>();
         foreach (var a in await users.Users.Where(x => x.IsActive && (x.Role == "Analist" || x.Role == "Senior analist")).ToListAsync())
         {
