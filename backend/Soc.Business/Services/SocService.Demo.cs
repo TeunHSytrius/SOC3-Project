@@ -15,7 +15,9 @@ public sealed partial class SocService
     async Task InitializeTeamAccountsAsync()
     {
         if (!config.GetValue<bool>("Demo:Enabled"))
+        {
             return;
+        }
         const string marker = "Projectgroep-demoaccounts ingericht v1";
         // Deactivate the former group member on existing demo databases, without deleting history.
         const string rosterMarker = "Projectgroep-demoaccounts bijgewerkt v2";
@@ -39,9 +41,16 @@ public sealed partial class SocService
             await rosterTransaction.CommitAsync();
         }
         if (await db.Audit.AnyAsync(entry => entry.Action == marker))
+        {
             return;
+        }
         await using var transaction = await db.Database.BeginTransactionAsync();
-        var tenants = await db.Tenants.OrderBy(organization => organization.Name == "Northstar Finance" ? 0 : organization.Name == "Delta Logistics" ? 1 : 2).ThenBy(organization => organization.Name).Select(organization => organization.Id).ToArrayAsync();
+        var tenants = await db.Tenants
+            .OrderBy(organization => organization.Name == "Northstar Finance" ? 0 :
+                organization.Name == "Delta Logistics" ? 1 : 2)
+            .ThenBy(organization => organization.Name)
+            .Select(organization => organization.Id)
+            .ToArrayAsync();
         Require(tenants.Length > 0, "Geen demoklanten beschikbaar.", 500);
         var members = new (string Name, string Login, string Role)[]
         {
@@ -55,7 +64,9 @@ public sealed partial class SocService
         foreach (var member in members)
         {
             if (await users.FindByNameAsync(member.Login) != null || await users.FindByEmailAsync(member.Login) != null)
+            {
                 continue;
+            }
             var user = new AppUser
             {
                 Id = Guid.NewGuid(),
@@ -93,13 +104,17 @@ public sealed partial class SocService
         {
             Require(await db.Audit.AnyAsync(entry => entry.Action == "Demonstratiegegevens aangemaakt"), "Onvolledige demodatabase: reset uitsluitend de demo-volumes en start opnieuw.", 500);
             foreach (var tenant in await db.Tenants.ToListAsync())
+            {
                 await factory.UpgradeDemoAsync(tenant);
+            }
             await InitializeTeamAccountsAsync();
             return;
         }
         var demoTenants = new List<Tenant>();
         foreach (var name in new[] { "Northstar Finance", "Delta Logistics", "Atlas Health" })
+        {
             demoTenants.Add(await CreateTenant(name));
+        }
         var organizationIds = demoTenants.Select(organization => organization.Id).ToArray();
         var demoAnalyst = new AppUser
             {
