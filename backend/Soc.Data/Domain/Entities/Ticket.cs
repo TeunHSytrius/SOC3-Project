@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using Soc.Data.Domain.Entities.Enums;
+using SlaStatus = Soc.Data.Domain.Entities.Enums.SlaStatus;
 namespace Soc.Data.Domain.Entities;
 
 public class Ticket

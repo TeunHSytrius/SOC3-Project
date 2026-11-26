@@ -1,44 +1,27 @@
 using Microsoft.EntityFrameworkCore;
 using Soc.Data.Domain.Entities;
+
 namespace Soc.Data.Domain.Context;
 
-public class DomainDbContext : DbContext
+// Original domain model from feature/database; shared by the application and the additive schema initializer.
+internal static class DomainModelConfiguration
 {
-    public DomainDbContext(DbContextOptions<DomainDbContext> options) : base(options)
+    internal const string Schema = "domain";
+
+    internal static void Configure(ModelBuilder modelBuilder)
     {
-    }
+        modelBuilder.Entity<Alert>().ToTable("Alerts", Schema);
+        modelBuilder.Entity<Research>().ToTable("Researches", Schema);
+        modelBuilder.Entity<Ticket>().ToTable("Tickets", Schema);
+        modelBuilder.Entity<Note>().ToTable("Notes", Schema);
+        modelBuilder.Entity<Customer>().ToTable("Customers", Schema);
+        modelBuilder.Entity<Organization>().ToTable("Organizations", Schema);
+        modelBuilder.Entity<CustomerOrganization>().ToTable("CustomerOrganizations", Schema);
+        modelBuilder.Entity<Contract>().ToTable("Contracts", Schema);
+        modelBuilder.Entity<Employee>().ToTable("Employees", Schema);
+        modelBuilder.Entity<Evidence>().ToTable("Evidences", Schema);
 
-    //centrale klasses
-    public DbSet<Alert> Alerts => Set<Alert>();
-    public DbSet<Research> Researches => Set<Research>();
-    public DbSet<Ticket> Tickets => Set<Ticket>();
-    public DbSet<Note> Notes => Set<Note>();
-
-    //klanten en orgs
-    public DbSet<Customer> Customers => Set<Customer>();
-    public DbSet<Organization> Organizations => Set<Organization>();
-    public DbSet<CustomerOrganization> CustomerOrganizations => Set<CustomerOrganization>();
-    public DbSet<Contract> Contracts => Set<Contract>();
-
-    //werknemers
-    public DbSet<Employee> Employees => Set<Employee>();
-
-    // alles mbt onderzoek
-    public DbSet<Evidence> Evidences => Set<Evidence>();
-    //Observables moeten nog worden verwerkt als ik meer info heb
-
-    //monitor
-    //hier moet nog een log komen once i figure out how i want to
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        base.OnModelCreating(modelBuilder);
-
-        modelBuilder.ApplyConfigurationsFromAssembly(
-            typeof(DomainDbContext).Assembly
-        );
-
-        //ticket relaties enforcen
+        // Ticket constraints and relationships.
         modelBuilder.Entity<Ticket>(entity =>
         {
             entity.Property(t => t.SlaStatus)
@@ -66,7 +49,7 @@ public class DomainDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-        //cust-org enforcen
+        // Customer-organization relationships.
         modelBuilder.Entity<CustomerOrganization>(entity =>
         {
 
@@ -87,7 +70,7 @@ public class DomainDbContext : DbContext
                 }
             ).IsUnique();
         });
-        //evidence model
+        // Evidence relationships.
         modelBuilder.Entity<Evidence>(entity =>
         {
             entity.HasOne(e => e.Research)
@@ -102,7 +85,7 @@ public class DomainDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
 
         });
-        //alert regels enforcen
+        // Alert constraints and relationships.
         modelBuilder.Entity<Alert>(entity =>
         {
             entity.HasOne(a => a.Customer)
@@ -200,7 +183,5 @@ public class DomainDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
 
         });
-
     }
-
 }

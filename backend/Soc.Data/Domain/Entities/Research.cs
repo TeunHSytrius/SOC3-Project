@@ -1,5 +1,6 @@
 namespace Soc.Data.Domain.Entities;
 using Soc.Data.Domain.Entities.Enums;
+using PriorityLevel = Soc.Data.Domain.Entities.Enums.PriorityLevel;
 using System.ComponentModel.DataAnnotations;
 
 public class Research

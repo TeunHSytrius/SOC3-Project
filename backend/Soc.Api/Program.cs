@@ -43,10 +43,7 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 builder.Services.AddDbContext<SocDbContext>(options => options.UseSqlServer(connection));
-builder.Services.AddDbContext<DomainDbContext>(options =>
-    options.UseSqlServer(DomainDatabaseConnection.Resolve(
-        connection,
-        builder.Configuration.GetConnectionString("SocDomain"))));
+builder.Services.AddScoped<DomainSchemaInitializer>();
 builder.Services.AddSingleton(new TenantDbFactory(connection));
 builder.Services.AddIdentity<AppUser, IdentityRole<Guid>>(options =>
 {
@@ -164,10 +161,9 @@ app.Use(async (context, next) =>
 app.UseAuthorization();
 app.MapControllers();
 app.MapOpenApi();
-app.MapGet("/api/v1/health", async (SocDbContext database, DomainDbContext domainDatabase) =>
+app.MapGet("/api/v1/health", async (SocDbContext database) =>
 {
-    if (await database.Database.CanConnectAsync() &&
-        await domainDatabase.Database.CanConnectAsync())
+    if (await database.Database.CanConnectAsync())
     {
         return Results.Ok(new
         {
@@ -198,8 +194,8 @@ if (demo)
         try
         {
             await scope.ServiceProvider.GetRequiredService<SocService>().InitializeAsync();
-            await scope.ServiceProvider.GetRequiredService<DomainDbContext>()
-                .Database.EnsureCreatedAsync();
+            await scope.ServiceProvider.GetRequiredService<DomainSchemaInitializer>()
+                .InitializeAsync();
             app.Logger.LogInformation("SOC-demo gereed.");
             break;
         }

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Soc.Data.Entities;
+using Soc.Data.Domain.Context;
+using Domain = Soc.Data.Domain.Entities;
 
 namespace Soc.Data.Context;
 
@@ -18,6 +20,17 @@ public sealed class SocDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>
     public DbSet<ApiSource> Sources => Set<ApiSource>();
     public DbSet<PlatformAudit> Audit => Set<PlatformAudit>();
 
+    public DbSet<Domain.Alert> Alerts => Set<Domain.Alert>();
+    public DbSet<Domain.Research> Researches => Set<Domain.Research>();
+    public DbSet<Domain.Ticket> Tickets => Set<Domain.Ticket>();
+    public DbSet<Domain.Note> Notes => Set<Domain.Note>();
+    public DbSet<Domain.Customer> Customers => Set<Domain.Customer>();
+    public DbSet<Domain.Organization> Organizations => Set<Domain.Organization>();
+    public DbSet<Domain.CustomerOrganization> CustomerOrganizations => Set<Domain.CustomerOrganization>();
+    public DbSet<Domain.Contract> Contracts => Set<Domain.Contract>();
+    public DbSet<Domain.Employee> Employees => Set<Domain.Employee>();
+    public DbSet<Domain.Evidence> Evidences => Set<Domain.Evidence>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -28,6 +41,7 @@ public sealed class SocDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>
         ConfigureScopes(modelBuilder);
         ConfigureRoleAssignments(modelBuilder);
         ConfigureApiSources(modelBuilder);
+        DomainModelConfiguration.Configure(modelBuilder);
     }
 
     private static void ConfigureTenants(ModelBuilder modelBuilder)
