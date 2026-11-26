@@ -2,19 +2,21 @@
 
 **SE3 — Multilayer Webapplications | Projectgroep 3 | Sprint 1**
 
-SOC3 is een webapplicatie voor het registreren, beoordelen en afhandelen van beveiligingsmeldingen binnen een Security Operations Centre (SOC). Deze repository bevat het technische fundament en een klikbaar prototype. Het is geen afgerond incidentmanagementsysteem.
+Laatste actualisatie: 26 november 2026.
+
+SOC3 is een webapplicatie voor het registreren, beoordelen en afhandelen van beveiligingsmeldingen binnen een Security Operations Centre (SOC). In Sprint 1 ligt de nadruk op het technische fundament: authenticatie, gebruikers- en klantenbeheer, navigatie, de database en de eerste schermen. De operationele verwerking van beveiligingsmeldingen wordt verder ontwikkeld in volgende sprints.
 
 [Taiga — sprintbord](https://tree.taiga.io/project/djominique-soc-groep-3/kanban) · [GitHub Actions](https://github.com/TeunHSytrius/SOC3-Project/actions) · [Installatie en problemen oplossen](docs/INSTALLATIE.md)
 
 ## Inhoud
 
 - [1. Snel starten](#1-snel-starten)
-- [2. Huidige stand](#2-huidige-stand)
+- [2. Huidige stand — Sprint 1](#2-huidige-stand--sprint-1)
 - [3. Architectuur en database](#3-architectuur-en-database)
 - [4. Bestaande bijdragen en herkomst](#4-bestaande-bijdragen-en-herkomst)
 - [5. Samen verder ontwikkelen](#5-samen-verder-ontwikkelen)
 - [6. Codeconventies en controles](#6-codeconventies-en-controles)
-- [7. Bespreekpunten voor het team](#7-bespreekpunten-voor-het-team)
+- [7. Openstaande keuzes en vervolg](#7-openstaande-keuzes-en-vervolg)
 
 ## 1. Snel starten
 
@@ -58,9 +60,9 @@ Stoppen: `docker compose down`. Gebruik **geen** `docker compose down -v`: daarm
 
 Werkt Docker niet op jouw laptop? Zie [de installatiehandleiding](docs/INSTALLATIE.md), ook voor Apple Silicon, een externe SQL Server en DataGrip.
 
-## 2. Huidige stand
+## 2. Huidige stand — Sprint 1
 
-Onderstaande indeling beschrijft de technische inhoud van deze versie, niet de formele acceptatie van Taiga-tickets.
+De geïntegreerde database, login, 2FA en het vernieuwde alertoverzicht staan op `main`. [PR #12](https://github.com/TeunHSytrius/SOC3-Project/pull/12) is gemerged na een geslaagde [CI-run](https://github.com/TeunHSytrius/SOC3-Project/actions/runs/45782022014). De tabel hieronder beschrijft de technische voortgang; de actuele taakstatus en formele acceptatie staan in [Taiga](https://tree.taiga.io/project/djominique-soc-groep-3/kanban).
 
 | Onderdeel | Stand | Toelichting |
 | --- | --- | --- |
@@ -68,12 +70,22 @@ Onderstaande indeling beschrijft de technische inhoud van deze versie, niet de f
 | 2FA | Geïntegreerd | Oorspronkelijke service van Thijs, aangesloten op Identity |
 | Gebruikers- en klantenbeheer | Basis beschikbaar | Bestaande beheer-API gebruikt platformmodellen |
 | Rollen en klanttoegang | Basis beschikbaar | Autorisatie in de backend; verdere validatie tegen FO/TO nodig |
-| Database | Gecombineerd model | Hamza's domeinentiteiten toegevoegd aan dezelfde SQL-database; koppeling met beheerdata nog open |
-| Dashboard en alertoverzicht | Prototype | Fictieve meldingen, filters en details; geen alert-API |
+| Database | Geïntegreerde basis | Hamza's domeinentiteiten en relaties zijn toegevoegd aan `SocDbContext`; koppeling met beheerdata nog open |
+| Dashboard en alertoverzicht | Prototype beschikbaar | Overzicht, zoekfunctie, filters, paginering en detailpagina met voorbeeldmeldingen |
 | Auditlog | Basis beschikbaar | Platformactiviteiten en paginering; geen volledige operationele audit |
-| Ingest, triage, tickets, SLA, onderzoeken en rapportages | Nog te realiseren | Geen afgeronde workflows of geaccepteerde user stories |
+| Ingest, triage, tickets, SLA, onderzoeken en rapportages | Nog te realiseren | Operationele API's en workflows ontbreken |
 
-**Voorbeelddata zijn geen werkende alertverwerking.** De interface duidt de voorbeelden aan met korte labels in plaats van een afzonderlijke banner. De klikbare alerts worden in de frontend gemaakt en niet in SQL opgeslagen. De groep bepaalt aan de hand van het FO, TO en Taiga welke onderdelen aan de acceptatiecriteria voldoen.
+De alertschermen gebruiken herkenbaar gelabelde voorbeeldgegevens uit `frontend/src/features/demo`. De meldingen worden niet in SQL opgeslagen en zijn niet afkomstig uit securitytooling. De groep bepaalt aan de hand van het FO, TO en Taiga welke onderdelen aan de acceptatiecriteria voldoen.
+
+### Scrum-artifacts
+
+| Artifact | Waar te vinden |
+| --- | --- |
+| Product Backlog | Taiga: geprioriteerde user stories en acceptatiecriteria |
+| Sprint Backlog | Taiga: geselecteerde user stories, taken en actuele taakverdeling voor Sprint 1 |
+| Increment | `main`: geïntegreerde en technisch geteste onderdelen; acceptatie aan de hand van de Definition of Done |
+
+Gebruik het actuele sprintbord tijdens het overleg en de Sprint Review. De README is geen tweede takenadministratie.
 
 ## 3. Architectuur en database
 
@@ -112,7 +124,7 @@ SOC3-Project/
 
 De oorspronkelijke domeinentiteiten zijn toegevoegd aan `SocDbContext` met behoud van integer-ID's en de oorspronkelijke relaties. De namespaces en schematoewijzing zijn aangepast om conflicten met de bestaande implementatie te voorkomen. Nieuwe demo's krijgen de tabellen bij initialisatie; voor bestaande demo's is een additieve initializer toegevoegd. Er is geen tweede database en geen automatische migratie van bestaande records.
 
-**Nog te besluiten:** hoe `AppUser` en `Employee`, `Tenant` en `Customer/Organization` aan elkaar worden gekoppeld; welke alert- en ticketmodellen uiteindelijk leidend zijn; hoe klantisolatie binnen het domeinmodel wordt afgedwongen. De bestaande schermen gebruiken nog de platformmodellen. Er zijn nog geen publieke API's voor de oorspronkelijke domeintabellen. De huidige oplossing is een integratiestap, niet het definitieve datamodel.
+**Nog te besluiten:** hoe `AppUser` en `Employee`, `Tenant` en `Customer/Organization` aan elkaar worden gekoppeld; welke alert- en ticketmodellen uiteindelijk leidend zijn; hoe klantisolatie binnen het domeinmodel wordt afgedwongen. De bestaande schermen gebruiken nog de platformmodellen. Er zijn nog geen publieke API's voor de oorspronkelijke domeintabellen. De huidige oplossing is een integratiestap. Wijzigingen in de gedeelde modellen worden met het team afgestemd.
 
 ## 4. Bestaande bijdragen en herkomst
 
@@ -186,9 +198,9 @@ docker compose --profile test run --rm smoke
 
 CI controleert de backendtests, Docker-build, HTTP-readiness, SQL-tabellen en API-smoketest. Zie [Actions](https://github.com/TeunHSytrius/SOC3-Project/actions) voor de werkelijke resultaten per commit. Een groene CI-run bewijst niet dat alle acceptatiecriteria zijn behaald. Test 2FA-setup en aanmelding ook handmatig met een eigen testaccount; gebruik daarvoor niet de generieke smoke-testaccounts.
 
-## 7. Bespreekpunten voor het team
+## 7. Openstaande keuzes en vervolg
 
-Gebruik dit overzicht om samen besluiten te nemen, niet om individueel taken toe te wijzen.
+De volgende punten zijn nog niet definitief vastgesteld. Bespreek ze gezamenlijk en leg de uitkomsten vast in Taiga en het FO/TO.
 
 | Onderwerp | Te bespreken besluit |
 | --- | --- |
