@@ -1,0 +1,36 @@
+@media (max-width: 1100px) {
+  .dashgrid,
+  .detailgrid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 700px) {
+  .stats {
+    gap: 8px;
+  }
+  .stat {
+    padding: 12px;
+  }
+  .stat strong {
+    font-size: 26px;
+  }
+  .filters {
+    padding: 12px;
+  }
+  .panelhead {
+    flex-wrap: wrap;
+  }
+  .slaoverview {
+    flex-wrap: wrap;
+  }
+}
+
+.rowlink:hover,
+.back:hover {
+  color: var(--focus);
+  text-decoration: underline;
+}
+.arrowbtn:hover {
+  color: var(--info-text);
+  background: var(--surface-hover);
+}

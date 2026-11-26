@@ -1,0 +1,70 @@
+.bodypad {
+  padding: 16px;
+}
+.bodypad > p {
+  margin-bottom: 15px;
+  line-height: 1.7;
+}
+.back {
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-h);
+  font-weight: 650;
+  padding: 4px 0;
+  margin-bottom: 10px;
+}
+dl {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) 1.5fr;
+  gap: 8px 14px;
+  margin: 0 0 16px;
+}
+dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+dd {
+  margin: 0;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.timeline {
+  padding: 19px 22px;
+}
+.timeline > div {
+  position: relative;
+  border-left: 1px solid var(--border);
+  padding: 0 0 22px 18px;
+  margin-left: 5px;
+}
+.timeline > div:last-child {
+  padding-bottom: 0;
+}
+.timeline-dot {
+  position: absolute;
+  left: -5px;
+  top: 4px;
+  width: 9px;
+  height: 9px;
+  background: var(--surface-hover);
+  border-radius: 50%;
+}
+.timeline strong {
+  display: block;
+  font-size: 13px;
+}
+.timeline small {
+  display: block;
+  margin-top: 5px;
+}
+.timeline p {
+  margin-top: 5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

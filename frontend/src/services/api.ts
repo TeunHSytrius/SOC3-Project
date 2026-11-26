@@ -42,7 +42,15 @@ function fallbackMessage(status: number): string {
   }
 }
 
-function throwResponseError(response: Response, data: any): never {
+interface ErrorResponse {
+  message?: string;
+  errors?: Record<string, string[]>;
+  detail?: string;
+  title?: string;
+  traceId?: string;
+}
+
+function throwResponseError(response: Response, data: ErrorResponse | null): never {
   const fields =
     data?.errors && typeof data.errors === 'object'
       ? Object.values(data.errors).flat().join(' ')
@@ -81,7 +89,7 @@ function resolveRoute(path: string, body?: Record<string, unknown>) {
   return { path, method };
 }
 
-export async function api<T = any>(
+export async function api<T = unknown>(
   path: string,
   body?: Record<string, unknown>,
   context?: RequestContext,

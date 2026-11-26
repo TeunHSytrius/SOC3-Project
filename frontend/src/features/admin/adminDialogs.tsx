@@ -1,9 +1,9 @@
-import { Field, Select } from '../../components/Ui';
-import { isClosed, labels, nextCaseStates, priorities, roles } from '../../types/domain';
-import { text, area, choose, check } from '../shared/dialogFields';
+import { Field } from '../../components/Ui';
+import { roles } from '../../types/domain';
+import { text, choose } from '../shared/dialogFields';
 import type { DialogDefinition, DialogProps } from '../shared/dialogTypes';
 
-export function getAdminDialog({ state: currentState, run, update, navigate }: DialogProps): DialogDefinition | null {
+export function getAdminDialog({ state: currentState, run, update }: DialogProps): DialogDefinition | null {
   const account = currentState.users.find((item) => item.id === currentState.selected);
   let title: string;
   let fields: DialogDefinition['fields'];

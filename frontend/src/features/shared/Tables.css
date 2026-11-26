@@ -1,0 +1,29 @@
+.tablewrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+th {
+  text-align: left;
+  background: var(--surface-raised);
+  color: var(--muted);
+  font-weight: 650;
+  font-size: 12px;
+  padding: 10px 14px;
+  white-space: nowrap;
+}
+td {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+td .rowlink { min-width: min(160px, 100%); }
+td

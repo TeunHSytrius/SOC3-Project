@@ -1,0 +1,73 @@
+.badge { white-space: nowrap; }
+td:first-child,
+th:first-child {
+  padding-left: 20px;
+}
+td small {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+}
+tr:hover td {
+  background: var(--surface-hover);
+}
+.rowlink {
+  appearance: none;
+  border: 0;
+  border-radius: 4px;
+  display: block;
+  text-align: left;
+  background: none;
+  padding: 0;
+  color: var(--info-text);
+  font-weight: 650;
+  white-space: normal;
+}
+.rowlink:hover {
+  text-decoration: underline;
+}
+.arrowbtn {
+  appearance: none;
+  border: 0;
+  border-radius: 6px;
+  min-width: 32px;
+  min-height: 32px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.badge.danger {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+.badge.warn {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+.badge.good {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+.badge.blue {
+  background: var(--info-bg);
+  color: var(--info-text);
+}
+.badge.neutral {
+  background: var(--surface-raised);
+  color: var(--muted);
+}
+
+.badge.critical {
+  background: var(--purple-bg);
+  color: var(--purple-text);
+}

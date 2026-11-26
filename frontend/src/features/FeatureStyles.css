@@ -1,5 +1,15 @@
 /* Shared styles are loaded in this order to preserve the existing cascade. */
 @import './shared/BaseComponents.css';
+@import './shared/Buttons.css';
+@import './shared/Panels.css';
+@import './shared/Charts.css';
+@import './shared/Tables.css';
+@import './shared/Badges.css';
+@import './shared/Forms.css';
+@import './shared/Details.css';
+@import './shared/Feedback.css';
+@import './shared/Dialogs.css';
+@import './shared/SharedResponsive.css';
 @import './shared/WorkspaceCards.css';
 @import './shared/ResponsiveWorkspace.css';
 @import './cases/CaseEntryStyles.css';
