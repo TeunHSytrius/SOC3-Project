@@ -34,9 +34,9 @@ public sealed partial class SocService
         Require(!string.IsNullOrWhiteSpace(value) && value.Length <= max, "Ongeldige of ontbrekende invoer.", 400);
         return value!.Trim();
     }
-    public static bool Analyst(AppUser u) => u.Role is "Analist" or "Senior analist";
-    internal static bool CanReadInternal(AppUser u) => Analyst(u) || u.Role == "Beheerder";
-    public static void Admin(AppUser u) => Require(u.Role == "Beheerder");
+    public static bool Analyst(AppUser user) => user.Role is "Analist" or "Senior analist";
+    internal static bool CanReadInternal(AppUser user) => Analyst(user) || user.Role == "Beheerder";
+    public static void Admin(AppUser user) => Require(user.Role == "Beheerder");
     internal static bool Closed(ResearchCase c) => c.Status == TicketStatus.Closed;
 
     internal static PriorityLevel Priority(string? p)
@@ -52,40 +52,105 @@ public sealed partial class SocService
         Require(value >= 1 && value <= 10080, "SLA moet tussen 1 en 10080 minuten liggen.", 400);
         return value;
     }
-    bool NeedsTwoFactor(AppUser u) => !u.TwoFactorEnabled && (u.Role is "Analist" or "Senior analist" or "Beheerder") && !(config.GetValue<bool>("Demo:Enabled") && u.Email!.EndsWith("@soc.demo", StringComparison.OrdinalIgnoreCase));
+    private bool NeedsTwoFactor(AppUser user)
+    {
+        bool internalRole = user.Role is "Analist" or "Senior analist" or "Beheerder";
+        if (user.TwoFactorEnabled || !internalRole)
+            return false;
+
+        bool demoAccount = config.GetValue<bool>("Demo:Enabled") &&
+            user.Email!.EndsWith("@soc.demo", StringComparison.OrdinalIgnoreCase);
+
+        return !demoAccount;
+    }
     public async Task<AppUser> UserAsync(System.Security.Claims.ClaimsPrincipal principal, bool allowSetup = false)
     {
-        var u = await users.GetUserAsync(principal);
-        Require(u is { IsActive: true }, "Log opnieuw in.", 401);
-        Require(allowSetup || !NeedsTwoFactor(u!), "Stel eerst tweestapsverificatie in via Account.", 403);
-        return u!;
+        var user = await users.GetUserAsync(principal);
+        Require(user is { IsActive: true }, "Log opnieuw in.", 401);
+        Require(allowSetup || !NeedsTwoFactor(user!), "Stel eerst tweestapsverificatie in via Account.", 403);
+        return user!;
     }
-    public async Task<object> PublicUser(AppUser u) => new { id = u.Id, u.Name, u.Email, u.Role, u.IsActive, u.TwoFactorEnabled, requiresTwoFactorSetup = NeedsTwoFactor(u), organizationIds = await db.Assignments.Where(x => x.UserId == u.Id).Select(x => x.TenantId).Distinct().ToArrayAsync() };
-    public async Task<object> Access(AppUser u) => new { user = await PublicUser(u), workspaces = await (from a in db.Assignments join s in db.Scopes on a.ScopeId equals s.Id join t in db.Tenants on a.TenantId equals t.Id where a.UserId == u.Id select new { workspaceId = t.Id, tenantName = t.Name, scopeId = s.Id, scopeName = s.Name }).ToListAsync() };
-    public async Task Log(AppUser u, string action, Guid? tenant = null, string? target = null)
+    public async Task<object> PublicUser(AppUser user)
+    {
+        var organizationIds = await db.Assignments
+            .Where(assignment => assignment.UserId == user.Id)
+            .Select(assignment => assignment.TenantId)
+            .Distinct()
+            .ToArrayAsync();
+
+        return new
+        {
+            id = user.Id,
+            user.Name,
+            user.Email,
+            user.Role,
+            user.IsActive,
+            user.TwoFactorEnabled,
+            requiresTwoFactorSetup = NeedsTwoFactor(user),
+            organizationIds
+        };
+    }
+    public async Task<object> Access(AppUser user)
+    {
+        var publicUser = await PublicUser(user);
+        var workspaces = await (
+            from assignment in db.Assignments
+            join scope in db.Scopes on assignment.ScopeId equals scope.Id
+            join tenant in db.Tenants on assignment.TenantId equals tenant.Id
+            where assignment.UserId == user.Id
+            select new
+            {
+                workspaceId = tenant.Id,
+                tenantName = tenant.Name,
+                scopeId = scope.Id,
+                scopeName = scope.Name
+            }).ToListAsync();
+
+        return new
+        {
+            user = publicUser,
+            workspaces
+        };
+    }
+    public async Task Log(AppUser user, string action, Guid? tenant = null, string? target = null)
     {
         db.Audit.Add(new()
         {
-            Actor = u.Name,
+            Actor = user.Name,
             Action = action,
             TenantId = tenant,
             Target = target
         });
         await db.SaveChangesAsync();
     }
-    internal static void LogTenant(TenantDbContext t, Guid scope, string actor, string action, string target) => t.Audit.Add(new() { ScopeId = scope, Actor = actor, Action = action, Target = target });
-    internal async Task<Tenant> Tenant(Guid? id) => await db.Tenants.SingleOrDefaultAsync(x => x.Id == id) ?? throw new SocException(404, "Klant niet gevonden.");
-    internal async Task<List<Guid>> Scopes(AppUser u, Guid tenant) => await db.Assignments.Where(x => x.UserId == u.Id && x.TenantId == tenant).Select(x => x.ScopeId).ToListAsync();
-    internal async Task<List<(Tenant Tenant, List<Guid> Scopes)>> Workspaces(AppUser u, Guid? tenant = null, Guid? scope = null)
+    internal static void LogTenant(TenantDbContext tenantDb, Guid scope, string actor, string action, string target)
     {
-        var ids = await db.Assignments.Where(x => x.UserId == u.Id).Select(x => x.TenantId).Distinct().ToListAsync();
+        tenantDb.Audit.Add(new TenantAudit
+        {
+            ScopeId = scope,
+            Actor = actor,
+            Action = action,
+            Target = target
+        });
+    }
+    internal async Task<Tenant> Tenant(Guid? id) => await db.Tenants.SingleOrDefaultAsync(x => x.Id == id) ?? throw new SocException(404, "Klant niet gevonden.");
+    internal async Task<List<Guid>> Scopes(AppUser user, Guid tenant)
+    {
+        return await db.Assignments
+            .Where(assignment => assignment.UserId == user.Id && assignment.TenantId == tenant)
+            .Select(assignment => assignment.ScopeId)
+            .ToListAsync();
+    }
+    internal async Task<List<(Tenant Tenant, List<Guid> Scopes)>> Workspaces(AppUser user, Guid? tenant = null, Guid? scope = null)
+    {
+        var ids = await db.Assignments.Where(x => x.UserId == user.Id).Select(x => x.TenantId).Distinct().ToListAsync();
         if (tenant.HasValue)
             Require(ids.Contains(tenant.Value) && await db.Tenants.AnyAsync(t => t.Id == tenant.Value && t.IsActive));
         var ts = await db.Tenants.Where(x => x.IsActive && ids.Contains(x.Id) && (!tenant.HasValue || x.Id == tenant.Value)).ToListAsync();
         var result = new List<(Tenant, List<Guid>)>();
         foreach (var t in ts)
         {
-            var scopes = await Scopes(u, t.Id);
+            var scopes = await Scopes(user, t.Id);
             if (scope.HasValue)
                 scopes = scopes.Where(x => x == scope.Value).ToList();
             if (scopes.Count > 0)
@@ -97,10 +162,10 @@ public sealed partial class SocService
     }
     // Platform administrators may inspect all tenants, including inactive ones.
     // Operational writes must still use the normal assigned, active workspace checks.
-    internal async Task<List<(Tenant Tenant, List<Guid> Scopes)>> ReadWorkspaces(AppUser u, Guid? tenant = null, Guid? scope = null)
+    internal async Task<List<(Tenant Tenant, List<Guid> Scopes)>> ReadWorkspaces(AppUser user, Guid? tenant = null, Guid? scope = null)
     {
-        if (u.Role != "Beheerder")
-            return await Workspaces(u, tenant, scope);
+        if (user.Role != "Beheerder")
+            return await Workspaces(user, tenant, scope);
         var result = new List<(Tenant, List<Guid>)>();
         foreach (var t in await db.Tenants.Where(t => !tenant.HasValue || t.Id == tenant.Value).ToListAsync())
         {
@@ -110,16 +175,16 @@ public sealed partial class SocService
         }
         return result;
     }
-    public async Task<List<Tenant>> Organizations(AppUser u)
+    public async Task<List<Tenant>> Organizations(AppUser user)
     {
-        if (u.Role == "Beheerder")
+        if (user.Role == "Beheerder")
             return await db.Tenants.OrderBy(x => x.Name).ToListAsync();
-        return (await Workspaces(u)).Select(x => x.Tenant).OrderBy(x => x.Name).ToList();
+        return (await Workspaces(user)).Select(x => x.Tenant).OrderBy(x => x.Name).ToList();
     }
-    public async Task<Tenant> Organization(AppUser u, Guid id)
+    public async Task<Tenant> Organization(AppUser user, Guid id)
     {
         var tenant = await Tenant(id);
-        Require(u.Role == "Beheerder" || tenant.IsActive && (await Scopes(u, id)).Count > 0);
+        Require(user.Role == "Beheerder" || tenant.IsActive && (await Scopes(user, id)).Count > 0);
         return tenant;
     }
     async Task<Tenant> CreateTenant(string name, int responseMinutes = DefaultResponseMinutes)
@@ -137,50 +202,62 @@ public sealed partial class SocService
         await db.SaveChangesAsync();
         return t;
     }
-    public async Task<Tenant> CreateOrganization(AppUser u, Input input, int? responseMinutes = null)
+    public async Task<Tenant> CreateOrganization(AppUser user, CreateOrganizationRequest input)
     {
-        Admin(u);
-        var t = await CreateTenant(Required(input.Name, 120), SlaMinutes(responseMinutes));
-        await Log(u, "Klant aangemaakt", t.Id);
+        Admin(user);
+        var t = await CreateTenant(Required(input.Name, 120), SlaMinutes(input.ResponseMinutes));
+        await Log(user, "Klant aangemaakt", t.Id);
         return t;
     }
-    public async Task<Tenant> RenameOrganization(AppUser u, Guid id, string? name, int? responseMinutes = null)
+    public async Task<Tenant> RenameOrganization(AppUser user, Guid id, string? name, int? responseMinutes = null)
     {
-        Admin(u);
+        Admin(user);
         var value = Required(name, 120);
         var t = await Tenant(id);
         Require(!await db.Tenants.AnyAsync(x => x.Id != id && x.Name == value), "Naam bestaat al.", 409);
         t.Name = value;
         if (responseMinutes.HasValue)
             t.ResponseMinutes = SlaMinutes(responseMinutes);
-        await Log(u, "Klantinstellingen gewijzigd", t.Id, t.Id.ToString());
+        await Log(user, "Klantinstellingen gewijzigd", t.Id, t.Id.ToString());
         return t;
     }
-    public async Task<Tenant> SetOrganization(AppUser u, Guid id, bool active)
+    public async Task<Tenant> SetOrganization(AppUser user, Guid id, bool active)
     {
-        Admin(u);
+        Admin(user);
         var t = await Tenant(id);
         t.IsActive = active;
         t.DeactivatedAt = active ? null : DateTimeOffset.UtcNow;
-        await Log(u, "Klantstatus gewijzigd", id);
+        await Log(user, "Klantstatus gewijzigd", id);
         return t;
     }
-    static object KeyDto(ApiSource k) => new { id = k.Id, k.Name, organizationId = k.TenantId, k.ScopeId, k.CreatedAt, k.IsActive, k.Prefix };
-    public async Task<object> Keys(AppUser u)
+    private static object KeyDto(ApiSource apiKey)
     {
-        Admin(u);
+        return new
+        {
+            id = apiKey.Id,
+            apiKey.Name,
+            organizationId = apiKey.TenantId,
+            apiKey.ScopeId,
+            apiKey.CreatedAt,
+            apiKey.IsActive,
+            apiKey.Prefix
+        };
+    }
+    public async Task<object> Keys(AppUser user)
+    {
+        Admin(user);
         return (await db.Sources.ToListAsync()).Select(KeyDto);
     }
-    public async Task<object> CreateKey(AppUser u, Input i)
+    public async Task<object> CreateKey(AppUser user, CreateApiKeyRequest input)
     {
-        Admin(u);
-        var t = await Tenant(i.OrganizationId);
+        Admin(user);
+        var t = await Tenant(input.OrganizationId);
         Require(t.IsActive, "Klant is inactief.", 400);
-        var scope = await db.Scopes.FirstOrDefaultAsync(x => x.TenantId == t.Id && (!i.ScopeId.HasValue || x.Id == i.ScopeId)) ?? throw new SocException(400, "Scope ontbreekt.");
+        var scope = await db.Scopes.FirstOrDefaultAsync(x => x.TenantId == t.Id && (!input.ScopeId.HasValue || x.Id == input.ScopeId)) ?? throw new SocException(400, "Scope ontbreekt.");
         var secret = "soc_demo_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-        var k = new ApiSource { TenantId = t.Id, ScopeId = scope.Id, Name = Required(i.Name, 80), Hash = Hash(secret), Prefix = secret[..16] };
+        var k = new ApiSource { TenantId = t.Id, ScopeId = scope.Id, Name = Required(input.Name, 80), Hash = Hash(secret), Prefix = secret[..16] };
         db.Sources.Add(k);
-        await Log(u, "API-sleutel aangemaakt", t.Id);
+        await Log(user, "API-sleutel aangemaakt", t.Id);
         return new
         {
             id = k.Id,
@@ -193,20 +270,20 @@ public sealed partial class SocService
             secret
         };
     }
-    public async Task<object> Revoke(AppUser u, Guid id)
+    public async Task<object> Revoke(AppUser user, Guid id)
     {
-        Admin(u);
+        Admin(user);
         var k = await db.Sources.FindAsync(id) ?? throw new SocException(404, "Sleutel niet gevonden.");
         k.IsActive = false;
-        await Log(u, "API-sleutel ingetrokken", k.TenantId);
+        await Log(user, "API-sleutel ingetrokken", k.TenantId);
         return new
         {
             ok = true
         };
     }
-    public async Task<object> Audit(AppUser u)
+    public async Task<object> Audit(AppUser user)
     {
-        Admin(u);
+        Admin(user);
         var result = (await db.Audit.ToListAsync()).Select(x => new AuditRow(x.Id, x.CreatedAt, x.Actor, x.Action, x.TenantId, x.Target)).ToList();
         foreach (var t in await db.Tenants.ToListAsync())
         {
@@ -218,9 +295,9 @@ public sealed partial class SocService
     public record AuditRow(Guid Id, DateTimeOffset CreatedAt, string Actor, string Action, Guid? OrganizationId, string? Target);
     // Administrative register: identifiers and lifecycle metadata only.
     // Do not include titles, owners, scope IDs, observables, payloads or investigation entries.
-    public async Task<object> TicketRegister(AppUser u)
+    public async Task<object> TicketRegister(AppUser user)
     {
-        Admin(u);
+        Admin(user);
         var rows = new List<object>();
         foreach (var tenant in await db.Tenants.OrderBy(t => t.Name).ToListAsync())
         {
@@ -239,7 +316,7 @@ public sealed partial class SocService
                     organizationId = tenant.Id
                 });
         }
-        await Log(u, "Ticketregister bekeken");
+        await Log(user, "Ticketregister bekeken");
         return rows;
     }
     internal static void CheckVersion(byte[] actual, string? supplied)

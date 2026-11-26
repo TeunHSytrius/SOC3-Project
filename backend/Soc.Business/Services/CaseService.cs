@@ -25,7 +25,56 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
             _ => false
         };
     }
-    static object CaseDto(ResearchCase c, Guid tenant, bool internalView) => new { id = c.Id, organizationId = tenant, c.ScopeId, c.Number, c.Title, c.Priority, c.Status, c.Owner, ownerId = internalView ? (Guid?)c.OwnerId : null, c.CreatedAt, c.ClosedAt, c.CustomerVisible, c.RowVersion, summary = c.Summary, conclusion = internalView ? c.Conclusion : null, alertIds = internalView ? c.Alerts.Select(x => x.Id).ToArray() : Array.Empty<Guid>(), entries = c.Entries.Where(x => internalView || x.Visible).Select(x => new EntryRow(x.Id, x.At, x.Actor, x.Kind, x.Text, x.Visible)).Concat(internalView ? c.Observables.Select(x => new EntryRow(x.Id, x.At, x.Actor, "Observable", $"{x.Type}: {x.Value} — {x.Assessment ?? "Niet beoordeeld"}", false)) : Enumerable.Empty<EntryRow>()).OrderBy(x => x.At) };
+    private static object CaseDto(ResearchCase researchCase, Guid organizationId, bool internalView)
+    {
+        var visibleEntries = researchCase.Entries
+            .Where(entry => internalView || entry.Visible)
+            .Select(entry => new EntryRow(
+                entry.Id,
+                entry.At,
+                entry.Actor,
+                entry.Kind,
+                entry.Text,
+                entry.Visible));
+
+        // Observables contain internal investigation information.
+        if (internalView)
+        {
+            var observableEntries = researchCase.Observables
+                .Select(observable => new EntryRow(
+                    observable.Id,
+                    observable.At,
+                    observable.Actor,
+                    "Observable",
+                    $"{observable.Type}: {observable.Value} — {observable.Assessment ?? "Niet beoordeeld"}",
+                    false));
+
+            visibleEntries = visibleEntries.Concat(observableEntries);
+        }
+
+        return new
+        {
+            id = researchCase.Id,
+            organizationId,
+            researchCase.ScopeId,
+            researchCase.Number,
+            researchCase.Title,
+            researchCase.Priority,
+            researchCase.Status,
+            researchCase.Owner,
+            ownerId = internalView ? (Guid?)researchCase.OwnerId : null,
+            researchCase.CreatedAt,
+            researchCase.ClosedAt,
+            researchCase.CustomerVisible,
+            researchCase.RowVersion,
+            summary = researchCase.Summary,
+            conclusion = internalView ? researchCase.Conclusion : null,
+            alertIds = internalView
+                ? researchCase.Alerts.Select(alert => alert.Id).ToArray()
+                : Array.Empty<Guid>(),
+            entries = visibleEntries.OrderBy(entry => entry.At)
+        };
+    }
     public record EntryRow(Guid Id, DateTimeOffset At, string Actor, string Kind, string Text, bool Visible);
     static void ValidateObservable(string type, string value, string assessment)
     {
@@ -41,23 +90,31 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
         };
         Require(valid, "Observable heeft geen geldig formaat voor dit type.", 400);
     }
-    static IQueryable<ResearchCase> CaseQuery(TenantDbContext td) => td.Cases.Include(x => x.Entries).Include(x => x.Observables).Include(x => x.Alerts).ThenInclude(x => x.History).AsSplitQuery();
-    public async Task<object> Cases(AppUser u, Guid? workspace, Guid? scope)
+    private static IQueryable<ResearchCase> CaseQuery(TenantDbContext tenantDb)
     {
-        Require(CanReadInternal(u) || u.Role is "Klant" or "Accountmanager");
+        return tenantDb.Cases
+            .Include(researchCase => researchCase.Entries)
+            .Include(researchCase => researchCase.Observables)
+            .Include(researchCase => researchCase.Alerts)
+                .ThenInclude(alert => alert.History)
+            .AsSplitQuery();
+    }
+    public async Task<object> Cases(AppUser currentUser, Guid? workspace, Guid? scope)
+    {
+        Require(CanReadInternal(currentUser) || currentUser.Role is "Klant" or "Accountmanager");
         var result = new List<object>();
-        foreach (var (t, scopes) in await platform.ReadWorkspaces(u, workspace, scope))
+        foreach (var (t, scopes) in await platform.ReadWorkspaces(currentUser, workspace, scope))
         {
-            await using var td = factory.Open(t);
-            foreach (var c in await CaseQuery(td).Where(x => scopes.Contains(x.ScopeId) && (CanReadInternal(u) || x.CustomerVisible)).ToListAsync())
-                result.Add(CaseDto(c, t.Id, CanReadInternal(u)));
+            await using var tenantDb = factory.Open(t);
+            foreach (var c in await CaseQuery(tenantDb).Where(x => scopes.Contains(x.ScopeId) && (CanReadInternal(currentUser) || x.CustomerVisible)).ToListAsync())
+                result.Add(CaseDto(c, t.Id, CanReadInternal(currentUser)));
             foreach (var sid in scopes)
-                LogTenant(td, sid, u.Name, "Caseoverzicht bekeken", "Cases");
-            await td.SaveChangesAsync();
+                LogTenant(tenantDb, sid, currentUser.Name, "Caseoverzicht bekeken", "Cases");
+            await tenantDb.SaveChangesAsync();
         }
         return result;
     }
-    public async Task<object> CaseAction(AppUser currentUser, Guid id, string action, Input input, Guid? workspace, Guid? scope)
+    public async Task<object> CaseAction(AppUser currentUser, Guid id, string action, CaseActionRequest input, Guid? workspace, Guid? scope)
     {
         Require(action == "get" ? (CanReadInternal(currentUser) || currentUser.Role is "Klant" or "Accountmanager") : (Analyst(currentUser) || currentUser.Role == "Klant" && action == "entry"));
         foreach (var (tenant, scopes) in await (action == "get" ? platform.ReadWorkspaces(currentUser, workspace, scope) : platform.Workspaces(currentUser, workspace, scope)))
@@ -83,125 +140,19 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
             switch (action)
             {
                 case "entry":
-                    var kind = Analyst(currentUser) ? Required(input.Kind, 40) : "Klantreactie";
-                    Require(new[] { "Notitie", "Observable", "Actie", "Bewijsreferentie", "Klantreactie" }.Contains(kind), "Ongeldig type.", 400);
-                    var text = Required(input.Text, 2000);
-                    if (kind == "Observable")
-                    {
-                        var type = Required(input.Type, 20);
-                        var assessment = Required(input.Assessment, 20);
-                        ValidateObservable(type, text, assessment);
-                        researchCase.Observables.Add(new()
-                        {
-                            Actor = currentUser.Name,
-                            Value = text,
-                            Type = type,
-                            Assessment = assessment
-                        });
-                        researchCase.Entries.Add(new()
-                        {
-                            Actor = currentUser.Name,
-                            Kind = "Observablebeoordeling",
-                            Text = $"{type}: {text} — {assessment}"
-                        });
-                    }
-                    else
-                        researchCase.Entries.Add(new()
-                        {
-                            Actor = currentUser.Name,
-                            Kind = kind,
-                            Text = text,
-                            Visible = kind == "Klantreactie" || input.Visible == true && kind != "Bewijsreferentie"
-                        });
+                    AddEntry(researchCase, currentUser, input);
                     break;
                 case "status":
-                    Require(Enum.TryParse<TicketStatus>(input.Status, out var status) && Enum.IsDefined(status), "Ongeldige status.", 400);
-                    Require(CanChangeCaseStatus(researchCase.Status, status, currentUser.Role == "Senior analist"), "Deze statusovergang is niet toegestaan. Volg de onderzoeksworkflow.", 409);
-                    if (Closed(researchCase))
-                    {
-                        researchCase.ClosedAt = null;
-                        researchCase.Entries.Add(new()
-                        {
-                            Actor = currentUser.Name,
-                            Kind = "Status",
-                            Text = "Heropend: " + Required(input.Reason)
-                        });
-                        foreach (var alert in researchCase.Alerts)
-                        {
-                            alert.Status = AlertStatus.Escalated;
-                            AlertService.Event(alert, currentUser.Name, "Case heropend");
-                        }
-                    }
-                    if (status == TicketStatus.Closed)
-                    {
-                        var summary = Required(input.Summary, 2000);
-                        researchCase.Summary = summary;
-                        researchCase.Conclusion = Required(input.Conclusion, 2000);
-                        researchCase.ClosedAt = DateTimeOffset.UtcNow;
-                        researchCase.Entries.Add(new()
-                        {
-                            Actor = currentUser.Name,
-                            Kind = "Samenvatting",
-                            Text = summary
-                        });
-                        foreach (var alert in researchCase.Alerts)
-                        {
-                            alert.Status = AlertStatus.Resolved;
-                            AlertService.Event(alert, currentUser.Name, "Case afgesloten");
-                        }
-                    }
-                    researchCase.Entries.Add(new()
-                    {
-                        Actor = currentUser.Name,
-                        Kind = "Status",
-                        Text = $"{researchCase.Status} → {status}"
-                    });
-                    researchCase.Status = status;
+                    ChangeStatus(researchCase, currentUser, input);
                     break;
                 case "visibility":
-                    Require(input.Visible.HasValue, "Ongeldige zichtbaarheid.", 400);
-                    researchCase.CustomerVisible = input.Visible!.Value;
+                    ChangeVisibility(researchCase, input);
                     break;
                 case "owner":
-                    var owner = await users.FindByIdAsync(input.UserId.ToString()!) ?? throw new SocException(400, "Analist niet gevonden.");
-                    Require(owner.IsActive && Analyst(owner) && (await platform.Scopes(owner, tenant.Id)).Contains(researchCase.ScopeId), "Analist heeft geen toegang tot scope.", 400);
-                    var initial = researchCase.Status == TicketStatus.Open;
-                    Require(!initial || currentUser.Role == "Senior analist", "Een senior analist moet de case eerst prioriteren en toewijzen.", 403);
-                    Require(initial || owner.Id != researchCase.OwnerId, "Deze analist is al eigenaar.", 400);
-                    if (!string.IsNullOrWhiteSpace(input.Priority))
-                    {
-                        Require(currentUser.Role == "Senior analist", "Alleen een senior mag de prioriteit wijzigen.", 403);
-                        researchCase.Priority = Priority(input.Priority);
-                    }
-                    var reason = Required(input.Reason, 2000);
-                    var next = Required(input.NextAction, 2000);
-                    researchCase.Entries.Add(new()
-                    {
-                        Actor = currentUser.Name,
-                        Kind = "Overdracht",
-                        Text = $"Van {researchCase.Owner} ({researchCase.OwnerId}) naar {owner.Name} ({owner.Id}). Toelichting: {reason}. Volgende actie: {next}"
-                    });
-                    researchCase.OwnerId = owner.Id;
-                    researchCase.Owner = owner.Name;
-                    if (initial)
-                    {
-                        researchCase.Status = TicketStatus.UnderInvestigation;
-                        researchCase.Entries.Add(new()
-                        {
-                            Actor = currentUser.Name,
-                            Kind = "Status",
-                            Text = "Geprioriteerd (" + researchCase.Priority + ") en toegewezen aan " + owner.Name
-                        });
-                    }
+                    await AssignOwnerAsync(researchCase, currentUser, input, tenant);
                     break;
                 case "link":
-                    Require(input.AlertId.HasValue, "Alert vereist.", 400);
-                    var link = await tenantDb.Alerts.Include(x => x.History).SingleOrDefaultAsync(x => x.Id == input.AlertId && x.ScopeId == researchCase.ScopeId);
-                    Require(link != null && link.CaseId == null && AlertService.NeedsCase(link.Triage) && link.Status == AlertStatus.UnderReview, "Alert niet geschikt voor koppeling.", 409);
-                    link!.CaseId = researchCase.Id;
-                    link.Status = AlertStatus.Escalated;
-                    AlertService.Event(link, currentUser.Name, "Gekoppeld aan " + researchCase.Number);
-                    researchCase.Alerts.Add(link);
+                    await LinkAlertAsync(tenantDb, researchCase, currentUser, input);
                     break;
                 default:
                     throw new SocException(404, "Onbekende actie.");
@@ -214,4 +165,136 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
         }
         throw new SocException(404, "Case niet gevonden.");
     }
+
+    private static void AddEntry(ResearchCase researchCase, AppUser currentUser, CaseActionRequest input)
+    {
+        var kind = Analyst(currentUser) ? Required(input.Kind, 40) : "Klantreactie";
+        Require(new[] { "Notitie", "Observable", "Actie", "Bewijsreferentie", "Klantreactie" }.Contains(kind), "Ongeldig type.", 400);
+        var text = Required(input.Text, 2000);
+        if (kind == "Observable")
+        {
+            var type = Required(input.Type, 20);
+            var assessment = Required(input.Assessment, 20);
+            ValidateObservable(type, text, assessment);
+            researchCase.Observables.Add(new()
+            {
+                Actor = currentUser.Name,
+                Value = text,
+                Type = type,
+                Assessment = assessment
+            });
+            researchCase.Entries.Add(new()
+            {
+                Actor = currentUser.Name,
+                Kind = "Observablebeoordeling",
+                Text = $"{type}: {text} — {assessment}"
+            });
+        }
+        else
+            researchCase.Entries.Add(new()
+            {
+                Actor = currentUser.Name,
+                Kind = kind,
+                Text = text,
+                Visible = kind == "Klantreactie" || input.Visible == true && kind != "Bewijsreferentie"
+            });
+    }
+
+    private static void ChangeStatus(ResearchCase researchCase, AppUser currentUser, CaseActionRequest input)
+    {
+        Require(Enum.TryParse<TicketStatus>(input.Status, out var status) && Enum.IsDefined(status), "Ongeldige status.", 400);
+        Require(CanChangeCaseStatus(researchCase.Status, status, currentUser.Role == "Senior analist"), "Deze statusovergang is niet toegestaan. Volg de onderzoeksworkflow.", 409);
+        if (Closed(researchCase))
+        {
+            researchCase.ClosedAt = null;
+            researchCase.Entries.Add(new()
+            {
+                Actor = currentUser.Name,
+                Kind = "Status",
+                Text = "Heropend: " + Required(input.Reason)
+            });
+            foreach (var alert in researchCase.Alerts)
+            {
+                alert.Status = AlertStatus.Escalated;
+                AlertService.Event(alert, currentUser.Name, "Case heropend");
+            }
+        }
+        if (status == TicketStatus.Closed)
+        {
+            var summary = Required(input.Summary, 2000);
+            researchCase.Summary = summary;
+            researchCase.Conclusion = Required(input.Conclusion, 2000);
+            researchCase.ClosedAt = DateTimeOffset.UtcNow;
+            researchCase.Entries.Add(new()
+            {
+                Actor = currentUser.Name,
+                Kind = "Samenvatting",
+                Text = summary
+            });
+            foreach (var alert in researchCase.Alerts)
+            {
+                alert.Status = AlertStatus.Resolved;
+                AlertService.Event(alert, currentUser.Name, "Case afgesloten");
+            }
+        }
+        researchCase.Entries.Add(new()
+        {
+            Actor = currentUser.Name,
+            Kind = "Status",
+            Text = $"{researchCase.Status} → {status}"
+        });
+        researchCase.Status = status;
+    }
+
+    private static void ChangeVisibility(ResearchCase researchCase, CaseActionRequest input)
+    {
+        Require(input.Visible.HasValue, "Ongeldige zichtbaarheid.", 400);
+        researchCase.CustomerVisible = input.Visible!.Value;
+    }
+
+    private async Task AssignOwnerAsync(ResearchCase researchCase, AppUser currentUser, CaseActionRequest input, Tenant tenant)
+    {
+        var owner = await users.FindByIdAsync(input.UserId.ToString()!) ?? throw new SocException(400, "Analist niet gevonden.");
+        Require(owner.IsActive && Analyst(owner) && (await platform.Scopes(owner, tenant.Id)).Contains(researchCase.ScopeId), "Analist heeft geen toegang tot scope.", 400);
+        var initial = researchCase.Status == TicketStatus.Open;
+        Require(!initial || currentUser.Role == "Senior analist", "Een senior analist moet de case eerst prioriteren en toewijzen.", 403);
+        Require(initial || owner.Id != researchCase.OwnerId, "Deze analist is al eigenaar.", 400);
+        if (!string.IsNullOrWhiteSpace(input.Priority))
+        {
+            Require(currentUser.Role == "Senior analist", "Alleen een senior mag de prioriteit wijzigen.", 403);
+            researchCase.Priority = Priority(input.Priority);
+        }
+        var reason = Required(input.Reason, 2000);
+        var next = Required(input.NextAction, 2000);
+        researchCase.Entries.Add(new()
+        {
+            Actor = currentUser.Name,
+            Kind = "Overdracht",
+            Text = $"Van {researchCase.Owner} ({researchCase.OwnerId}) naar {owner.Name} ({owner.Id}). Toelichting: {reason}. Volgende actie: {next}"
+        });
+        researchCase.OwnerId = owner.Id;
+        researchCase.Owner = owner.Name;
+        if (initial)
+        {
+            researchCase.Status = TicketStatus.UnderInvestigation;
+            researchCase.Entries.Add(new()
+            {
+                Actor = currentUser.Name,
+                Kind = "Status",
+                Text = "Geprioriteerd (" + researchCase.Priority + ") en toegewezen aan " + owner.Name
+            });
+        }
+    }
+
+    private static async Task LinkAlertAsync(TenantDbContext tenantDb, ResearchCase researchCase, AppUser currentUser, CaseActionRequest input)
+    {
+        Require(input.AlertId.HasValue, "Alert vereist.", 400);
+        var link = await tenantDb.Alerts.Include(x => x.History).SingleOrDefaultAsync(x => x.Id == input.AlertId && x.ScopeId == researchCase.ScopeId);
+        Require(link != null && link.CaseId == null && AlertService.NeedsCase(link.Triage) && link.Status == AlertStatus.UnderReview, "Alert niet geschikt voor koppeling.", 409);
+        link!.CaseId = researchCase.Id;
+        link.Status = AlertStatus.Escalated;
+        AlertService.Event(link, currentUser.Name, "Gekoppeld aan " + researchCase.Number);
+        researchCase.Alerts.Add(link);
+    }
+
 }
