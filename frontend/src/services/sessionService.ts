@@ -40,7 +40,9 @@ export async function restoreUser(): Promise<User | null> {
   // Only reloads of an explicitly signed-in tab restore the cookie session.
   if (previousUserId && navigation?.type === 'reload') {
     const user = await api<User>('auth/me');
-    if (user.id === previousUserId) return user;
+    if (user.id === previousUserId) {
+      return user;
+    }
   }
 
   // A new tab must not sign out an existing authenticated tab.

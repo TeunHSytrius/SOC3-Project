@@ -22,12 +22,14 @@ public sealed partial class SocService
         db.Assignments.RemoveRange(existing.Where(assignment => !desiredIds.Contains(assignment.ScopeId)));
         var existingIds = existing.Select(assignment => assignment.ScopeId).ToHashSet();
         foreach (var scope in desired.Where(availableScope => !existingIds.Contains(availableScope.Id)))
+        {
             db.Assignments.Add(new()
             {
                 UserId = user.Id,
                 TenantId = scope.TenantId,
                 ScopeId = scope.Id
             });
+        }
         user.Role = role;
         await db.SaveChangesAsync();
     }

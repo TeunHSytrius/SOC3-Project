@@ -4,7 +4,15 @@ import { emptyWorkspaceData, initialState, roleAccess, startPage } from './app/w
 import LoginPage from './features/auth/LoginPage';
 import { LoadingState } from './components/PageStates';
 import { formData } from './features/shared/formData';
-import { clearSession, currentUser, isCurrentSession, isUnauthorized, loginUser, logoutUser, restoreUser } from './services/sessionService';
+import {
+  clearSession,
+  currentUser,
+  isCurrentSession,
+  isUnauthorized,
+  loginUser,
+  logoutUser,
+  restoreUser,
+} from './services/sessionService';
 import { loadWorkspace, submitWorkspaceAction } from './services/workspaceService';
 import type { State, User } from './types/soc';
 import type { ActionResult, WorkspaceActions } from './types/workspace';
@@ -45,10 +53,14 @@ export default class App extends React.Component<Record<string, never>, State> {
   private async restoreSession() {
     try {
       const user = await restoreUser();
-      if (user) await this.enter(user);
+      if (user) {
+        await this.enter(user);
+      }
     } catch (error) {
       clearSession();
-      if (!isUnauthorized(error)) this.fail(error);
+      if (!isUnauthorized(error)) {
+        this.fail(error);
+      }
     } finally {
       this.setState({ loading: false });
     }
@@ -67,7 +79,9 @@ export default class App extends React.Component<Record<string, never>, State> {
       notice: '',
     });
 
-    if (!user.requiresTwoFactorSetup) await this.refresh(user);
+    if (!user.requiresTwoFactorSetup) {
+      await this.refresh(user);
+    }
   }
 
   private login = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -88,7 +102,15 @@ export default class App extends React.Component<Record<string, never>, State> {
     try {
       await logoutUser();
     } finally {
-      this.setState({ ...emptyWorkspaceData(), user: null, selected: null, modal: null, error: '', notice: '', busy: false });
+      this.setState({
+        ...emptyWorkspaceData(),
+        user: null,
+        selected: null,
+        modal: null,
+        error: '',
+        notice: '',
+        busy: false,
+      });
     }
   };
 
@@ -97,7 +119,14 @@ export default class App extends React.Component<Record<string, never>, State> {
     if (isUnauthorized(error) && this.state.user) {
       clearSession();
       this.invalidateRefresh();
-      this.setState({ ...emptyWorkspaceData(), user: null, selected: null, modal: null, error: message, busy: false });
+      this.setState({
+        ...emptyWorkspaceData(),
+        user: null,
+        selected: null,
+        modal: null,
+        error: message,
+        busy: false,
+      });
       return;
     }
     this.setState({ error: message, notice: '' });
@@ -108,16 +137,22 @@ export default class App extends React.Component<Record<string, never>, State> {
   }
 
   private refresh = async (user = this.state.user): Promise<boolean | undefined> => {
-    if (!user || user.requiresTwoFactorSetup) return;
+    if (!user || user.requiresTwoFactorSetup) {
+      return;
+    }
     const version = ++this.refreshVersion;
 
     try {
       const data = await loadWorkspace(user);
-      if (!this.isCurrentRefresh(version, user)) return;
+      if (!this.isCurrentRefresh(version, user)) {
+        return;
+      }
       this.update(data);
       return true;
     } catch (error) {
-      if (this.isCurrentRefresh(version, user)) this.fail(error);
+      if (this.isCurrentRefresh(version, user)) {
+        this.fail(error);
+      }
       return false;
     }
   };
@@ -129,25 +164,37 @@ export default class App extends React.Component<Record<string, never>, State> {
     after?: (result: ActionResult) => void,
   ) => {
     const { user, busy } = this.state;
-    if (!user || busy) return;
+    if (!user || busy) {
+      return;
+    }
     this.setState({ busy: true, error: '', notice: '' });
 
     try {
       const result = await submitWorkspaceAction(path, data);
-      if (!isCurrentSession(user.id) || this.state.user?.id !== user.id) return;
+      if (!isCurrentSession(user.id) || this.state.user?.id !== user.id) {
+        return;
+      }
 
       const refreshed = await this.refresh(user);
-      if (!isCurrentSession(user.id) || this.state.user?.id !== user.id) return;
+      if (!isCurrentSession(user.id) || this.state.user?.id !== user.id) {
+        return;
+      }
 
       this.setState({
-        notice: refreshed ? message : message + ' Gegevens vernieuwen is mislukt; klik op Vernieuwen.',
+        notice: refreshed
+          ? message
+          : message + ' Gegevens vernieuwen is mislukt; klik op Vernieuwen.',
         modal: null,
       });
       after?.(result);
     } catch (error) {
-      if (isCurrentSession(user.id)) this.fail(error);
+      if (isCurrentSession(user.id)) {
+        this.fail(error);
+      }
     } finally {
-      if (this.state.user?.id === user.id) this.setState({ busy: false });
+      if (this.state.user?.id === user.id) {
+        this.setState({ busy: false });
+      }
     }
   };
 
@@ -175,8 +222,12 @@ export default class App extends React.Component<Record<string, never>, State> {
 
   render() {
     const { user, loading, error, busy } = this.state;
-    if (loading) return <LoadingState label="SOC3 laden…" />;
-    if (!user) return <LoginPage error={error} busy={busy} onSubmit={this.login} />;
+    if (loading) {
+      return <LoadingState label="SOC3 laden…" />;
+    }
+    if (!user) {
+      return <LoginPage error={error} busy={busy} onSubmit={this.login} />;
+    }
 
     return (
       <Workspace

@@ -10,7 +10,16 @@ namespace Soc.Data.Context;
 
 public sealed class TenantDbFactory(string connectionString)
 {
-    public TenantDbContext Open(Tenant tenant) => new(new DbContextOptionsBuilder<TenantDbContext>().UseSqlServer(connectionString).ReplaceService<IModelCacheKeyFactory, SchemaModelCacheKeyFactory>().Options, tenant.SchemaName);
+    public TenantDbContext Open(Tenant tenant)
+    {
+        var options = new DbContextOptionsBuilder<TenantDbContext>()
+            .UseSqlServer(connectionString)
+            .ReplaceService<IModelCacheKeyFactory, SchemaModelCacheKeyFactory>()
+            .Options;
+
+        return new TenantDbContext(options, tenant.SchemaName);
+    }
+
     // Additive upgrade for existing local demo schemas; production requires separate reviewed deployment.
     public async Task UpgradeDemoAsync(Tenant tenant)
     {

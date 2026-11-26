@@ -18,13 +18,17 @@ public sealed class ApiErrorLog
         {
             entries.Enqueue(entry);
             while (entries.Count > 500)
+            {
                 entries.Dequeue();
+            }
         }
     }
     public ApiErrorEntry[] Recent()
     {
         lock (gate)
+        {
             return entries.Reverse().ToArray();
+        }
     }
 }
 
@@ -63,7 +67,9 @@ public sealed class ApiErrorMiddleware(RequestDelegate next, ILogger<ApiErrorMid
                 context.Request.Headers.TryGetValue("Origin", out var origin) &&
                 (!Uri.TryCreate(origin.ToString(), UriKind.Absolute, out var uri) ||
                  !string.Equals(uri.Authority, context.Request.Host.Value, StringComparison.OrdinalIgnoreCase)))
+            {
                 throw new SocException(403, "Ongeldige origin.");
+            }
             await next(context);
         }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
@@ -73,7 +79,9 @@ public sealed class ApiErrorMiddleware(RequestDelegate next, ILogger<ApiErrorMid
         catch (Exception ex)
         {
             if (context.Response.HasStarted)
+            {
                 throw;
+            }
             exceptionType = ex.GetType().Name;
             var status = 500;
             var message = Reason(status);
@@ -115,7 +123,9 @@ public sealed class ApiErrorMiddleware(RequestDelegate next, ILogger<ApiErrorMid
             });
             // The server log contains the exception type and stack, not the exception message.
             if (status >= 500)
+            {
                 logger.LogError("API exception {Type}; trace {TraceId}; stack {Stack}", exceptionType, context.TraceIdentifier, ex.StackTrace);
+            }
         }
         if (context.Response.StatusCode >= 400)
         {
@@ -123,7 +133,9 @@ public sealed class ApiErrorMiddleware(RequestDelegate next, ILogger<ApiErrorMid
             var status = context.Response.StatusCode;
             // The normal anonymous logout attempt on initial page load is not an error event.
             if (status == 401 && context.Request.Path == "/api/v1/auth/logout")
+            {
                 return;
+            }
             var entry = new ApiErrorEntry(DateTimeOffset.UtcNow, status, context.Request.Method, route,
                 reason ?? Reason(status), context.TraceIdentifier, exceptionType);
             log.Add(entry);
