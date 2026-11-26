@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Soc.Data.Entities;
+using Soc.Data.Domain.Context;
+using DomainEntities = global::Soc.Data.Domain.Entities;
 
 namespace Soc.Data.Context;
 
@@ -18,6 +20,17 @@ public sealed class SocDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>
     public DbSet<ApiSource> Sources => Set<ApiSource>();
     public DbSet<PlatformAudit> Audit => Set<PlatformAudit>();
 
+    public DbSet<DomainEntities.Alert> Alerts => Set<DomainEntities.Alert>();
+    public DbSet<DomainEntities.Research> Researches => Set<DomainEntities.Research>();
+    public DbSet<DomainEntities.Ticket> Tickets => Set<DomainEntities.Ticket>();
+    public DbSet<DomainEntities.Note> Notes => Set<DomainEntities.Note>();
+    public DbSet<DomainEntities.Customer> Customers => Set<DomainEntities.Customer>();
+    public DbSet<DomainEntities.Organization> Organizations => Set<DomainEntities.Organization>();
+    public DbSet<DomainEntities.CustomerOrganization> CustomerOrganizations => Set<DomainEntities.CustomerOrganization>();
+    public DbSet<DomainEntities.Contract> Contracts => Set<DomainEntities.Contract>();
+    public DbSet<DomainEntities.Employee> Employees => Set<DomainEntities.Employee>();
+    public DbSet<DomainEntities.Evidence> Evidences => Set<DomainEntities.Evidence>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -28,6 +41,7 @@ public sealed class SocDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>
         ConfigureScopes(modelBuilder);
         ConfigureRoleAssignments(modelBuilder);
         ConfigureApiSources(modelBuilder);
+        DomainModelConfiguration.Configure(modelBuilder);
     }
 
     private static void ConfigureTenants(ModelBuilder modelBuilder)

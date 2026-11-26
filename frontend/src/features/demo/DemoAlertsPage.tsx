@@ -6,7 +6,6 @@ import type { State } from '../../types/soc';
 import type { Navigate } from '../../types/workspace';
 import DemoAlertDetails from './DemoAlertDetails';
 import DemoAlertTable from './DemoAlertTable';
-import DemoBanner from './DemoBanner';
 import { getDemoAlerts } from './demoAlerts';
 import './DemoAlerts.css';
 
@@ -38,8 +37,7 @@ export default function DemoAlertsPage({ state, navigate }: DemoAlertsPageProps)
 
   return (
     <div className="fragment">
-      <PageHeader title="Alerts" sub="Voorbeeld van het SOC-alertoverzicht" />
-      <DemoBanner />
+      <PageHeader title="Alerts" sub="Overzicht van beveiligingsmeldingen" />
       <Panel title="Meldingen" sub={matchingAlerts.length + ' voorbeeldmeldingen'}>
         <div className="filters">
           <input

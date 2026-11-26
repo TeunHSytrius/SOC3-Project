@@ -7,6 +7,7 @@ using Soc.Api.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Soc.Data.Context;
+using Soc.Data.Domain.Context;
 using Soc.Data.Entities;
 using Soc.Business.Services;
 using Soc.Business.Repositories;
@@ -42,6 +43,7 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 builder.Services.AddDbContext<SocDbContext>(options => options.UseSqlServer(connection));
+builder.Services.AddScoped<DomainSchemaInitializer>();
 builder.Services.AddSingleton(new TenantDbFactory(connection));
 builder.Services.AddIdentity<AppUser, IdentityRole<Guid>>(options =>
 {
@@ -192,6 +194,8 @@ if (demo)
         try
         {
             await scope.ServiceProvider.GetRequiredService<SocService>().InitializeAsync();
+            await scope.ServiceProvider.GetRequiredService<DomainSchemaInitializer>()
+                .InitializeAsync();
             app.Logger.LogInformation("SOC-demo gereed.");
             break;
         }

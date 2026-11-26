@@ -2,7 +2,6 @@ import { Button, Panel } from '../../components/Ui';
 import type { State } from '../../types/soc';
 import type { Navigate } from '../../types/workspace';
 import DemoAlertTable from './DemoAlertTable';
-import DemoBanner from './DemoBanner';
 import { getDemoAlerts } from './demoAlerts';
 import './DemoAlerts.css';
 
@@ -29,7 +28,6 @@ export default function DemoAlertDashboard({ state, navigate }: DemoAlertDashboa
 
   return (
     <section className="demo-alert-dashboard" aria-label="SOC-werkoverzicht">
-      <DemoBanner />
       <div className="demo-metrics">
         {metrics.map((metric) => (
           <div key={metric.label} className="demo-metric">
@@ -40,7 +38,7 @@ export default function DemoAlertDashboard({ state, navigate }: DemoAlertDashboa
       </div>
       <Panel
         title="Alertwachtrij"
-        sub="Voorbeeld van de toekomstige alertverwerking"
+        sub="Voorbeeldgegevens"
         action={<Button onClick={() => navigate('alerts')}>Alle alerts</Button>}
       >
         <DemoAlertTable

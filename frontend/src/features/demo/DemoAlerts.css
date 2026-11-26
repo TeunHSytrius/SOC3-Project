@@ -2,23 +2,6 @@
   margin: 20px 0;
 }
 
-.demo-banner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px 16px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface-raised);
-  color: var(--muted);
-}
-
-.demo-banner strong {
-  color: var(--info-text);
-}
-
 .demo-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
