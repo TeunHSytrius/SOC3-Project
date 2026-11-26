@@ -88,7 +88,6 @@ export default function DashboardPage({
           )
         }
       />
-      {admin && <PlatformManagement state={state} navigate={navigate} />}
       <section aria-label="Werkvoorraad">
         <h2 className="dashboard-section-title">{admin ? 'SOC-overzicht' : 'Werkvoorraad'}</h2>
         <DashboardStats items={summary} />
@@ -139,6 +138,7 @@ export default function DashboardPage({
           </Button>
         </div>
       </section>
+      {admin && <PlatformManagement state={state} navigate={navigate} />}
       <section aria-label="Recente meldingen">
         <Panel
             title="Recent ontvangen meldingen"
