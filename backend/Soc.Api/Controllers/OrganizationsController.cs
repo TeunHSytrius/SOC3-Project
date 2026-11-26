@@ -11,6 +11,7 @@ public sealed class OrganizationsController(SocService service):ControllerBase
     [HttpGet] public async Task<IActionResult> GetAll()=>Ok((await service.Organizations(await service.UserAsync(User))).Select(Dto));
     [HttpGet("{id:guid}")] public async Task<IActionResult> GetById(Guid id)=>Ok(Dto(await service.Organization(await service.UserAsync(User),id)));
     [HttpPost] public async Task<IActionResult> Create(CreateOrganizationRequest input){var t=await service.CreateOrganization(await service.UserAsync(User),new Input(Name:input.Name));return CreatedAtAction(nameof(GetById),new{id=t.Id},Dto(t));}
+    [HttpPatch("{id:guid}")] public async Task<IActionResult> Update(Guid id,CreateOrganizationRequest input)=>Ok(Dto(await service.RenameOrganization(await service.UserAsync(User),id,input.Name)));
     [HttpPost("{id:guid}/deactivate")] public async Task<IActionResult> Deactivate(Guid id)=>Ok(Dto(await service.SetOrganization(await service.UserAsync(User),id,false)));
     [HttpPost("{id:guid}/activate")] public async Task<IActionResult> Activate(Guid id)=>Ok(Dto(await service.SetOrganization(await service.UserAsync(User),id,true)));
 }
@@ -19,6 +20,7 @@ public sealed class UsersController(SocService service):ControllerBase
 {
     [HttpGet] public async Task<IActionResult> List()=>Ok(await service.ListUsers(await service.UserAsync(User)));
     [HttpPost] public async Task<IActionResult> Create(Input i)=>StatusCode(201,await service.CreateUser(await service.UserAsync(User),i));
+    [HttpPatch("{id:guid}")] public async Task<IActionResult> Update(Guid id,UpdateUserRequest input)=>Ok(await service.UpdateUser(await service.UserAsync(User),id,input));
     [HttpPost("{id:guid}/access")] public async Task<IActionResult> Access(Guid id,Input i)=>Ok(await service.ChangeAccess(await service.UserAsync(User),id,i));
 }
 [Authorize,ApiController,Route("api/v1/keys")]
