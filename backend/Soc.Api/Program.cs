@@ -36,15 +36,6 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0
             }));
 
-    options.AddPolicy("ingest", context =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            context.Connection.RemoteIpAddress?.ToString() ?? "local",
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 120,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0
-            }));
 });
 builder.Services.AddDbContext<SocDbContext>(options => options.UseSqlServer(connection));
 builder.Services.AddSingleton(new TenantDbFactory(connection));
@@ -84,12 +75,8 @@ builder.Services.AddScoped<ISecretProtector, DataProtectionSecretProtector>();
 builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
 builder.Services.AddScoped<SocService>();
 builder.Services.AddScoped<OrganizationService>();
-builder.Services.AddScoped<ApiKeyService>();
 builder.Services.AddScoped<AdministrationService>();
 builder.Services.AddScoped<UserManagementService>();
-builder.Services.AddScoped<AlertService>();
-builder.Services.AddScoped<AlertIngestService>();
-builder.Services.AddScoped<CaseService>();
 builder.Services.AddSingleton<ApiErrorLog>();
 var app = builder.Build();
 app.UseMiddleware<ApiErrorMiddleware>();
@@ -128,15 +115,14 @@ app.Use(async (ctx, next) =>
     await next();
 });
 app.UseRateLimiter();
-// API-key ingestion has its own authentication. Browser mutations require CSRF protection.
+// Browser mutations require CSRF protection.
 app.Use(async (context, next) =>
 {
     bool isMutation = HttpMethods.IsPost(context.Request.Method) ||
         HttpMethods.IsPatch(context.Request.Method);
     bool isApi = context.Request.Path.StartsWithSegments("/api/v1");
-    bool isIngestion = context.Request.Path.StartsWithSegments("/api/v1/ingest");
 
-    if (isMutation && isApi && !isIngestion)
+    if (isMutation && isApi)
     {
         try
         {
