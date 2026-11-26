@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
 using Soc.Data.Entities;
+
 namespace Soc.Data.Context;
 
 public sealed class TenantDbFactory(string connectionString)

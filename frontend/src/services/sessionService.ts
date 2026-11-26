@@ -43,12 +43,8 @@ export async function restoreUser(): Promise<User | null> {
     if (user.id === previousUserId) return user;
   }
 
+  // A new tab must not sign out an existing authenticated tab.
   clearSession();
-  try {
-    await logoutUser();
-  } catch (error) {
-    if (!isUnauthorized(error)) throw error;
-  }
   return null;
 }
 

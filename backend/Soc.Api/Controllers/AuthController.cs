@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Soc.Business.Services;
 using Soc.Data.Entities;
+
 namespace Soc.Api.Controllers;
 
 [ApiController, Route("api/v1/auth")]
@@ -19,11 +20,12 @@ public sealed class AuthController(UserManager<AppUser> users, SignInManager<App
             token = tokens.RequestToken
         });
     }
+
     [EnableRateLimiting("login"), AllowAnonymous, HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest input)
     {
         var email = SocService.Required(input.Username, 120);
-        var password = SocService.Required(input.Password, 200);
+        var password = SocService.RequiredPassword(input.Password);
         var user = await users.FindByNameAsync(email);
         if (user is not { IsActive: true })
             return Unauthorized(new
@@ -49,6 +51,7 @@ public sealed class AuthController(UserManager<AppUser> users, SignInManager<App
         await service.Log(user, "Ingelogd");
         return Ok(await service.PublicUser(user));
     }
+
     [EnableRateLimiting("login"), AllowAnonymous, HttpPost("2fa")]
     public async Task<IActionResult> Complete(TwoFactorRequest input)
     {
@@ -68,6 +71,7 @@ public sealed class AuthController(UserManager<AppUser> users, SignInManager<App
         await service.Log(user, "Ingelogd met 2FA");
         return Ok(await service.PublicUser(user));
     }
+
     [Authorize, HttpGet("me")]
     public async Task<IActionResult> Me() => Ok(await service.PublicUser(await service.UserAsync(User, true)));
     [Authorize, HttpPost("logout")]
@@ -79,6 +83,7 @@ public sealed class AuthController(UserManager<AppUser> users, SignInManager<App
             ok = true
         });
     }
+
     [Authorize, EnableRateLimiting("login"), HttpPost("2fa/setup")]
     public async Task<IActionResult> Setup()
     {
@@ -101,6 +106,7 @@ public sealed class AuthController(UserManager<AppUser> users, SignInManager<App
             otpAuthUri = uri
         });
     }
+
     [Authorize, EnableRateLimiting("login"), HttpPost("2fa/enable")]
     public async Task<IActionResult> Enable(TwoFactorRequest input)
     {

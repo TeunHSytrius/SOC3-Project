@@ -60,7 +60,14 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 24px;
+  margin: auto 0 0;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+}
+.dashboard-ticket-links > button {
+  min-height: 30px;
+  padding: 5px 9px;
+  font-size: 12px;
 }
 .ticket-stage-tabs {
   display: flex;
@@ -148,11 +155,11 @@
 
 .soc-dashboard .stats {
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .soc-dashboard .stat {
-  padding: 16px;
+  padding: 12px 14px;
 }
 
 .soc-dashboard .stat strong {
@@ -163,13 +170,10 @@
 }
 
 .soc-dashboard .panel {
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
-.dashboard-report-link {
-  display: flex;
-  justify-content: flex-end;
-}
+.soc-dashboard .PageHeader { margin-bottom: 16px; }
 
 .soc-dashboard .dashboard-queues .panelhead h2 {
   font-size: 15px;

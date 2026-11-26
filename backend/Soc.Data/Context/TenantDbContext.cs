@@ -1,72 +1,104 @@
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Soc.Data.Entities;
+
 namespace Soc.Data.Context;
 
-public sealed class TenantDbContext(DbContextOptions<TenantDbContext> options, string schema) : DbContext(options)
+public sealed class TenantDbContext : DbContext
 {
-    public string Schema { get; } = Regex.IsMatch(schema, "^tenant_[a-f0-9]{32}$") ? schema : throw new ArgumentException("Invalid schema");
+    public TenantDbContext(DbContextOptions<TenantDbContext> options, string schema)
+        : base(options)
+    {
+        if (!Regex.IsMatch(schema, "^tenant_[a-f0-9]{32}$"))
+        {
+            throw new ArgumentException("Invalid schema", nameof(schema));
+        }
+
+        Schema = schema;
+    }
+
+    public string Schema { get; }
 
     public DbSet<Alert> Alerts => Set<Alert>();
-
     public DbSet<ResearchCase> Cases => Set<ResearchCase>();
-
     public DbSet<CaseEvent> CaseEvents => Set<CaseEvent>();
-
     public DbSet<Observable> Observables => Set<Observable>();
-
     public DbSet<TenantAudit> Audit => Set<TenantAudit>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema(Schema);
-        // All tenant IDs are assigned by the application (Guid.NewGuid()).
-        // EF must recognize new children of tracked alerts/cases as INSERTs,
-        // not UPDATEs against non-existent rows. RowVersion remains database-generated.
-        modelBuilder.Entity<Alert>().Property(entity => entity.Id).ValueGeneratedNever();
-        modelBuilder.Entity<AlertEvent>().Property(entity => entity.Id).ValueGeneratedNever();
-        modelBuilder.Entity<ResearchCase>().Property(entity => entity.Id).ValueGeneratedNever();
-        modelBuilder.Entity<CaseEvent>().Property(entity => entity.Id).ValueGeneratedNever();
-        modelBuilder.Entity<Observable>().Property(entity => entity.Id).ValueGeneratedNever();
-        modelBuilder.Entity<TenantAudit>().Property(entity => entity.Id).ValueGeneratedNever();
-        // Adapted from feature/database CK_Ticket_Deadline: alerts carry the first-response deadline.
-        modelBuilder.Entity<Alert>().ToTable(table => table.HasCheckConstraint("CK_Alert_Deadline", "[Deadline] >= [CreatedAt]"));
-        modelBuilder.Entity<Alert>().Property(entity => entity.RowVersion).IsRowVersion();
-        modelBuilder.Entity<ResearchCase>().Property(entity => entity.RowVersion).IsRowVersion();
-        modelBuilder.Entity<Alert>().Property(entity => entity.ExternalEventId).HasMaxLength(200);
-        modelBuilder.Entity<Alert>().Property(entity => entity.PayloadHash).HasMaxLength(64);
-        modelBuilder.Entity<Alert>().HasIndex(entity => new { entity.SourceIntegrationId, entity.ExternalEventId })
+
+        ConfigureAlerts(modelBuilder);
+        ConfigureCases(modelBuilder);
+        ConfigureApplicationGeneratedIds(modelBuilder);
+    }
+
+    private static void ConfigureApplicationGeneratedIds(ModelBuilder modelBuilder)
+    {
+        // The application assigns IDs to new records; SQL Server generates RowVersion.
+        modelBuilder.Entity<Alert>().Property(alert => alert.Id).ValueGeneratedNever();
+        modelBuilder.Entity<AlertEvent>().Property(alertEvent => alertEvent.Id).ValueGeneratedNever();
+        modelBuilder.Entity<ResearchCase>().Property(ticket => ticket.Id).ValueGeneratedNever();
+        modelBuilder.Entity<CaseEvent>().Property(caseEvent => caseEvent.Id).ValueGeneratedNever();
+        modelBuilder.Entity<Observable>().Property(observable => observable.Id).ValueGeneratedNever();
+        modelBuilder.Entity<TenantAudit>().Property(audit => audit.Id).ValueGeneratedNever();
+    }
+
+    private static void ConfigureAlerts(ModelBuilder modelBuilder)
+    {
+        var alerts = modelBuilder.Entity<Alert>();
+
+        alerts.ToTable(table => table.HasCheckConstraint(
+            "CK_Alert_Deadline", "[Deadline] >= [CreatedAt]"));
+
+        alerts.Property(alert => alert.RowVersion).IsRowVersion();
+        alerts.Property(alert => alert.ExternalEventId).HasMaxLength(200);
+        alerts.Property(alert => alert.PayloadHash).HasMaxLength(64);
+        alerts.Property(alert => alert.Status).HasConversion<string>();
+        alerts.Property(alert => alert.Priority).HasConversion<string>();
+
+        alerts.HasIndex(alert => new { alert.SourceIntegrationId, alert.ExternalEventId })
             .IsUnique()
             .HasFilter("[SourceIntegrationId] IS NOT NULL AND [ExternalEventId] IS NOT NULL");
-        modelBuilder.Entity<Alert>().Property(entity => entity.Status).HasConversion<string>();
-        modelBuilder.Entity<Alert>().Property(entity => entity.Priority).HasConversion<string>();
-        modelBuilder.Entity<ResearchCase>().Property(entity => entity.Status).HasConversion<string>();
-        modelBuilder.Entity<ResearchCase>().Property(entity => entity.Priority).HasConversion<string>();
-        modelBuilder.Entity<Alert>().HasIndex(entity => new { entity.ScopeId, entity.CreatedAt });
-        modelBuilder.Entity<ResearchCase>().HasIndex(entity => entity.ScopeId);
-        modelBuilder.Entity<ResearchCase>().HasAlternateKey(entity => new { entity.ScopeId, entity.Id })
-            .HasName("AK_Cases_ScopeId_Id");
-        modelBuilder.Entity<Alert>()
-            .HasOne(entity => entity.Case)
-            .WithMany(entity => entity.Alerts)
-            .HasForeignKey(entity => new { entity.ScopeId, entity.CaseId })
-            .HasPrincipalKey(entity => new { entity.ScopeId, entity.Id })
+
+        alerts.HasIndex(alert => new { alert.ScopeId, alert.CreatedAt });
+
+        alerts.HasOne(alert => alert.Case)
+            .WithMany(ticket => ticket.Alerts)
+            .HasForeignKey(alert => new { alert.ScopeId, alert.CaseId })
+            .HasPrincipalKey(ticket => new { ticket.ScopeId, ticket.Id })
             .HasConstraintName("FK_Alerts_Cases_ScopeId_CaseId")
             .OnDelete(DeleteBehavior.Restrict);
-        modelBuilder.Entity<Alert>()
-            .HasMany(entity => entity.History)
+
+        alerts.HasMany(alert => alert.History)
             .WithOne()
-            .HasForeignKey(entity => entity.AlertId);
-        modelBuilder.Entity<ResearchCase>()
-            .HasMany(entity => entity.Entries)
+            .HasForeignKey(alertEvent => alertEvent.AlertId);
+    }
+
+    private static void ConfigureCases(ModelBuilder modelBuilder)
+    {
+        var cases = modelBuilder.Entity<ResearchCase>();
+
+        cases.Property(ticket => ticket.RowVersion).IsRowVersion();
+        cases.Property(ticket => ticket.Status).HasConversion<string>();
+        cases.Property(ticket => ticket.Priority).HasConversion<string>();
+
+        cases.HasIndex(ticket => ticket.ScopeId);
+
+        cases.HasAlternateKey(ticket => new { ticket.ScopeId, ticket.Id })
+            .HasName("AK_Cases_ScopeId_Id");
+
+        cases.HasMany(ticket => ticket.Entries)
             .WithOne()
-            .HasForeignKey(entity => new { entity.ScopeId, entity.CaseId })
-            .HasPrincipalKey(entity => new { entity.ScopeId, entity.Id })
+            .HasForeignKey(caseEvent => new { caseEvent.ScopeId, caseEvent.CaseId })
+            .HasPrincipalKey(ticket => new { ticket.ScopeId, ticket.Id })
             .HasConstraintName("FK_CaseEvents_Cases_ScopeId_CaseId");
-        modelBuilder.Entity<ResearchCase>()
-            .HasMany(entity => entity.Observables)
+
+        cases.HasMany(ticket => ticket.Observables)
             .WithOne()
-            .HasForeignKey(entity => new { entity.ScopeId, entity.CaseId })
-            .HasPrincipalKey(entity => new { entity.ScopeId, entity.Id })
+            .HasForeignKey(observable => new { observable.ScopeId, observable.CaseId })
+            .HasPrincipalKey(ticket => new { ticket.ScopeId, ticket.Id })
             .HasConstraintName("FK_Observables_Cases_ScopeId_CaseId");
     }
 }

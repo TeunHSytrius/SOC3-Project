@@ -31,7 +31,9 @@ public sealed class UserManagementService(SocDbContext db, UserManager<AppUser> 
     {
         Admin(currentUser);
         var email = Required(input.Email, 120);
-        Require(email.Contains('@'), "Ongeldig e-mailadres.", 400);
+        Require(System.Net.Mail.MailAddress.TryCreate(email, out var address) &&
+            string.Equals(address.Address, email, StringComparison.OrdinalIgnoreCase),
+            "Ongeldig e-mailadres.", 400);
         var role = Required(input.Role, 30);
         var organizationIds = input.OrganizationIds ?? [];
         Require(Roles.Contains(role) && (role != "Klant" || organizationIds.Distinct().Count() == 1) && await db.Tenants.CountAsync(organization => organizationIds.Contains(organization.Id)) == organizationIds.Distinct().Count(), "Ongeldige rol of klant.", 400);
@@ -45,23 +47,33 @@ public sealed class UserManagementService(SocDbContext db, UserManager<AppUser> 
             Role = role,
             LockoutEnabled = true
         };
-        var result = await users.CreateAsync(account, Required(input.Password, 200));
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        var result = await users.CreateAsync(account, RequiredPassword(input.Password));
         Require(result.Succeeded, string.Join(" ", result.Errors.Select(error => error.Description)), 400);
         await platform.SetGrants(account, role, organizationIds);
         await platform.Log(currentUser, "Gebruiker aangemaakt", target: email);
+        await transaction.CommitAsync();
+
         return await platform.PublicUser(account);
     }
+
     public async Task<object> ChangeAccess(AppUser currentUser, Guid id, ChangeUserAccessRequest input)
     {
         Admin(currentUser);
         Require(currentUser.Id != id, "Eigen rechten wijzigen is niet toegestaan.", 400);
         var account = await users.FindByIdAsync(id.ToString()) ?? throw new SocException(404, "Gebruiker niet gevonden.");
         Require(account.DeletedAt == null, "Gebruiker is verwijderd.", 404);
+        await using var transaction = await db.Database.BeginTransactionAsync();
+
         await platform.SetGrants(account, Required(input.Role, 30), input.OrganizationIds ?? []);
-        await users.UpdateSecurityStampAsync(account);
+        var securityStampResult = await users.UpdateSecurityStampAsync(account);
+        Require(securityStampResult.Succeeded, "Gebruikersrechten wijzigen mislukt.", 500);
+
         await platform.Log(currentUser, "Gebruikersrechten gewijzigd", target: account.Email);
+        await transaction.CommitAsync();
         return await platform.PublicUser(account);
     }
+
     public async Task<object> RemoveUser(AppUser actor, Guid id)
     {
         Admin(actor);
@@ -81,6 +93,7 @@ public sealed class UserManagementService(SocDbContext db, UserManager<AppUser> 
             ok = true
         };
     }
+
     public async Task<object> UpdateUser(AppUser actor, Guid id, UpdateUserRequest input)
     {
         Admin(actor);
@@ -111,7 +124,7 @@ public sealed class UserManagementService(SocDbContext db, UserManager<AppUser> 
         if (!string.IsNullOrEmpty(input.Password))
         {
             var token = await users.GeneratePasswordResetTokenAsync(user);
-            var reset = await users.ResetPasswordAsync(user, token, input.Password);
+            var reset = await users.ResetPasswordAsync(user, token, RequiredPassword(input.Password));
             Require(reset.Succeeded, string.Join(" ", reset.Errors.Select(error => error.Description)), 400);
             await users.ResetAccessFailedCountAsync(user);
             await users.SetLockoutEndDateAsync(user, null);
@@ -125,6 +138,7 @@ public sealed class UserManagementService(SocDbContext db, UserManager<AppUser> 
         await transaction.CommitAsync();
         return await platform.PublicUser(user);
     }
+
     public async Task<List<object>> Analysts(AppUser currentUser)
     {
         Require(Analyst(currentUser));

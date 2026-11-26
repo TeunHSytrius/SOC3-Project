@@ -32,6 +32,10 @@ export default function CaseWorkflow({ research }: { research: ResearchCase }) {
 
   return (
     <Panel title="Incidentworkflow" sub={description}>
+      <div className="workflow-owner">
+        <span>Huidige verantwoordelijke</span>
+        <strong>{research.owner || 'Niet toegewezen'}</strong>
+      </div>
       <ol className="case-workflow" aria-label="Voortgang incidentworkflow">
         {workflowSteps.map((step, index) => {
           const completed = index < activeStep;
@@ -44,8 +48,8 @@ export default function CaseWorkflow({ research }: { research: ResearchCase }) {
                 {completed ? <Icon name="check" size={16} /> : index + 1}
               </span>
               <strong>{step.title}</strong>
-              <small>{step.role}</small>
               <span className="workflow-state">{completed ? 'Afgerond' : current ? 'Actief' : 'Gepland'}</span>
+              {current && <small>{step.role}</small>}
             </li>
           );
         })}

@@ -39,6 +39,51 @@ export async function loadWorkspace(user: User): Promise<Partial<State>> {
   return { orgs, cases };
 }
 
+// Background refresh retrieves live information only. Full refresh remains available
+// after mutations, sign-in and the explicit Refresh button.
+export async function loadLiveWorkspace(user: User, page: string): Promise<Partial<State>> {
+  if (page === 'dashboard') {
+    // Platform counters and operational queues are both visible on the admin dashboard.
+    if (user.role === 'Beheerder') {
+      const [orgs, alerts, cases, users, keys, errors] = await Promise.all([
+        api<Organization[]>('organizations'),
+        loadAlerts(),
+        api<ResearchCase[]>('cases'),
+        api<User[]>('users'),
+        api<ApiKey[]>('keys'),
+        api<ApiErrorEntry[]>('errors'),
+      ]);
+      return { orgs, alerts, cases, users, keys, errors };
+    }
+
+    const [alerts, cases, analysts] = await Promise.all([
+      loadAlerts(),
+      api<ResearchCase[]>('cases'),
+      api<Analyst[]>('analysts'),
+    ]);
+    return { alerts, cases, analysts };
+  }
+
+  const alerts = loadAlerts();
+
+  if (page === 'cases') {
+    const [updatedAlerts, cases] = await Promise.all([alerts, api<ResearchCase[]>('cases')]);
+    return { alerts: updatedAlerts, cases };
+  }
+
+  if (user.role === 'Beheerder' && page === 'errors') {
+    const [updatedAlerts, errors] = await Promise.all([alerts, api<ApiErrorEntry[]>('errors')]);
+    return { alerts: updatedAlerts, errors };
+  }
+
+  if (user.role === 'Beheerder' && page === 'ticket-register') {
+    const [updatedAlerts, ticketRegister] = await Promise.all([alerts, api<TicketRegisterRow[]>('ticket-register')]);
+    return { alerts: updatedAlerts, ticketRegister };
+  }
+
+  return { alerts: await alerts };
+}
+
 export function loadAlerts(): Promise<Alert[]> {
   return api<Alert[]>('alerts');
 }

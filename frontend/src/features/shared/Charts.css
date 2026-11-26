@@ -1,0 +1,99 @@
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-strong);
+  margin-right: 6px;
+}
+
+.bars {
+  padding: 17px 22px;
+  display: grid;
+  gap: 12px;
+}
+.barrow {
+  display: grid;
+  grid-template-columns: 90px 1fr 22px;
+  gap: 10px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.track {
+  height: 10px;
+  background: var(--surface-raised);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.bar {
+  height: 100%;
+  border-radius: 5px;
+  background: var(--severity-moderate);
+}
+.bar.Immediate {
+  background: var(--severity-immediate);
+}
+.bar.Urgent {
+  background: var(--severity-urgent);
+}
+.bar.High {
+  background: var(--severity-high);
+}
+.bar.Moderate {
+  background: var(--severity-moderate);
+}
+.bar.Low {
+  background: var(--severity-low);
+}
+.slaoverview {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 18px;
+  padding: 22px 18px;
+}
+.donut {
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  padding: 15px;
+  flex-shrink: 0;
+}
+.donut > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  border-radius: 50%;
+}
+.donut strong {
+  font-size: 27px;
+  letter-spacing: -1px;
+}
+.slaoverview > div:last-child {
+  min-width: 130px;
+}
+.slaoverview p {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 9px 0;
+  font-size: 12px;
+}
+.slaoverview b {
+  margin-left: auto;
+  color: var(--text-h);
+}
+.dot.green {
+  background: var(--sla-on-time);
+}
+.dot.red {
+  background: var(--sla-late);
+}
+.dot.orange {
+  background: var(--severity-high);
+}
