@@ -30,6 +30,6 @@ export default function TicketRegister({tickets,organizations,organizationId,onO
         {filtered.map(t=><tr key={t.id}><td><b>{t.number}</b></td><td>{organizations.find(o=>o.id===t.organizationId)?.name||'—'}</td><td><Badge value={t.status}/></td><td>{fmt(t.createdAt)}</td><td>{fmt(t.closedAt)}</td></tr>)}
       </Table>
     </Panel>
-    <p className="admin-access-note">Het register bevat ook tickets van inactieve klanten. Log in als bevoegde analist om de bijbehorende notities, alerts en observables te openen.</p>
+    <p className="admin-access-note">Het register bevat ook tickets van inactieve klanten. Open Tickets in de navigatie om als beheerder de volledige dossiers te bekijken.</p>
   </>;
 }

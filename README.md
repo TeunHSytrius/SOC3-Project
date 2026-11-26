@@ -111,7 +111,7 @@ De onderstaande rollen zijn gekozen voor het demonstreren van de applicatie, nie
 | Ruben Abrahamse | ruben@soc.demo | Accountmanager |
 | Thijs Dronkers | thijs@soc.demo | Klant |
 
-De zes accounts worden eenmalig toegevoegd, ook aan een bestaande geïnitialiseerde demodatabase. Bestaande accounts en hun wijzigingen blijven behouden bij herstart. Analisten krijgen toegang tot de bestaande demoklanten, de klant tot één (bij voorkeur Northstar Finance), de accountmanager tot twee (bij voorkeur Northstar Finance en Delta Logistics). De beheerder krijgt platformbeheer, geen automatische onderzoekstoegang.
+De zes accounts worden eenmalig toegevoegd, ook aan een bestaande geïnitialiseerde demodatabase. Bestaande accounts en hun wijzigingen blijven behouden bij herstart. Analisten krijgen toegang tot de bestaande demoklanten, de klant tot één (bij voorkeur Northstar Finance), de accountmanager tot twee (bij voorkeur Northstar Finance en Delta Logistics). De beheerder krijgt platformbeheer en volledige leesrechten op alle klantdossiers.
 
 ### Algemene testaccounts
 
@@ -127,7 +127,7 @@ De volgende accounts blijven beschikbaar voor de smoketest en generieke presenta
 
 | Functionaliteit | Analist | Senior | Beheerder | Klant | Accountmanager |
 | --- | --- | --- | --- | --- | --- |
-| SOC-dashboard en interne alerts | Ja | Ja | Nee | Nee | Nee |
+| SOC-dashboard en interne alerts | Ja | Ja | Alleen lezen | Nee | Nee |
 | Beheerdashboard (auditmetadata) | Nee | Nee | Ja | Nee | Nee |
 | Alert oppakken, triage en escalatie | Ja | Ja | Nee | Nee | Nee |
 | Afgewezen/opgeloste alert zonder case heropenen | Nee | Ja | Nee | Nee | Nee |
@@ -138,7 +138,7 @@ De volgende accounts blijven beschikbaar voor de smoketest en generieke presenta
 | Auditlog bekijken | Nee | Nee | Ja | Nee | Nee |
 | Eigen 2FA instellen | Ja | Ja | Ja | Ja | Ja |
 
-Klant- en scopetoewijzingen begrenzen operationele toegang. Beheerders krijgen niet automatisch toegang tot onderzoeksinhoud. De voorgestelde procesrollen van de opdrachtgever zijn nog niet volledig geïmplementeerd; zie hoofdstuk 10.
+Klant- en scopetoewijzingen begrenzen operationele toegang. Beheerders hebben expliciet platformbrede leesrechten; operationele wijzigingen blijven bij de analisten. De voorgestelde procesrollen van de opdrachtgever zijn nog niet volledig geïmplementeerd; zie hoofdstuk 10.
 
 ### Gebruikersbeheer
 
@@ -156,7 +156,7 @@ Een beheerder kan klanten aanmaken, hun naam wijzigen, deactiveren en heractiver
 
 ### Dashboard
 
-Beheerders starten op een eigen dashboard met actieve klanten, gebruikers, bronnen, aantallen geregistreerde alertontvangsten per klant en recente ontvangsten uit het bestaande auditlog. Het gaat niet om actuele aantallen openstaande alerts; die worden alleen binnen bevoegde analistenscopes getoond. Er wordt geen ruwe payload of interne case-inhoud aan de beheerder beschikbaar gesteld. Voor de analistenweergave log je in als analist of senior analist.
+Beheerders starten op een eigen dashboard met actieve klanten, gebruikers, bronnen, aantallen geregistreerde alertontvangsten per klant en recente ontvangsten uit het bestaande auditlog. Het dashboard toont daarnaast actuele aantallen openstaande alerts en historische cases. De beheerder kan alle dossiers en ruwe payloads inzien, maar niet behandelen.
 
 Het dashboard toont open alerts, actieve cases, SLA-risico's, overschrijdingen, prioriteitsverdeling, SLA-prestaties, FIFO-wachtrij en actieve onderzoeken. De klantfilter beperkt de getoonde resultaten. De actieve analistenoverzichten vernieuwen automatisch elke 15 seconden. Details, formulieren en verborgen tabbladen worden niet automatisch vernieuwd. Het dashboard toont ook dreigingscategorieën, betrokken systemen en recent ontvangen meldingen; dit is polling, geen realtime push.
 
@@ -401,23 +401,37 @@ De demo draait lokaal via HTTP; de verbinding met SQL Server vraagt encryptie aa
 
 ## 9. Ontwikkelen en testen
 
-### Zonder app-container
+### Lokale frontendontwikkeling (aanbevolen)
 
-Vereisten: .NET 10 SDK, Node 22.12+ en een afzonderlijke SQL Server-testdatabase. Gebruik niet de echte projectdatabase.
+Node 22.12+ (24 aanbevolen). Start de app en SQL Server in Docker. Gebruik Vite voor live wijzigingen; de API blijft op 8081.
 
 ```bash
+docker compose up --build -d
 cd frontend
-npm install
-npm run build
-cd ..
-mkdir -p backend/Soc.Api/wwwroot
-cp -R frontend/dist/. backend/Soc.Api/wwwroot/
-export ConnectionStrings__Soc='Server=localhost,1433;Database=Soc3Demo;User Id=sa;Password=VUL_TEST_WACHTWOORD_IN;Encrypt=True;TrustServerCertificate=True'
-export Demo__Enabled=true
-dotnet run --project backend/Soc.Api --urls http://localhost:8080
+# Eenmalig zolang package-lock.json ontbreekt:
+npm install --package-lock-only
+npm ci
+npm run dev
 ```
 
-Frontendontwikkeling: `cd frontend && npm run dev` in een tweede terminal. Vite proxyt /api naar poort 8080. Gebruik Docker voor de presentatie.
+Open http://localhost:5173. In een tweede terminal, vanuit frontend: `npm run build`. Commit package-lock.json; daarna volstaat npm ci. De frontend heeft nog geen lint-script.
+
+### Backend lokaal ontwikkelen
+
+.NET 10 SDK. Start alleen de databasecontainer en gebruik een afzonderlijke ontwikkel-database Soc3Dev. Gebruik het eigen lokale SQL-wachtwoord indien aangepast.
+
+```bash
+docker compose stop app
+docker compose up -d sqlserver
+dotnet restore SOC3.slnx
+dotnet build SOC3.slnx
+export ConnectionStrings__Soc='Server=127.0.0.1,14333;Database=Soc3Dev;User Id=sa;Password=SocDemo!2026Local;Encrypt=True;TrustServerCertificate=True'
+export Demo__Enabled=true
+export ASPNETCORE_ENVIRONMENT=Development
+dotnet watch --project backend/Soc.Api/Soc.Api.csproj run --no-launch-profile --urls http://localhost:8080
+```
+
+In een tweede terminal vanuit de hoofdmap: `cd frontend && VITE_API_TARGET=http://127.0.0.1:8080 npm run dev`. Open http://localhost:5173. De Vite-proxy gebruikt standaard Docker-poort 8081, met deze override de lokale backend 8080. Geen databasevolumes wissen.
 
 ### Smoketest
 
@@ -559,7 +573,7 @@ Open cases gaan via de toewijzing naar In onderzoek. Vanuit In onderzoek kan de 
 
 ### Wireframes en huisstijl
 
-De oorspronkelijke kaartweergave uit FO v1.1 (figuren 1–4) is hersteld: drie kaarten naast elkaar, maximaal twaalf alerts per pagina, zoek- en filterbalk, driepuntjesmenu, apart triagepaneel, casebanner, observables en tijdlijn, en kaarten voor klantonderzoeken. De basis-index.css is overgenomen van de aangeleverde groepscode. De precieze ernstkleuren zijn in het FO nog niet definitief vastgelegd; deze versie gebruikt grijs voor laag/gemiddeld, oranje voor hoog, rood voor urgent en magenta voor kritiek, steeds met tekstlabels. Het latere FO v2.0 bevat ook een tabelvariant; de oorspronkelijke v1.1-kaarten zijn hier gekozen omdat die als visuele basis zijn aangewezen. De beheerder heeft geen automatische analisttoegang (TO 6.2/8.2). Browser- en buildcontrole van deze nieuwe UI zijn nog nodig.
+De oorspronkelijke kaartweergave uit FO v1.1 (figuren 1–4) is hersteld: drie kaarten naast elkaar, maximaal twaalf alerts per pagina, zoek- en filterbalk, driepuntjesmenu, apart triagepaneel, casebanner, observables en tijdlijn, en kaarten voor klantonderzoeken. De basis-index.css is overgenomen van de aangeleverde groepscode. De precieze ernstkleuren zijn in het FO nog niet definitief vastgelegd; deze versie gebruikt grijs voor laag/gemiddeld, oranje voor hoog, rood voor urgent en magenta voor kritiek, steeds met tekstlabels. Het latere FO v2.0 bevat ook een tabelvariant; de oorspronkelijke v1.1-kaarten zijn hier gekozen omdat die als visuele basis zijn aangewezen. De beheerder heeft leesrechten, geen analistenmutatierechten; dit wijkt af van de oorspronkelijke TO 6.2/8.2. Browser- en buildcontrole van deze nieuwe UI zijn nog nodig.
 
 ### Hergebruik van originele groepsbranches (25 november 2026)
 
@@ -588,4 +602,20 @@ Notities, observables, acties en bewijsreferenties zijn per ticket/onderzoek gek
 
 ### Ticketarchief en klantregister
 
-Analisten en klantgebruikers hebben bij Tickets / onderzoeken de keuze Alle tickets, Lopend en Archief. Afgesloten cases blijven raadpleegbaar binnen toegewezen actieve tenant/scopes; klanten en accountmanagers zien uitsluitend vrijgegeven cases. Datum en klantfilters blijven beschikbaar. Er worden geen fictieve historische tickets toegevoegd. De beheerder krijgt een afzonderlijke administratieve route GET /api/v1/ticket-register met ticketnummer, klant, status en tijdstippen, ook voor inactieve klanten. Dit is een expliciete uitbreiding van de beheerrechten voor lifecycle-metadata; geen toegang tot titels, scope-ID, gekoppelde alerts of onderzoeksinhoud. De oorspronkelijke TO-rollenmatrix geeft beheerders geen interne onderzoekstoegang; die blijft afgeschermd. De opdrachtgever moet bevestigen of ook deze beperkte metadata contractueel aan platformbeheer mag worden getoond. De registertoegang wordt geaudit. De nieuwe archieftests zijn nog niet runtime uitgevoerd.
+Analisten en klantgebruikers hebben bij Tickets / onderzoeken de keuze Alle tickets, Lopend en Archief. Afgesloten cases blijven raadpleegbaar binnen toegewezen actieve tenant/scopes; klanten en accountmanagers zien uitsluitend vrijgegeven cases. Datum en klantfilters blijven beschikbaar. Er worden geen fictieve historische tickets toegevoegd. De beheerder krijgt een afzonderlijke administratieve route GET /api/v1/ticket-register met ticketnummer, klant, status en tijdstippen, ook voor inactieve klanten. Dit is een expliciete uitbreiding van de beheerrechten voor lifecycle-metadata; geen toegang tot titels, scope-ID, gekoppelde alerts of onderzoeksinhoud. Het afzonderlijke register blijft metadata-only. Op uitdrukkelijk verzoek is de reguliere GET API voor alerts en cases nu ook beschikbaar voor beheerders, inclusief volledige dossierinhoud en inactieve klanten. Dit is een wijziging ten opzichte van de TO-rollenmatrix en moet door de opdrachtgever worden bevestigd voordat echte klantgegevens worden gebruikt. De registertoegang wordt geaudit. De nieuwe archieftests zijn nog niet runtime uitgevoerd.
+
+### Uitgebreide beheerdersleesrechten
+
+Beheerder → Alerts en Tickets toont alle klantorganisaties, scopes en historische gegevens, ook van inactieve klanten. Klanten blijven beperkt tot hun eigen vrijgegeven onderzoeken. De backend verleent deze extra rechten alleen voor lezen; POST/PATCH-acties voor triage, notities en casebeheer blijven afgeschermd. Leesacties worden gelogd. De beheerdersrol is daardoor zeer vertrouwelijk en vereist sterke beveiliging; productie vereist 2FA en formele goedkeuring van deze afwijking van het TO. Demoaccounts behouden hun bestaande demo-uitzondering. Tests voor lees- en schrijfgrenzen zijn aangepast, nog niet uitgevoerd.
+
+### Werkvoorraden en gedeeld SOC-dashboard
+
+Analisten en beheerders gebruiken hetzelfde SOC-dashboard met echte alert-, SLA- en casegegevens binnen hun bevoegde klantcontext. Beheerder heeft daarnaast beheerknoppen en volledige leesrechten, geen operationele mutatierechten. De openstaande alertwachtrij is standaard FIFO. Gekoppelde alerts staan apart van afgehandelde alerts (Dismissed/Resolved). Tickets beginnen op Lopend; Resolved staat in Opgelost – nog afsluiten; Closed staat in Archief. Beide lijsten hebben een aparte Alles-tab, filters op klant, status, prioriteit, eigenaar, datum, zoektekst en sortering; alerts hebben ook bron, categorie en SLA-filter. Analisten kunnen hun eigen werk selecteren. De filters werken op reeds geautoriseerde data; er is geen wijziging van database of rechten. Browsercontrole is nog nodig.
+
+### Onderzoekscontext in demo-alerts
+
+De acht oorspronkelijke seedmeldingen ALT-1001 t/m ALT-1008 krijgen in demomodus fictieve, specifiek op het type incident afgestemde securitycontext, brongegevens en onderzoeksaandachtspunten. Bestaande oorspronkelijke records worden eenmalig aangevuld op startup, uitsluitend als ze geen ingest-bron, extern ID of payloadhash hebben. De oorspronkelijke demo-JSON wordt vervangen door expliciet gemarkeerde fictieve bron-JSON; statussen, koppelingen, eigenaren, deadlines en historie blijven staan. Ingest-payloads van echte bronnen worden niet aangepast. De nieuwe velden zijn optioneel. De analist ziet de context direct naast triage. Geen automatische incidentbevestiging of externe threat intelligence. Tests nog niet runtime uitgevoerd.
+
+### Dashboard en gebruikers verwijderen
+
+Wachtrij en recente openstaande alerts worden als verticale lijsten weergegeven. Alertvolume per prioriteit gebruikt ontvangen databaserecords in de laatste 24 uur of zeven kalenderdagen (inclusief vandaag), geen verzonnen meetreeks. De originele .gitignore uit main van soc3Managment is aangevuld met lokale projectbestanden. Gebruikers verwijderen is een soft delete: DeletedAt, inactief, toegang ingetrokken, security stamp vernieuwd, auditregistratie. Het account verdwijnt uit gebruikersbeheer; ticket- en auditgeschiedenis blijft intact. Het e-mailadres blijft gereserveerd en eigen account verwijderen is geblokkeerd. Een senior moet eventuele open toegewezen werkzaamheden overnemen. Bestaande demodatabases krijgen een additieve kolom; runtimecontrole nodig.

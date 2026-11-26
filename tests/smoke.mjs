@@ -19,13 +19,13 @@ class Client {
   login(role){return this.post('auth/login',{username:`${role}@soc.demo`,password:'Demo2026!'});}
 }
 const guest=new Client();await guest.ok('health');const denied=await guest.request('alerts');assert.equal(denied.status,401);assert(denied.data.message&&denied.data.traceId,'401 must explain failure and include trace ID');
-const admin=new Client();await admin.login('beheerder');const orgs=await admin.ok('organizations');assert(orgs.length>=3);assert.equal((await admin.request('alerts')).status,403);const errors=await admin.ok('errors');assert(errors.some(e=>e.traceId===denied.data.traceId&&e.status===401));assert(errors.every(e=>!('body' in e)&&!('headers' in e)));
+const admin=new Client();await admin.login('beheerder');const orgs=await admin.ok('organizations');assert(orgs.length>=3);assert((await admin.ok('alerts')).length>=8);const errors=await admin.ok('errors');assert(errors.some(e=>e.traceId===denied.data.traceId&&e.status===401));assert(errors.every(e=>!('body' in e)&&!('headers' in e)));
 // Group accounts are seeded once; their role/profile can be changed through user management.
 const teamUsers=await admin.ok('users');
 for(const email of ['teun@soc.demo','dominique@soc.demo','sergio@soc.demo','hamza@soc.demo','ruben@soc.demo','thijs@soc.demo'])assert(teamUsers.some(u=>u.email===email),`Demoaccount ontbreekt: ${email}`);
 assert(!teamUsers.some(u=>u.email==='riza@soc.demo'&&u.isActive),'Voormalig groepsaccount mag niet actief zijn');
 const north=orgs.find(o=>o.name==='Northstar Finance');const delta=orgs.find(o=>o.name==='Delta Logistics');assert(north&&delta);
-const analyst=new Client();await analyst.login('analist');assert((await analyst.ok('alerts')).length>=8);
+const analyst=new Client();await analyst.login('analist');const demoAlerts=await analyst.ok('alerts');assert(demoAlerts.length>=8);const networkDemo=demoAlerts.find(a=>a.number==='ALT-1003');assert(networkDemo?.security?.simulated&&networkDemo.security.sourceIp&&networkDemo.security.destinationIp&&networkDemo.security.evidence,'Seed network alert must contain usable fictional evidence');
 assert.equal((await analyst.request('errors')).status,403);assert.equal((await analyst.request('auth/me',{headers:{'X-SOC-User':'00000000-0000-0000-0000-000000000000'}})).status,401,'Wrong tab identity must not use the shared cookie');
 const customer=new Client();await customer.login('klant');assert.equal((await customer.request('alerts')).status,403);assert.equal((await customer.request('users')).status,403);assert.equal((await customer.request('organizations/'+delta.id)).status,403);
 
@@ -90,11 +90,22 @@ assert.equal((await analyst.request(`cases/${id}`,{method:'PATCH',body:{status:'
 await analyst.ok(`cases/${id}`,{method:'PATCH',body:{status:'Resolved'}});
 assert.equal((await analyst.request(`cases/${id}`,{method:'PATCH',body:{status:'Closed'}})).status,400);
 const closed=await analyst.ok(`cases/${id}`,{method:'PATCH',body:{status:'Closed',summary:'Onderzoek en acties afgerond.',conclusion:'Demotest afgerond.'}});assert.equal(closed.status,'Closed');assert.equal((await analyst.ok(`alerts/${alert.id}`)).status,'Resolved');
+const removable=await admin.post('users',{name:'Verwijdertest',email:'remove-'+unique+'@soc.demo',password:'TestAccount2026!',role:'Klant',organizationIds:[north.id]});
+const removedSession=new Client();await removedSession.post('auth/login',{username:removable.email,password:'TestAccount2026!'});
+assert.equal((await customer.request('users/'+removable.id+'/remove',{method:'POST',body:{}})).status,403);
+await admin.post('users/'+removable.id+'/remove',{});
+assert(!(await admin.ok('users')).some(u=>u.id===removable.id));
+assert.equal((await removedSession.request('auth/me')).status,401);
+assert((await admin.ok('audit')).some(a=>a.action==='Gebruiker verwijderd'&&a.target===removable.id));
 const archive=await admin.ok('ticket-register');
 const registered=archive.find(t=>t.id===id);
 assert(registered&&registered.status==='Closed'&&registered.closedAt&&registered.organizationId===north.id);
 assert(archive.every(t=>!('title' in t)&&!('entries' in t)&&!('scopeId' in t)&&!('alertIds' in t)));
-assert.equal((await admin.request(`cases/${id}`)).status,403);
+const adminCase=await admin.ok(`cases/${id}`);assert(adminCase.entries.some(e=>e.text===noteText));assert(adminCase.entries.some(e=>e.kind==='Observable'));assert(adminCase.alertIds.includes(alert.id));
+assert((await admin.ok('cases')).some(c=>c.id===id&&c.status==='Closed'));
+assert((await admin.ok(`alerts/${alert.id}`)).rawPayload);
+assert.equal((await admin.request(`cases/${id}/events`,{method:'POST',body:{kind:'Notitie',text:'Verboden beheerderswijziging'}})).status,403);
+assert.equal((await admin.request(`alerts/${alert.id}/claim`,{method:'POST',body:{}})).status,403);
 assert.equal((await customer.request('ticket-register')).status,403);
 assert((await customer.ok('portal/cases')).some(t=>t.id===id&&t.status==='Closed'));
 assert((await analyst.ok('cases')).some(t=>t.id===id&&t.status==='Closed'));

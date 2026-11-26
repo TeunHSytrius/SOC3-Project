@@ -1,6 +1,6 @@
-import type {AuditRow,Organization,User,ApiKey,TicketRegisterRow} from '../../types/soc';
+import type {AuditRow,Organization,User,ApiKey,TicketRegisterRow,Alert} from '../../types/soc';
 import {Button,Panel,PageHeader,Table} from '../../components/Ui';
-import {fmt} from '../../types/domain';
+import {fmt,active,sla} from '../../types/domain';
 
 interface Props {
   organizations:Organization[];
@@ -8,18 +8,22 @@ interface Props {
   keys:ApiKey[];
   audit:AuditRow[];
   tickets:TicketRegisterRow[];
+  alerts:Alert[];
+  onArchive:()=>void;
   navigate:(page:string)=>void;
   onCustomerTickets:(id:string)=>void;
 }
 
-export default function AdminDashboard({organizations,users,keys,audit,tickets,navigate,onCustomerTickets}:Props){
+export default function AdminDashboard({organizations,users,keys,audit,tickets,alerts,navigate,onCustomerTickets,onArchive}:Props){
   // Use the audit data the administrator is already authorized to read.
-  // No alert payloads, case details or internal investigation notes are loaded here.
+  // Dashboard counters use actual alerts and tickets; full detail is available in the read-only views.
   const received=audit.filter(row=>row.action==='Alert ontvangen'||row.action==='Alert handmatig ontvangen');
   const since=Date.now()-24*60*60*1000;
   const today=received.filter(row=>Date.parse(row.createdAt)>=since);
   const activeCustomers=organizations.filter(org=>org.isActive);
   const cards=[
+    ['Open alerts',alerts.filter(active).length,'Alle klanten','alerts'],
+    ['SLA overschreden',alerts.filter(a=>sla(a).kind==='danger').length,'Eerste behandeling','alerts'],
     ['Ontvangen alerts (24 uur)',today.length,'Geregistreerde ontvangsten','audit'],
     ['Actieve klanten',activeCustomers.length,'Klantorganisaties','customers'],
     ['Actieve gebruikers',users.filter(user=>user.isActive).length,'Accounts','users'],
@@ -30,7 +34,7 @@ export default function AdminDashboard({organizations,users,keys,audit,tickets,n
   return <>
     <PageHeader title="Beheerdashboard" sub="Overzicht van platform, aangesloten klanten en alertontvangst."/>
     <div className="stats">
-      {cards.map(([label,count,description,page])=><button type="button" className="stat admin-stat" key={label} onClick={()=>navigate(String(page))}>
+      {cards.map(([label,count,description,page])=><button type="button" className="stat admin-stat" key={label} onClick={()=>label==='Afgesloten tickets'?onArchive():navigate(String(page))}>
         <div className="statline">{label}</div><strong>{count}</strong><small>{description}</small>
       </button>)}
     </div>
@@ -48,6 +52,6 @@ export default function AdminDashboard({organizations,users,keys,audit,tickets,n
         {received.slice(0,12).map(row=><tr key={row.id}><td>{fmt(row.createdAt)}</td><td>{organizations.find(org=>org.id===row.organizationId)?.name||'—'}</td><td>{row.actor}</td><td>{row.target||'—'}</td></tr>)}
       </Table>
     </Panel>
-    <p className="admin-access-note">Voor het bekijken en behandelen van alerts en onderzoeken is een afzonderlijk analistenaccount met klant- en scopetoegang nodig.</p>
+    <p className="admin-access-note">Als beheerder kun je alle alerts en dossiers inzien, ook afgesloten tickets. Voor operationele wijzigingen is een analistenaccount nodig.</p>
   </>;
 }
