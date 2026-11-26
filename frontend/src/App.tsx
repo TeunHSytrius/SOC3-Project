@@ -12,22 +12,54 @@ import {AlertSecurityDetails} from './features/alerts/SecurityDetails';
 import CaseWorkflow from './features/cases/CaseWorkflow';
 import DashboardAlerts from './features/alerts/DashboardAlerts';
 import AlertTrend from './features/alerts/AlertTrend';
+import AlertNotifications from './features/alerts/AlertNotifications';
 import {AlertCards,CaseCards,priorityColor} from './features/alerts/AlertCards';
 import ErrorLog from './features/admin/ErrorLog';
 import TicketRegister from './features/admin/TicketRegister';
 function formData(e):Record<string,any>{e.preventDefault();return Object.fromEntries(new FormData(e.currentTarget));}
 class App extends React.Component<Record<string, never>,State> {
- constructor(p){super(p);this.state={user:null,loading:true,page:'dashboard',archiveFilter:'open',listSort:'default',ownerFilter:'',slaFilter:'',sourceFilter:'',orgs:[],alerts:[],cases:[],users:[],keys:[],audit:[],errors:[],ticketRegister:[],analysts:[],org:'',search:'',filter:'',priority:'',category:'',fromDate:'',toDate:'',mine:false,selected:null,modal:null,error:'',notice:'',busy:false,secret:null,setup:null};}
+ constructor(p){super(p);this.state={user:null,loading:true,page:'dashboard',archiveFilter:'open',listSort:'default',ownerFilter:'',slaFilter:'',sourceFilter:'',orgs:[],alerts:[],alertNotifications:[],cases:[],users:[],keys:[],audit:[],errors:[],ticketRegister:[],analysts:[],org:'',search:'',filter:'',priority:'',category:'',fromDate:'',toDate:'',mine:false,selected:null,modal:null,error:'',notice:'',busy:false,secret:null,setup:null};}
  private refreshTimer?:number;
  private refreshing=false;
  private refreshVersion=0;
+ private knownAlertIds=new Set<string>();
+ private alertsInitialized=false;
+ private resetAlertNotifications(){this.knownAlertIds.clear();this.alertsInitialized=false;}
+ private findNewAlerts(alerts:Alert[]):Alert[]{
+   const newAlerts=this.alertsInitialized?alerts.filter(alert=>!this.knownAlertIds.has(alert.id)&&active(alert)):[];
+   for(const alert of alerts)this.knownAlertIds.add(alert.id);
+   this.alertsInitialized=true;
+   return sortRecords(newAlerts,'newest',false);
+ }
+ private dismissAlertNotification=(id:string)=>this.setState(s=>({alertNotifications:s.alertNotifications.filter(alert=>alert.id!==id)}));
+ private openAlertNotification=async(alert:Alert)=>{
+   const user=this.state.user;
+   if(!user||this.state.busy||this.state.modal)return;
+   if(!await this.refresh(user)||sessionStorage.getItem(sessionKey)!==user.id)return;
+   this.go('alerts',alert.id);
+   this.setState({org:alert.organizationId});
+   this.dismissAlertNotification(alert.id);
+ };
+ private async pollAlertNotifications(user:User){
+   const version=++this.refreshVersion;
+   this.refreshing=true;
+   try{
+     const alerts=await api<Alert[]>('alerts');
+     if(version!==this.refreshVersion||sessionStorage.getItem(sessionKey)!==user.id)return;
+     const newAlerts=this.findNewAlerts(alerts);
+     if(newAlerts.length)this.setState(s=>({alertNotifications:[...newAlerts,...s.alertNotifications].slice(0,3)}));
+   }catch(e){if(version===this.refreshVersion&&sessionStorage.getItem(sessionKey)===user.id)this.fail(e);}
+   finally{if(version===this.refreshVersion)this.refreshing=false;}
+ }
  componentDidMount(){
    void this.restoreSession();
    this.refreshTimer=window.setInterval(()=>{
      const s=this.state;
-     if(!document.hidden&&(this.canReadInternal)&&!s.loading&&!s.busy&&!s.modal&&!s.selected&&
-        ['dashboard','alerts','cases','errors','ticket-register'].includes(s.page)&&!this.refreshing){
+     if(document.hidden||!this.canReadInternal||!s.user||s.user.requiresTwoFactorSetup||s.loading||s.busy||this.refreshing)return;
+     if(!s.modal&&!s.selected&&['dashboard','alerts','cases','errors','ticket-register'].includes(s.page)){
        void this.refresh(s.user,true);
+     }else{
+       void this.pollAlertNotifications(s.user);
      }
    },15000);
  }
@@ -50,7 +82,7 @@ class App extends React.Component<Record<string, never>,State> {
  get canReadInternal(){return this.isAnalyst||this.isAdmin;}
  get isAnalyst(){return this.state.user&&['Analist','Senior analist'].includes(this.state.user.role)}
  get isAdmin(){return this.state.user&&this.state.user.role==='Beheerder'}
- async enter(user:User){this.setState({user,loading:false,page:user.requiresTwoFactorSetup?'account':user.role==='Beheerder'?'dashboard':user.role==='Klant'||user.role==='Accountmanager'?'cases':'dashboard',org:'',selected:null,archiveFilter:'open',listSort:'default',ownerFilter:'',slaFilter:'',sourceFilter:'',search:'',filter:'',priority:'',category:'',fromDate:'',toDate:'',mine:false,error:'',notice:'',secret:null,setup:null});if(!user.requiresTwoFactorSetup)await this.refresh(user)}
+ async enter(user:User){this.resetAlertNotifications();this.setState({user,alertNotifications:[],loading:false,page:user.requiresTwoFactorSetup?'account':user.role==='Beheerder'?'dashboard':user.role==='Klant'||user.role==='Accountmanager'?'cases':'dashboard',org:'',selected:null,archiveFilter:'open',listSort:'default',ownerFilter:'',slaFilter:'',sourceFilter:'',search:'',filter:'',priority:'',category:'',fromDate:'',toDate:'',mine:false,error:'',notice:'',secret:null,setup:null});if(!user.requiresTwoFactorSetup)await this.refresh(user)}
  async refresh(u=this.state.user,automatic=false){
    if(!u||u.requiresTwoFactorSetup||(automatic&&this.refreshing))return;
    const version=++this.refreshVersion;
@@ -63,12 +95,13 @@ class App extends React.Component<Record<string, never>,State> {
      if(automatic&&(this.state.selected||this.state.modal||this.state.busy))return;
      const state:Partial<State>={};
      paths.forEach((p,i)=>state[p==='organizations'?'orgs':p==='portal/cases'?'cases':p==='ticket-register'?'ticketRegister':p]=data[i]);
-     this.setState(state as Pick<State,keyof State>);
+     const newAlerts=state.alerts?this.findNewAlerts(state.alerts):[];
+     this.setState(previous=>({...state,alertNotifications:[...newAlerts,...previous.alertNotifications].slice(0,3)}) as Pick<State,keyof State>);
      return true;
    }catch(e){if(version===this.refreshVersion&&sessionStorage.getItem(sessionKey)===u.id)this.fail(e);return false;}
    finally{if(version===this.refreshVersion)this.refreshing=false;}
  }
- fail(e){const message=e instanceof Error?e.message:'Onbekende fout. Probeer opnieuw.';if(e?.status===401&&this.state.user){sessionStorage.removeItem(sessionKey);this.setState({user:null,alerts:[],cases:[],users:[],keys:[],audit:[],errors:[],ticketRegister:[],orgs:[],analysts:[],secret:null,setup:null,error:message});return;}this.setState({error:message,notice:''})}
+ fail(e){const message=e instanceof Error?e.message:'Onbekende fout. Probeer opnieuw.';if(e?.status===401&&this.state.user){sessionStorage.removeItem(sessionKey);this.resetAlertNotifications();this.setState({user:null,alerts:[],alertNotifications:[],cases:[],users:[],keys:[],audit:[],errors:[],ticketRegister:[],orgs:[],analysts:[],secret:null,setup:null,error:message});return;}this.setState({error:message,notice:''})}
  async run(path:string,data:Record<string,unknown>,message:string,after?:(result:any)=>void){if(this.state.busy)return;this.setState({busy:true,error:'',notice:''});try{const item=this.state.alerts.find(x=>x.id===this.state.selected)||this.state.cases.find(x=>x.id===this.state.selected);const payload=item&&/^(alerts|cases)\//.test(path)?{...data,rowVersion:item.rowVersion}:data;const r=await api(path,payload,item?{workspaceId:item.organizationId,scopeId:item.scopeId}:undefined);const refreshed=await this.refresh();if(!this.state.user||!sessionStorage.getItem(sessionKey))return;this.setState({notice:refreshed?message:message+' Gegevens vernieuwen is mislukt; klik op Vernieuwen.',modal:null});if(after)after(r);}catch(e){this.fail(e)}finally{this.setState({busy:false})}}
  go(page:string,selected:string|null=null){
    if(page===this.state.page&&(selected||this.state.selected)){
@@ -96,11 +129,13 @@ class App extends React.Component<Record<string, never>,State> {
    });
  }
  async login(e){const data=formData(e);this.setState({busy:true,error:''});try{const user:User=await api('auth/login',data);sessionStorage.setItem(sessionKey,user.id);await this.enter(user)}catch(err){this.fail(err)}finally{this.setState({busy:false})}}
- async logout(){this.refreshVersion++;this.refreshing=false;try{await api('auth/logout',{})}finally{sessionStorage.removeItem(sessionKey);this.setState({user:null,alerts:[],cases:[],users:[],keys:[],audit:[],errors:[],ticketRegister:[],orgs:[],analysts:[],error:'',notice:'',secret:null,setup:null})}}
+ async logout(){this.refreshVersion++;this.refreshing=false;this.resetAlertNotifications();try{await api('auth/logout',{})}finally{sessionStorage.removeItem(sessionKey);this.setState({user:null,alerts:[],alertNotifications:[],cases:[],users:[],keys:[],audit:[],errors:[],ticketRegister:[],orgs:[],analysts:[],error:'',notice:'',secret:null,setup:null})}}
  renderLogin(){return <LoginPage error={this.state.error} busy={this.state.busy} onSubmit={e=>this.login(e)}/>;}
  nav(){if(this.state.user?.requiresTwoFactorSetup)return [['account','Account']];return this.isAdmin?[['dashboard','Dashboard'],['alerts','Alerts'],['cases','Tickets'],['customers','Klanten'],['users','Gebruikers & rollen'],['keys','API-sleutels'],['audit','Auditlog'],['errors','Foutenlog'],['account','Account']]:this.isAnalyst?[['dashboard','Dashboard'],['alerts','Alerts'],['cases','Cases'],['account','Account']]:[['cases','Cases'],['account','Account']]}
  render(){const s=this.state;if(s.loading)return <LoadingState label="SOC3 laden…"/>;if(!s.user)return this.renderLogin();const pages={dashboard:()=>this.dashboard(),alerts:()=>this.alerts(),cases:()=>this.cases(),customers:()=>this.customers(),'ticket-register':()=>this.isAdmin?<TicketRegister tickets={s.ticketRegister} organizations={s.orgs} organizationId={s.org} onOrganizationChange={id=>this.setState({org:id})} reload={()=>void this.refresh()}/>:null,users:()=>this.users(),keys:()=>this.keys(),audit:()=>this.audit(),errors:()=>this.isAdmin?<ErrorLog errors={s.errors} reload={()=>void this.refresh()}/>:null,account:()=>this.account()};const customerOptions=[{id:'',name:'Alle klanten'},...s.orgs.map(o=>({id:o.id,name:o.name}))];const customer=s.orgs.find(o=>o.id===s.org)||(s.orgs.length===1?s.orgs[0]:{id:'',name:'Alle klanten'});return <AppShell user={{displayName:s.user.name,role:s.user.role}} customer={customer} customerOptions={s.orgs.length>1?customerOptions:[]} onCustomerChange={id=>this.setState({org:id,selected:null,ownerFilter:'',sourceFilter:'',category:''})} navigationItems={this.nav().map(([id,label])=>({label,href:id==='dashboard'?'/':'/'+id}))} currentPath={s.page==='dashboard'?'/':'/'+s.page} onNavigate={href=>this.go(href==='/'?'dashboard':href.slice(1))} actions={<><Button onClick={()=>this.refresh()}><Icon name="refresh" size={16}/> Vernieuwen</Button><Button onClick={()=>this.logout()}><Icon name="logout" size={16}/> Uitloggen</Button></>}>
-{s.error&&<div className="error" role="alert">{s.error}<button onClick={()=>this.setState({error:''})}>×</button></div>}{s.notice&&<div className="notice" role="status">{s.notice}<button onClick={()=>this.setState({notice:''})}>×</button></div>}{pages[s.page]&&pages[s.page]()} {s.modal&&this.modal()}</AppShell>}
+{s.error&&<div className="error" role="alert">{s.error}<button onClick={()=>this.setState({error:''})}>×</button></div>}{s.notice&&<div className="notice" role="status">{s.notice}<button onClick={()=>this.setState({notice:''})}>×</button></div>}{pages[s.page]&&pages[s.page]()} {s.modal&&this.modal()}
+{this.canReadInternal&&!s.user.requiresTwoFactorSetup&&<AlertNotifications alerts={s.alertNotifications} customerName={id=>this.name(id)} onOpen={this.openAlertNotification} onDismiss={this.dismissAlertNotification} busy={s.busy||!!s.modal}/>}
+</AppShell>}
 
  stats(items){return <div className="stats">{items.map(([label,value,desc,icon,tone])=><div className="stat" key={label}><div className="statline"><span>{label}</span><span className={'stat-icon '+tone}><Icon name={icon}/></span></div><strong>{value}</strong><small>{desc}</small></div>)}</div>}
  dashboard(){const a=this.state.alerts.filter(x=>!this.state.org||x.organizationId===this.state.org),r=this.state.cases.filter(x=>!this.state.org||x.organizationId===this.state.org),open=a.filter(active),breach=a.filter(x=>sla(x).kind==='danger'),risk=open.filter(x=>sla(x).kind==='warn');const handled=a.filter(x=>x.firstHandledAt);const pct=handled.length?Math.round(100*handled.filter(x=>sla(x).kind==='good').length/handled.length):null;return <div className="fragment"><PageHeader title="SOC dashboard" sub="Een actueel overzicht van meldingen, onderzoeken en servicetijden." action={this.isAnalyst&&<Button primary onClick={()=>this.setState({modal:'newAlert'})}><Icon name="plus"/> Alert toevoegen</Button>}/>{this.stats([['Open alerts',open.length,'Nog af te handelen','alerts','blue'],['Actieve cases',r.filter(x=>caseGroup(x)==='open').length,'Lopende onderzoeken','cases','purple'],['SLA-risico',risk.length,'Binnen 15 minuten te behandelen','clock','warn'],['SLA overschreden',breach.length,'Eerste behandeling te laat','alerts','danger']])}<div className="dashgrid"><Panel title="Alerts per prioriteit" sub="Openstaande meldingen in de actieve klantcontext"><div className="bars">{priorities.slice().reverse().map(p=>{const n=open.filter(x=>x.priority===p).length;return <div className="barrow" key={p}><span>{labels[p]}</span><div className="track"><div className={'bar '+p} style={{width:(n/Math.max(1,open.length)*100)+'%'}}/></div><b>{n}</b></div>})}</div></Panel><Panel title="SLA-prestaties" sub="Op basis van de eerste behandeling"><div className="slaoverview"><div className="donut" style={{background:`conic-gradient(#14836c ${pct||0}%, #e6edf1 0)`}}><div><strong>{pct===null?'—':pct+'%'}</strong><small>op tijd</small></div></div><div><p><span className="dot green"/> Binnen SLA <b>{handled.filter(x=>sla(x).kind==='good').length}</b></p><p><span className="dot red"/> Overschreden <b>{handled.filter(x=>sla(x).kind==='danger').length}</b></p><p><span className="dot orange"/> Dreigend <b>{risk.length}</b></p></div></div></Panel></div><AlertTrend alerts={a}/>{this.isAdmin&&<Panel title="Platformbeheer" sub="Beheer klanten, accounts en integraties naast het SOC-overzicht."><div className="bodypad actions"><Button onClick={()=>this.go('customers')}>Klanten ({this.state.orgs.filter(o=>o.isActive).length})</Button><Button onClick={()=>this.go('users')}>Gebruikers ({this.state.users.filter(u=>u.isActive).length})</Button><Button onClick={()=>this.go('keys')}>API-sleutels</Button><Button onClick={()=>this.go('audit')}>Auditlog</Button><Button onClick={()=>this.go('errors')}>Foutenlog</Button></div></Panel>}<div className="dashboard-queues"><Panel title="Alertwachtrij" sub="Oudste eerst (FIFO)" action={<Button onClick={()=>this.go('alerts')}>Open alerts <Icon name="arrow" size={16}/></Button>}><DashboardAlerts alerts={sortRecords(open,'oldest',true).slice(0,6)} customerName={id=>this.name(id)} open={id=>this.go('alerts',id)}/></Panel><Panel title="Recent ontvangen openstaande meldingen" sub="Nieuwste eerst · elke 15 seconden vernieuwd"><DashboardAlerts alerts={sortRecords(open,'newest',false).slice(0,6)} customerName={id=>this.name(id)} open={id=>this.go('alerts',id)}/></Panel></div><Panel title="Ticketoverzicht" sub={r.filter(x=>caseGroup(x)==='open').length+' lopend · '+r.filter(x=>caseGroup(x)==='resolved').length+' opgelost · '+r.filter(isClosed).length+' afgesloten'} action={<><Button onClick={()=>{this.go('cases');this.setState({archiveFilter:'all'});}}>Alle tickets</Button><Button onClick={()=>{this.go('cases');this.setState({archiveFilter:'resolved'});}}>Opgelost ({r.filter(x=>caseGroup(x)==='resolved').length})</Button><Button onClick={()=>{this.go('cases');this.setState({archiveFilter:'closed'});}}>Archief ({r.filter(isClosed).length})</Button></>}>{this.caseTable(sortRecords(r.filter(x=>caseGroup(x)==='open'),'newest',false).slice(0,5))}</Panel></div>}

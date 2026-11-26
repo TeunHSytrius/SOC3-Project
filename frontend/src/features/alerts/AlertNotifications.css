@@ -1,0 +1,73 @@
+.alert-notifications {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9;
+  width: min(360px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  text-align: left;
+}
+.alert-notification {
+  --notification-priority: #bcbcbc;
+  pointer-events: auto;
+  flex-shrink: 0;
+  background: #fff;
+  color: #333;
+  border: 1px solid #ddd;
+  border-left: 5px solid var(--notification-priority);
+  border-radius: 9px;
+  padding: 13px 15px;
+  box-shadow: 0 4px 16px #0002;
+}
+.alert-notification--Moderate { --notification-priority: #7a7a7a; }
+.alert-notification--High { --notification-priority: #ffb000; }
+.alert-notification--Urgent { --notification-priority: #ff624b; }
+.alert-notification--Immediate { --notification-priority: #d51ac7; }
+.alert-notification__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #444;
+  font-size: 13px;
+}
+.alert-notification__header strong { flex: 1; }
+.alert-notification__close {
+  background: transparent;
+  border: 0;
+  color: #666;
+  font-size: 23px;
+  line-height: 1;
+  padding: 2px 5px;
+}
+.alert-notification__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 8px;
+  color: #666;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.alert-notification__title { font-weight: 650; font-size: 14px; margin: 6px 0; overflow-wrap: anywhere; }
+.alert-notification__source { color: #666; font-size: 12px; overflow-wrap: anywhere; }
+.alert-notification__open {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  color: #444;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 650;
+  margin-top: 10px;
+}
+.alert-notification__open:hover:not(:disabled) { background: #f3f3f3; }
+.alert-notification__open:disabled { opacity: .55; cursor: not-allowed; }
+@media (max-width: 600px) {
+  .alert-notifications { top: 12px; right: 12px; width: min(340px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); }
+}

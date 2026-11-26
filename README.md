@@ -407,6 +407,10 @@ Gebruik het volledige voorbeeld bij [Stap 1 — Teun: platformbeheer en alertont
 
 Verwacht HTTP 201 bij een nieuw event-ID. Identieke herhaling geeft 200 met hetzelfde alert-ID; gewijzigde bytes onder hetzelfde event-ID geven 409. Gebruik een nieuw event-ID voor elke nieuwe melding. Klant-, scope- en andere niet-contractvelden worden geweigerd. Het oorspronkelijke JSON-bericht en de SHA-256-hash worden opgeslagen. De maximale berichtgrootte is 1 MiB. Vernieuw daarna het dashboard als analist. De API-key bepaalt server-side klant en scope; waarden uit de requestbody mogen dit niet overschrijven. Ongeldige of ingetrokken sleutels geven HTTP 401.
 
+### Live meldingen
+
+Analisten, senior analisten en beheerders zien rechtsboven een melding zodra een nieuwe toegankelijke openstaande alert bij het vernieuwen wordt ontdekt (maximaal circa 15 seconden vertraging bij een actief tabblad, tenzij een actie of refresh nog loopt). De melding bevat klant, alertnummer, titel, bron en prioriteit. Open de alert met **Alert bekijken** of sluit de melding met het kruisje. Maximaal drie recente meldingen blijven zichtbaar; oudere meldingen blijven in het alertoverzicht staan. Bestaande alerts bij het inloggen geven geen melding. Tijdens een open detail of formulier worden alleen nieuwe meldingen gecontroleerd, zonder het formulier of de geselecteerde gegevens automatisch te verversen. Dit is polling, geen WebSocket of systeemmelding buiten de browser.
+
 ### Alertsimulator
 
 Maak als beheerder een API-sleutel met bronnaam Demo securitytool voor een actieve klant. Kopieer de sleutel eenmalig. Start vervolgens vanuit de hoofdmap:
