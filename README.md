@@ -383,9 +383,9 @@ De backend bewaakt de toegestane statusovergangen. De afzonderlijke procesrollen
 
 ### Schermen en gegevens
 
-- **Dashboard:** hetzelfde voor analist en beheerder, met extra beheerknoppen voor beheerder. Alertvolume per prioriteit over 24 uur of zeven kalenderdagen; FIFO-wachtrij en recente openstaande meldingen naast elkaar op brede schermen, onder elkaar op kleinere schermen. Polling elke 15 seconden op actieve overzichten.
+- **Dashboard:** analisten zien hun werkvoorraad en eigen actieve tickets; senior analisten zien ook nieuwe te prioriteren tickets. Beheerders zien eerst platformbeheer (klanten, gebruikers, API-sleutels, foutenlog en audit) en daarna SOC-toezicht. De FIFO-wachtrij bevat alleen nog niet toegewezen alerts; recent ontvangen meldingen bevatten alle statussen. De twee lijsten staan naast elkaar op brede schermen. Rapportage met alertvolume en SLA staat onderaan. Polling elke 15 seconden op actieve overzichten.
 - **Alerts:** Openstaand, Gekoppeld aan case, Afgehandeld, Alle alerts. Zoek en filter op klant, status, prioriteit, eigenaar, datum, SLA, categorie en securitytool.
-- **Tickets:** Lopend, Opgelost – nog afsluiten, Archief, Alle tickets. Zoek ook op notities en observables. Afgesloten tickets blijven bewaard.
+- **Tickets:** Actief, Nieuw (nog te prioriteren), In onderzoek, Wacht op klant, Af te sluiten (opgelost of in eindbeoordeling), Archief en Alle tickets. Nieuw is een workflowfase, geen sortering. Het archief toont standaard de laatst afgesloten tickets eerst. Zoek ook op notities en observables; uitgebreidere filters staan onder Meer filters. Afgesloten tickets blijven bewaard.
 - **Onderzoeksdossier:** meerdere alerts per case; eigen notities, observables, acties, bewijsreferenties en tijdlijn. Klantzichtbaarheid wordt server-side gefilterd.
 - **SLA:** standaard 60 minuten tot eerste behandeling, instelbaar per klant voor nieuwe alerts. Waarschuwing bij maximaal 15 minuten resterend. Geen afzonderlijke case-afhandel-SLA.
 - **Gebruikers:** aanmaken, wijzigen, deactiveren, heractiveren en verwijderen. Verwijderen is soft delete: toegang ingetrokken, historie behouden, account uit lijst. Eigen account kan niet worden verwijderd; e-mailadres blijft gereserveerd.
@@ -607,6 +607,8 @@ HTTP-statuscodes: 200 geslaagd, 201 aangemaakt, 400 ongeldige invoer/CSRF, 401 n
 De demo draait lokaal via HTTP; de verbinding met SQL Server vraagt encryptie aan maar vertrouwt het servercertificaat. TLS 1.2+ voor browserverkeer is niet aangetoond. Data Protection-sleutels worden lokaal persistent maar niet apart versleuteld opgeslagen. Volledige encryptie-at-rest, volledige auditdekking, retentie, OWASP-toetsing en productiebeveiliging moeten nog worden gerealiseerd of bewezen.
 
 ## 9. Ontwikkelen en testen
+
+De `.gitignore` sluit lokale builds, IDE-instellingen, caches, geheimen, databasebestanden, certificaten en tijdelijke bestanden uit. Commit wel broncode, SQL-scripts en migraties, package-lock.json, projectbestanden, `.env.example`, gedeelde Compose-configuratie en CI-workflows. Gitignore verwijdert geen al getrackte bestanden en is geen beveiliging tegen eerder gecommitteerde geheimen.
 
 ### Lokale frontendontwikkeling (aanbevolen)
 
