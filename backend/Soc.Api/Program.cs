@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Soc.Data.Context;
 using Soc.Data.Entities;
 using Soc.Business.Services;
+using Soc.Business.Repositories;
+using Soc.Business.Security;
 var builder = WebApplication.CreateBuilder(args);
 var connection = builder.Configuration.GetConnectionString("Soc") ?? throw new InvalidOperationException("ConnectionStrings:Soc ontbreekt.");
 var demo = builder.Configuration.GetValue<bool>("Demo:Enabled");
@@ -54,7 +56,8 @@ builder.Services.AddIdentity<AppUser, IdentityRole<Guid>>(options =>
     options.Lockout.MaxFailedAccessAttempts = 5;
 })
 .AddEntityFrameworkStores<SocDbContext>()
-.AddDefaultTokenProviders();
+.AddDefaultTokenProviders()
+.AddTokenProvider<SocTwoFactorTokenProvider>(SocTwoFactorTokenProvider.ProviderName);
 builder.Services.AddScoped<IUserStore<AppUser>, ProtectedUserStore>();
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -75,6 +78,10 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 builder.Services.AddOpenApi();
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddScoped<ITwoFactorRepository, SqlTwoFactorRepository>();
+builder.Services.AddScoped<ISecretProtector, DataProtectionSecretProtector>();
+builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
 builder.Services.AddScoped<SocService>();
 builder.Services.AddScoped<OrganizationService>();
 builder.Services.AddScoped<ApiKeyService>();
