@@ -86,10 +86,10 @@ export function AppShell({
               <span className="AppShell__customerName">{customer.name}</span>
             )}
           </div>
+          {actions && <div className="workspace-actions">{actions}</div>}
         </div>
       </header>
       <main className="AppShell__content">
-        {actions && <div className="workspace-actions">{actions}</div>}
         {children}
       </main>
     </div>

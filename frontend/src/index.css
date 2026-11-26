@@ -33,6 +33,9 @@
   --purple-bg: #352743;
   --purple-text: #d6b5ff;
 
+  --sla-on-time: #14836c;
+  --sla-late: #c34242;
+
   --severity-low: #a8b7c6;
   --severity-moderate: #8e9caa;
   --severity-high: #ffb000;

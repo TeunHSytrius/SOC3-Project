@@ -3,6 +3,7 @@ import type { NavigationItem } from '../components/AppMenu';
 
 const account: NavigationItem = { label: 'Account', href: '/account' };
 const dashboard: NavigationItem = { label: 'Dashboard', href: '/' };
+const reports: NavigationItem = { label: 'Rapportages', href: '/reports' };
 const alerts: NavigationItem = { label: 'Alerts', href: '/alerts' };
 
 export function getNavigation(user: User): NavigationItem[] {
@@ -18,13 +19,14 @@ export function getNavigation(user: User): NavigationItem[] {
       { label: 'API-sleutels', href: '/keys' },
       { label: 'Auditlog', href: '/audit' },
       { label: 'Foutenlog', href: '/errors' },
+      reports,
       account,
     ];
   }
 
-  const cases = { label: 'Cases', href: '/cases' };
+  const cases = { label: 'Tickets', href: '/cases' };
   if (user.role === 'Analist' || user.role === 'Senior analist') {
-    return [dashboard, alerts, cases, account];
+    return [dashboard, alerts, cases, reports, account];
   }
 
   return [cases, account];

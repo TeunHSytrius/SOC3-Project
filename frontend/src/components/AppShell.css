@@ -13,12 +13,15 @@
 }
 
 .AppShell__header {
+  position: sticky;
+  top: 0;
+  z-index: 8;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 0.65rem 1rem;
-  min-height: 4.5rem;
-  padding: 0.75rem clamp(1rem, 3vw, 2.5rem);
+  min-height: 3.5rem;
+  padding: 0.5rem clamp(1rem, 3vw, 2.5rem);
   border-bottom: 1px solid var(--border);
   box-shadow: 0 2px 6px rgb(0 0 0 / 4%);
   color: var(--shell-text);
@@ -53,7 +56,7 @@
   grid-row: 2;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
   min-width: 0;
   gap: 0.25rem;
@@ -63,12 +66,12 @@
 .AppMenu__link {
   display: inline-flex;
   align-items: center;
-  min-height: 2.4rem;
-  border-radius: 999px;
-  padding: 0 0.8rem;
+  min-height: 2rem;
+  border-radius: 6px;
+  padding: 0 0.65rem;
   color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: 0.78rem;
+  font-weight: 550;
   text-decoration: none;
   white-space: nowrap;
   max-width: 100%;
@@ -169,12 +172,12 @@
   min-width: 0;
   max-width: 1440px;
   margin: 0 auto;
-  padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 3rem;
+  padding: 1.25rem clamp(1rem, 3vw, 2.5rem) 2rem;
 }
 
 .PageHeader {
-  margin-bottom: 1.5rem;
-  text-align: center;
+  margin-bottom: 1rem;
+  text-align: left;
 }
 
 .PageHeader__breadcrumbs {
@@ -196,21 +199,21 @@
 .PageHeader__row {
   display: flex;
   align-items: flex-start;
-  justify-content: center;
+  justify-content: space-between;
   gap: 1rem;
 }
 
 .PageHeader__title {
   margin: 0;
   color: var(--shell-text);
-  font-size: clamp(2rem, 4vw, 2.5rem);
+  font-size: clamp(1.35rem, 2vw, 1.7rem);
   font-weight: 700;
   letter-spacing: -0.025em;
   line-height: 1.2;
 }
 
 .PageHeader__description {
-  margin-top: 0.45rem;
+  margin-top: 0.3rem;
   color: var(--shell-muted);
 }
 
@@ -228,7 +231,7 @@
 
 /* A full navigation row prevents long labels and account details from overlapping.
    Only use a single row when the viewport has enough room. */
-@media (min-width: 1500px) {
+@media (min-width: 1900px) {
   .AppShell__header {
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
@@ -321,7 +324,7 @@
   }
   .PageHeader__row {
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
   }
 }
 @media (max-width: 420px) {
@@ -351,5 +354,24 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+.AppShell__context .workspace-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+
+.AppShell__context .workspace-actions button {
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .AppShell__header {
+    position: static;
   }
 }

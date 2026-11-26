@@ -11,10 +11,10 @@
   min-width: 0;
 }
 .dashboard-queues .panelhead {
-  min-height: 90px;
+  min-height: 0;
   align-items: flex-start;
   flex-wrap: wrap;
-  padding: 16px;
+  padding: 12px 14px;
 }
 .dashboard-queues .panelhead > div {
   flex: 1 1 190px;
@@ -56,12 +56,12 @@
   display: grid;
   grid-template-columns: 5px minmax(0, 1fr) 16px;
   grid-template-rows: auto auto;
-  gap: 7px 12px;
+  gap: 4px 10px;
   align-items: center;
   text-align: left;
   background: var(--bg);
   border: 0;
-  padding: 12px 16px;
+  padding: 9px 14px;
   color: var(--text);
 }
 .dashboard-alert-row > .dashboard-severity {
@@ -89,7 +89,7 @@
 .dashboard-severity {
   align-self: stretch;
   border-radius: 3px;
-  min-height: 44px;
+  min-height: 36px;
 }
 .dashboard-alert-main {
   display: flex;
@@ -116,4 +116,10 @@
   justify-content: flex-start;
   gap: 5px;
   min-width: 0;
+}
+
+.dashboard-empty {
+  padding: 30px 16px;
+  text-align: center;
+  color: var(--muted);
 }

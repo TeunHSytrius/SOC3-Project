@@ -30,7 +30,6 @@ textarea:focus-visible {
   font-size: 14px;
   line-height: 1.5;
   --line: var(--border);
-  --muted: var(--shell-muted);
 }
 .AppShell__content h2 {
   font-size: 16px;
@@ -256,10 +255,10 @@ textarea:focus-visible {
   color: var(--text-h);
 }
 .dot.green {
-  background: #14836c;
+  background: var(--sla-on-time);
 }
 .dot.red {
-  background: #c34242;
+  background: var(--sla-late);
 }
 .dot.orange {
   background: #dca13b;
@@ -275,18 +274,18 @@ table {
   width: 100%;
   border-collapse: collapse;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 13px;
 }
 th {
   text-align: left;
   background: var(--surface-raised);
   color: var(--muted);
   font-weight: 650;
-  font-size: 11px;
-  padding: 12px 15px;
+  font-size: 12px;
+  padding: 10px 14px;
 }
 td {
-  padding: 13px 15px;
+  padding: 12px 14px;
   border-top: 1px solid var(--border);
   vertical-align: middle;
 }
@@ -303,19 +302,25 @@ tr:hover td {
   background: var(--surface-hover);
 }
 .rowlink {
+  border: 0;
+  border-radius: 4px;
   display: block;
   text-align: left;
   background: none;
   padding: 0;
-  color: var(--text-h);
-  font-weight: 700;
+  color: var(--info-text);
+  font-weight: 650;
   white-space: normal;
 }
 .rowlink:hover {
   text-decoration: underline;
 }
 .arrowbtn {
-  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  min-width: 32px;
+  min-height: 32px;
+  background: transparent;
   color: var(--muted);
   font-size: 20px;
   line-height: 1;
@@ -407,11 +412,13 @@ textarea::placeholder {
   line-height: 1.7;
 }
 .back {
+  border: 0;
+  border-radius: 4px;
   background: transparent;
   color: var(--text-h);
   font-weight: 650;
-  padding: 0;
-  margin-bottom: 17px;
+  padding: 4px 0;
+  margin-bottom: 10px;
 }
 dl {
   display: grid;
@@ -489,6 +496,7 @@ dd {
 }
 .error button,
 .notice button {
+  border: 0;
   color: inherit;
   background: none;
   font-size: 18px;
@@ -526,6 +534,7 @@ dd {
   font-size: 20px;
 }
 .dialoghead button {
+  border: 0;
   font-size: 25px;
   background: none;
   color: var(--muted);
@@ -612,4 +621,18 @@ legend {
   .slaoverview {
     flex-wrap: wrap;
   }
+}
+
+.badge.critical {
+  background: var(--purple-bg);
+  color: var(--purple-text);
+}
+.rowlink:hover,
+.back:hover {
+  color: var(--focus);
+  text-decoration: underline;
+}
+.arrowbtn:hover {
+  color: var(--info-text);
+  background: var(--surface-hover);
 }

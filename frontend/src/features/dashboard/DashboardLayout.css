@@ -1,15 +1,15 @@
 /* Role-specific workspaces and compact queue filters */
 .dashboard-section-title {
   font-size: 17px;
-  margin: 10px 0 12px;
+  margin: 0 0 10px;
   color: var(--text-h);
 }
 .dashboard-management {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 16px;
-  margin-bottom: 16px;
+  padding: 12px;
+  margin-bottom: 14px;
 }
 .dashboard-management h2 {
   font-size: 16px;
@@ -19,7 +19,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 .dashboard-management-item {
   display: flex;
@@ -27,8 +27,8 @@
   gap: 10px;
   min-width: 0;
   text-align: left;
-  padding: 12px;
-  background: var(--surface-hover);
+  padding: 9px;
+  background: var(--surface-raised);
   color: var(--text-h);
   border: 1px solid var(--border);
   border-radius: 7px;
@@ -143,4 +143,27 @@
   .dashboard-ticket-links button {
     flex: 1 1 140px;
   }
+}
+
+.soc-dashboard .stats {
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.soc-dashboard .stat {
+  padding: 12px 15px;
+}
+
+.soc-dashboard .stat strong {
+  font-size: 29px;
+  margin: 3px 0;
+}
+
+.soc-dashboard .panel {
+  margin-bottom: 14px;
+}
+
+.dashboard-report-link {
+  display: flex;
+  justify-content: flex-end;
 }

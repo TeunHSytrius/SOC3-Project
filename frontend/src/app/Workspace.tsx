@@ -11,6 +11,7 @@ import AuditPage from '../features/admin/AuditPage';
 import ErrorLog from '../features/admin/ErrorLog';
 import TicketRegister from '../features/admin/TicketRegister';
 import DashboardPage from '../features/dashboard/DashboardPage';
+import ReportsPage from '../features/dashboard/ReportsPage';
 import AccountPage from '../features/auth/AccountPage';
 import ActionDialog from '../features/shared/ActionDialog';
 import AlertNotifications from '../features/alerts/AlertNotifications';
@@ -35,6 +36,8 @@ function WorkspacePage({ state, actions, refresh, showQueue, onTwoFactorEnabled,
   switch (state.page) {
     case 'dashboard':
       return <DashboardPage {...pageProps} showQueue={showQueue} />;
+    case 'reports':
+      return actions.canReadInternal ? <ReportsPage state={state} /> : null;
     case 'alerts':
       return <AlertsPage {...pageProps} />;
     case 'cases':
