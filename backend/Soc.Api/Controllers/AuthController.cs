@@ -1,4 +1,9 @@
+using System.Data;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.EntityFrameworkCore;
+using Soc.Api.Security;
+using Soc.Business.Exceptions;
+using Soc.Data.Context;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -9,7 +14,12 @@ using Soc.Data.Entities;
 namespace Soc.Api.Controllers;
 
 [ApiController, Route("api/v1/auth")]
-public sealed class AuthController(UserManager<AppUser> users, SignInManager<AppUser> signIn, SocService service) : ControllerBase
+public sealed class AuthController(
+    UserManager<AppUser> users,
+    SignInManager<AppUser> signIn,
+    SocService service,
+    ITwoFactorService twoFactor,
+    SocDbContext database) : ControllerBase
 {
     [AllowAnonymous, HttpGet("csrf")]
     public IActionResult Csrf([FromServices] IAntiforgery antiforgery)
@@ -62,7 +72,20 @@ public sealed class AuthController(UserManager<AppUser> users, SignInManager<App
                 message = "Start opnieuw met inloggen."
             });
         var code = SocService.Required(input.Code, 50).Replace(" ", "");
-        var result = code.Length == 6 && code.All(char.IsDigit) ? await signIn.TwoFactorAuthenticatorSignInAsync(code, false, false) : await signIn.TwoFactorRecoveryCodeSignInAsync(code);
+        // Accounts enrolled before this integration retain their Identity authenticator and recovery codes.
+        // New enrollments use the original service through Identity's second-factor provider.
+        Microsoft.AspNetCore.Identity.SignInResult result;
+        if (await twoFactor.IsEnabledAsync(user.Id))
+        {
+            result = await signIn.TwoFactorSignInAsync(
+                SocTwoFactorTokenProvider.ProviderName, code, false, false);
+        }
+        else
+        {
+            result = code.Length == 6 && code.All(char.IsDigit)
+                ? await signIn.TwoFactorAuthenticatorSignInAsync(code, false, false)
+                : await signIn.TwoFactorRecoveryCodeSignInAsync(code);
+        }
         if (!result.Succeeded)
             return Unauthorized(new
             {
@@ -89,21 +112,22 @@ public sealed class AuthController(UserManager<AppUser> users, SignInManager<App
     {
         var currentUser = await service.UserAsync(User, true);
         SocService.Require(!currentUser.TwoFactorEnabled, "2FA is al actief.", 409);
-        var key = await users.GetAuthenticatorKeyAsync(currentUser);
-        if (string.IsNullOrEmpty(key))
-        {
-            await users.ResetAuthenticatorKeyAsync(currentUser);
-            key = await users.GetAuthenticatorKeyAsync(currentUser);
-        }
-        var uri = $"otpauth://totp/SOC3:{Uri.EscapeDataString(currentUser.Email!)}?secret={key}&issuer=SOC3&algorithm=SHA1&digits=6&period=30";
-        var manualEntryKey = string.Join(' ', key!.Chunk(4).Select(chunk => new string(chunk)));
+
+        await using var transaction = await database.Database
+            .BeginTransactionAsync(IsolationLevel.Serializable);
+
+        var setup = await twoFactor.StartSetupAsync(
+            new StartTwoFactorSetupRequest(currentUser.Id, currentUser.Email!));
+
+        await transaction.CommitAsync();
+
         return Ok(new
         {
-            secret = key,
-            manualEntryKey,
+            secret = setup.ManualEntryKey.Replace(" ", ""),
+            setup.ManualEntryKey,
             account = currentUser.Email,
-            authenticatorUri = uri,
-            otpAuthUri = uri
+            authenticatorUri = setup.OtpAuthUri,
+            setup.OtpAuthUri
         });
     }
 
@@ -112,17 +136,39 @@ public sealed class AuthController(UserManager<AppUser> users, SignInManager<App
     {
         var currentUser = await service.UserAsync(User, true);
         SocService.Require(!currentUser.TwoFactorEnabled, "2FA is al actief.", 409);
-        SocService.Require(!string.IsNullOrEmpty(await users.GetAuthenticatorKeyAsync(currentUser)), "Start eerst de setup.", 400);
-        var valid = await users.VerifyTwoFactorTokenAsync(currentUser, users.Options.Tokens.AuthenticatorTokenProvider, SocService.Required(input.Code, 12));
-        SocService.Require(valid, "Ongeldige code.", 400);
+
+        await using var transaction = await database.Database
+            .BeginTransactionAsync(IsolationLevel.Serializable);
+
+        EnableTwoFactorResponse response;
+        try
+        {
+            response = await twoFactor.EnableAsync(
+                new EnableTwoFactorRequest(currentUser.Id, SocService.Required(input.Code, 50)));
+        }
+        catch (InvalidTwoFactorCodeException)
+        {
+            // Failed attempts must be persisted even when the verification is rejected.
+            await transaction.CommitAsync();
+            return BadRequest(new { message = "Ongeldige code. Start de setup opnieuw als deze is verlopen." });
+        }
+        catch (TwoFactorSetupNotStartedException)
+        {
+            await transaction.CommitAsync();
+            return BadRequest(new { message = "Start de setup opnieuw; deze is niet gestart of verlopen." });
+        }
+        catch (TwoFactorAlreadyEnabledException)
+        {
+            return Conflict(new { message = "2FA is al actief." });
+        }
+
         var result = await users.SetTwoFactorEnabledAsync(currentUser, true);
         SocService.Require(result.Succeeded, "2FA activeren mislukt.", 500);
-        var codes = await users.GenerateNewTwoFactorRecoveryCodesAsync(currentUser, 8);
-        await signIn.RefreshSignInAsync(currentUser);
+
         await service.Log(currentUser, "2FA geactiveerd");
-        return Ok(new
-        {
-            recoveryCodes = codes
-        });
+        await transaction.CommitAsync();
+        await signIn.RefreshSignInAsync(currentUser);
+
+        return Ok(response);
     }
 }
