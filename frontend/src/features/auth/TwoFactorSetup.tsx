@@ -1,18 +1,28 @@
-import { useState } from "react";
-import type { FormEvent } from "react";
-import { QRCodeSVG } from "qrcode.react";
-import { enableTwoFactor, startTwoFactorSetup } from "../../services/twoFactor";
-import { ApiError } from "../../services/api";
-import type { TwoFactorSetupResponse } from "../../types/twoFactor";
-import "./TwoFactorSetup.css";
+import { useState } from 'react';
+import type { FormEvent } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import { enableTwoFactor, startTwoFactorSetup } from '../../services/twoFactor';
+import { ApiError } from '../../services/api';
+import type { TwoFactorSetupResponse } from '../../types/twoFactor';
+import './TwoFactorSetup.css';
 
-type Step = "start" | "scan" | "done";
+type Step = 'start' | 'scan' | 'done';
 
 // Adapted from feature/tg-39-two-factor-auth; the server identifies the signed-in account.
-function TwoFactorSetup({email,initiallyEnabled,onEnabled,onSessionExpired}:{email:string;initiallyEnabled:boolean;onEnabled:()=>Promise<void>;onSessionExpired:(error:unknown)=>void}) {
-  const [step, setStep] = useState<Step>("start");
+function TwoFactorSetup({
+  email,
+  initiallyEnabled,
+  onEnabled,
+  onSessionExpired,
+}: {
+  email: string;
+  initiallyEnabled: boolean;
+  onEnabled: () => Promise<void>;
+  onSessionExpired: (error: unknown) => void;
+}) {
+  const [step, setStep] = useState<Step>('start');
   const [setup, setSetup] = useState<TwoFactorSetupResponse | null>(null);
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState('');
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,8 +34,8 @@ function TwoFactorSetup({email,initiallyEnabled,onEnabled,onSessionExpired}:{ema
     try {
       await request();
     } catch (caught) {
-      if(caught instanceof ApiError && caught.status===401) onSessionExpired(caught);
-      setError(caught instanceof Error ? caught.message : "Er ging iets mis.");
+      if (caught instanceof ApiError && caught.status === 401) onSessionExpired(caught);
+      setError(caught instanceof Error ? caught.message : 'Er ging iets mis.');
     } finally {
       setIsLoading(false);
     }
@@ -36,7 +46,7 @@ function TwoFactorSetup({email,initiallyEnabled,onEnabled,onSessionExpired}:{ema
     void runRequest(async () => {
       const response = await startTwoFactorSetup();
       setSetup(response);
-      setStep("scan");
+      setStep('scan');
     });
   }
 
@@ -46,35 +56,41 @@ function TwoFactorSetup({email,initiallyEnabled,onEnabled,onSessionExpired}:{ema
       const response = await enableTwoFactor({ code });
       setRecoveryCodes(response.recoveryCodes);
       setSetup(null);
-      setCode("");
-      setStep("done");
+      setCode('');
+      setStep('done');
       await onEnabled();
     });
   }
 
-  if(initiallyEnabled && step==="start") return <p>Tweestapsverificatie is actief voor dit account.</p>;
+  if (initiallyEnabled && step === 'start')
+    return <p>Tweestapsverificatie is actief voor dit account.</p>;
 
   return (
     <section className="two-factor-setup">
       <h2>Tweestapsverificatie instellen</h2>
 
-      {step === "start" && (
+      {step === 'start' && (
         <form className="two-factor-form" onSubmit={handleStart}>
-          <p>Account: <strong>{email}</strong></p>
+          <p>
+            Account: <strong>{email}</strong>
+          </p>
           <p>Koppel een authenticator-app aan je eigen account.</p>
 
           <button type="submit" disabled={isLoading}>
-            {isLoading ? "Bezig..." : "QR-code maken"}
+            {isLoading ? 'Bezig...' : 'QR-code maken'}
           </button>
         </form>
       )}
 
-      {step === "scan" && setup !== null && (
+      {step === 'scan' && setup !== null && (
         <div className="two-factor-result">
           <ol>
-            <li>Open Microsoft Authenticator, Google Authenticator of een andere TOTP-app op je telefoon.</li>
             <li>
-              Tik op <strong>+</strong> en kies{" "}
+              Open Microsoft Authenticator, Google Authenticator of een andere TOTP-app op je
+              telefoon.
+            </li>
+            <li>
+              Tik op <strong>+</strong> en kies{' '}
               <strong>Ander account (Google, Facebook, enz.)</strong>.
             </li>
             <li>Scan de QR-code hieronder.</li>
@@ -82,12 +98,7 @@ function TwoFactorSetup({email,initiallyEnabled,onEnabled,onSessionExpired}:{ema
           </ol>
 
           <div className="two-factor-qr">
-            <QRCodeSVG
-              value={setup.otpAuthUri}
-              size={200}
-              bgColor="#ffffff"
-              fgColor="#000000"
-            />
+            <QRCodeSVG value={setup.otpAuthUri} size={200} bgColor="#ffffff" fgColor="#000000" />
           </div>
 
           <p>Lukt scannen niet? Voer deze sleutel handmatig in:</p>
@@ -103,25 +114,25 @@ function TwoFactorSetup({email,initiallyEnabled,onEnabled,onSessionExpired}:{ema
               maxLength={6}
               placeholder="123456"
               value={code}
-              onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
+              onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
               required
             />
 
             <button type="submit" disabled={isLoading || code.length !== 6}>
-              {isLoading ? "Bezig..." : "Activeren"}
+              {isLoading ? 'Bezig...' : 'Activeren'}
             </button>
           </form>
         </div>
       )}
 
-      {step === "done" && (
+      {step === 'done' && (
         <div className="two-factor-result">
           <p className="two-factor-success">Tweestapsverificatie is ingeschakeld.</p>
 
           <p>
-            <strong>Bewaar deze herstelcodes op een veilige plek.</strong> Ben je je telefoon
-            kwijt, dan kun je met één van deze codes toch inloggen. Elke code werkt maar één
-            keer en je ziet ze hierna niet meer terug.
+            <strong>Bewaar deze herstelcodes op een veilige plek.</strong> Ben je je telefoon kwijt,
+            dan kun je met één van deze codes toch inloggen. Elke code werkt maar één keer en je
+            ziet ze hierna niet meer terug.
           </p>
 
           <ul className="two-factor-recovery-codes">
@@ -132,7 +143,14 @@ function TwoFactorSetup({email,initiallyEnabled,onEnabled,onSessionExpired}:{ema
             ))}
           </ul>
 
-          <button type="button" onClick={() => void runRequest(async()=>{await navigator.clipboard.writeText(recoveryCodes.join("\n"));})}>
+          <button
+            type="button"
+            onClick={() =>
+              void runRequest(async () => {
+                await navigator.clipboard.writeText(recoveryCodes.join('\n'));
+              })
+            }
+          >
             Kopieer codes
           </button>
         </div>

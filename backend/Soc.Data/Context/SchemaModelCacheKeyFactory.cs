@@ -7,4 +7,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Soc.Data.Entities;
 namespace Soc.Data.Context;
 
-public sealed class SchemaModelCacheKeyFactory : IModelCacheKeyFactory { public object Create(DbContext context,bool designTime)=>context is TenantDbContext t?(context.GetType(),t.Schema,designTime):(context.GetType(),designTime); }
+public sealed class SchemaModelCacheKeyFactory : IModelCacheKeyFactory
+{
+    public object Create(DbContext context, bool designTime) => context is TenantDbContext t ? (context.GetType(), t.Schema, designTime) : (context.GetType(), designTime);
+}

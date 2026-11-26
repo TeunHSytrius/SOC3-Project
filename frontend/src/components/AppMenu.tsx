@@ -45,7 +45,10 @@ export function AppMenu({ items, currentPath, onNavigate }: AppMenuProps) {
               href={item.href}
               aria-current={current ? 'page' : undefined}
               onClick={(event) => {
-                if (onNavigate) { event.preventDefault(); onNavigate(item.href); }
+                if (onNavigate) {
+                  event.preventDefault();
+                  onNavigate(item.href);
+                }
                 setMenuOpen(false);
               }}
             >

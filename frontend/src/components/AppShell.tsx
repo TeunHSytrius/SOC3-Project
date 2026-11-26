@@ -43,8 +43,20 @@ export function AppShell({
     <div className="AppShell">
       <header className="AppShell__header">
         <div className="AppShell__topbar">
-          <a className="AppShell__brand" href="/" aria-label="SOC3 startpagina" onClick={(event) => { if (onNavigate) { event.preventDefault(); onNavigate(navigationItems[0]?.href ?? '/'); } }}>
-            <span className="AppShell__brandMark" aria-hidden="true">S3</span>
+          <a
+            className="AppShell__brand"
+            href="/"
+            aria-label="SOC3 startpagina"
+            onClick={(event) => {
+              if (onNavigate) {
+                event.preventDefault();
+                onNavigate(navigationItems[0]?.href ?? '/');
+              }
+            }}
+          >
+            <span className="AppShell__brandMark" aria-hidden="true">
+              S3
+            </span>
             <span>SOC3</span>
           </a>
           <AppMenu items={navigationItems} currentPath={currentPath} onNavigate={onNavigate} />

@@ -9,17 +9,17 @@ namespace Soc.Data.Context;
 
 public sealed class TenantDbFactory(string connectionString)
 {
-    public TenantDbContext Open(Tenant tenant) => new(new DbContextOptionsBuilder<TenantDbContext>().UseSqlServer(connectionString).ReplaceService<IModelCacheKeyFactory,SchemaModelCacheKeyFactory>().Options,tenant.SchemaName);
+    public TenantDbContext Open(Tenant tenant) => new(new DbContextOptionsBuilder<TenantDbContext>().UseSqlServer(connectionString).ReplaceService<IModelCacheKeyFactory, SchemaModelCacheKeyFactory>().Options, tenant.SchemaName);
     // Additive upgrade for existing local demo schemas; production requires separate reviewed deployment.
     public async Task UpgradeDemoAsync(Tenant tenant)
     {
-        await using var db=Open(tenant);
-        var schema=db.Schema;
-        var alerts=$"[{schema}].[Alerts]";
-        var cases=$"[{schema}].[Cases]";
-        var observables=$"[{schema}].[Observables]";
-        var events=$"[{schema}].[CaseEvents]";
-        var sql=$"""
+        await using var db = Open(tenant);
+        var schema = db.Schema;
+        var alerts = $"[{schema}].[Alerts]";
+        var cases = $"[{schema}].[Cases]";
+        var observables = $"[{schema}].[Observables]";
+        var events = $"[{schema}].[CaseEvents]";
+        var sql = $"""
             IF COL_LENGTH('{alerts}', 'SourceIntegrationId') IS NULL ALTER TABLE {alerts} ADD SourceIntegrationId uniqueidentifier NULL;
             IF COL_LENGTH('{alerts}', 'ExternalEventId') IS NULL ALTER TABLE {alerts} ADD ExternalEventId nvarchar(200) NULL;
             IF COL_LENGTH('{alerts}', 'PayloadHash') IS NULL ALTER TABLE {alerts} ADD PayloadHash nvarchar(64) NULL;
@@ -54,10 +54,14 @@ public sealed class TenantDbFactory(string connectionString)
             IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID('{alerts}') AND name='IX_Alerts_SourceIntegrationId_ExternalEventId')
                 EXEC(N'CREATE UNIQUE INDEX [IX_Alerts_SourceIntegrationId_ExternalEventId] ON {alerts} ([SourceIntegrationId],[ExternalEventId]) WHERE [SourceIntegrationId] IS NOT NULL AND [ExternalEventId] IS NOT NULL');
             """;
-        await using var tx=await db.Database.BeginTransactionAsync();
+        await using var tx = await db.Database.BeginTransactionAsync();
         await db.Database.ExecuteSqlRawAsync(sql);
         await tx.CommitAsync();
     }
     // Called on provision only; platform and tenant schemas share one database.
-    public async Task ProvisionAsync(Tenant tenant) { await using var db=Open(tenant); await db.GetService<IRelationalDatabaseCreator>().CreateTablesAsync(); }
+    public async Task ProvisionAsync(Tenant tenant)
+    {
+        await using var db = Open(tenant);
+        await db.GetService<IRelationalDatabaseCreator>().CreateTablesAsync();
+    }
 }
