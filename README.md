@@ -28,11 +28,72 @@ De huidige versie bevat het technische fundament van Sprint 1: authenticatie, tw
 
 ## 1. Snelstart
 
+### Bestaande installatie bijwerken
+
+Heb je de nieuwe SOC3-repository al gekloond? Clone niet opnieuw. Stop eerst de draaiende frontend (Ctrl+C in de Vite-terminal) en bewaar eventuele lokale wijzigingen. Haal daarna de nieuwste commits op van de branch waarop je werkt.
+
+Voor de gezamenlijke ontwikkelbranch:
+
+```bash
+git switch develop
+git pull --ff-only origin develop
+```
+
+Wil je de stabiele versie op `main` gebruiken? Gebruik dan:
+
+```bash
+git switch main
+git pull --ff-only origin main
+```
+
+`git switch` haalt geen nieuwe commits op. Beide branches bevatten de vastgelegde `frontend/package-lock.json`. Voer na het bijwerken vanuit de hoofdmap uit:
+
+```bash
+dotnet restore SOC3.slnx
+dotnet build SOC3.slnx --no-restore
+npm --prefix frontend ci
+npm --prefix frontend run build
+```
+
+Zit je al in `frontend`? Voer daar alleen `npm ci` en daarna `npm run build` uit; gebruik niet opnieuw `cd frontend`. Gebruik Node.js 24 LTS. Vraagt je Node-versiebeheerder om versie 24 te installeren, bevestig dit dan.
+
+Voer de build pas uit nadat de installatie geslaagd is. Bij `EUSAGE` controleer je de werkmap en of de nieuwste commit met `package-lock.json` lokaal aanwezig is. Bij `EPERM` op `esbuild.exe` (Windows) stop je eerst Vite en eventuele bijbehorende esbuild-processen; sluit zo nodig de IDE en probeer `npm ci` opnieuw. Verwijder de lockfile niet.
+
+### Installatie voor developers (eenmalig)
+
+Wil je zelf programmeren? Installeer ook de lokale SDK en packages, zelfs als je de applicatie via Docker start. Docker installeert dependencies in containers, niet in je lokale IDE.
+
+1. Installeer [Git](https://git-scm.com/downloads), [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (niet alleen de runtime), [Node.js 24 LTS](https://nodejs.org/) inclusief npm en een recente IDE met .NET 10- en `.slnx`-ondersteuning, bijvoorbeeld Rider of Visual Studio. Voor VS Code: gebruik C# Dev Kit.
+2. Clone de repository en open `SOC3.slnx` in Rider/Visual Studio (in VS Code: open de hoofdmap).
+
+```bash
+git clone https://github.com/TeunHSytrius/SOC3-Project.git
+cd SOC3-Project
+git switch develop
+```
+
+3. Installeer de backend- en frontenddependencies lokaal. Voer dit uit vanuit de hoofdmap:
+
+```bash
+dotnet restore SOC3.slnx
+dotnet build SOC3.slnx --no-restore
+cd frontend
+npm ci
+npm run build
+cd ..
+```
+
+Na `dotnet restore` zijn de NuGet-packages beschikbaar voor C#. Na `npm ci` bevat `frontend/node_modules` de React-, TypeScript- en overige frontendpackages. Beide buildcommando's moeten slagen. Je hebt hiervoor geen draaiende SQL Server nodig. Wacht tot de IDE klaar is met indexeren. Ontbrekende referenties en imports horen nu opgelost te zijn, tenzij er een echte code-, SDK- of IDE-fout is.
+
+Controleer bij problemen `dotnet --list-sdks`, `node --version` en `npm --version` in de IDE-terminal. Herhaal restore/install wanneer dependencies wijzigen. Gebruik `npm ci` om de vastgelegde dependencyversies te installeren. De databaseverbinding en het daadwerkelijk opstarten zijn aparte stappen hieronder. De aanbevolen Node-hoofdversie staat in `frontend/.nvmrc` (24); gebruik dezelfde hoofdversie als CI en Docker. Met nvm kun je in de frontendmap `nvm use` uitvoeren als Node 24 al geïnstalleerd is. Op Windows kun je Node 24 rechtstreeks installeren.
+
+### Applicatie opstarten
+
 Kies één van de twee installatieroutes. Beide gebruiken dezelfde ASP.NET Core-backend, React-frontend en SQL Server-datalaag.
 
 | | Met Docker | Zonder Docker |
 | --- | --- | --- |
-| Benodigd | Git, Docker Desktop of Docker Engine met Compose v2 | Git, .NET 10 SDK, Node.js 22.12+, npm, bereikbare SQL Server |
+| Benodigd | Git, Docker Desktop of Docker Engine met Compose v2 | Git, .NET 10 SDK, Node.js 24 LTS (aanbevolen), npm, bereikbare SQL Server |
 | Frontend | http://localhost:8081 | http://localhost:5173 |
 | Backend | http://localhost:8081 | http://localhost:8081 |
 | Database | SQL Server 2022 in container | Eigen lokale of externe SQL Server |
@@ -86,7 +147,7 @@ De SQL Server-container gebruikt een x86-64-image. Op Apple Silicon of andere AR
 Installeer:
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
-- [Node.js](https://nodejs.org/) 22.12 of hoger, bij voorkeur een ondersteunde LTS-versie, inclusief npm.
+- [Node.js](https://nodejs.org/) 24 LTS (aanbevolen), inclusief npm.
 - SQL Server 2022 Developer op een ondersteunde machine, of toegang tot een bestaande SQL Server met een eigen ontwikkel-database.
 - Een IDE naar keuze, bijvoorbeeld Rider, Visual Studio of VS Code.
 
@@ -132,13 +193,13 @@ Open een tweede terminal vanuit de hoofdmap:
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
 Open **http://localhost:5173**. Vite stuurt verzoeken naar `/api` door naar de backend op http://127.0.0.1:8081. Houd beide processen actief.
 
-De huidige repository bevat geen vastgelegde `package-lock.json`. Daarom gebruiken we nu `npm install` in plaats van `npm ci`. Het vastleggen van een lockfile is een vervolgafspraak voor reproduceerbare frontendbuilds.
+De repository bevat `frontend/package-lock.json`. Gebruik `npm ci` voor een reproduceerbare installatie. Alleen wanneer je bewust dependencies toevoegt of wijzigt, gebruik je `npm install` en commit je zowel `package.json` als `package-lock.json`.
 
 Stop beide processen met Ctrl+C. Je database blijft behouden.
 
@@ -160,7 +221,7 @@ Gebruik voor het schrijven van code bij voorkeur de native ontwikkelroute. Docke
 **IDE en dependencies eenmalig instellen**
 
 1. Open in Rider of Visual Studio het bestand `SOC3.slnx` in de hoofdmap. In VS Code open je de hele repositorymap met C#-ondersteuning (bijvoorbeeld C# Dev Kit) en TypeScript-ondersteuning.
-2. Controleer of .NET SDK 10 en Node.js 22.12+ (bij voorkeur een ondersteunde LTS-versie) beschikbaar zijn in je IDE-terminal.
+2. Controleer of .NET SDK 10 en Node.js 24 LTS (aanbevolen) beschikbaar zijn in je IDE-terminal.
 3. Haal de NuGet-packages op en bouw de solution vanuit de hoofdmap:
 
 ```bash
@@ -172,7 +233,7 @@ dotnet build SOC3.slnx --no-restore
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run build
 cd ..
 ```
@@ -337,7 +398,9 @@ SOC3-Project/
 │   │   ├── hooks/          Herbruikbare React-logica
 │   │   ├── services/       API- en sessieverzoeken
 │   │   └── types/          TypeScript-types
-│   └── package.json
+│   ├── .nvmrc
+│   ├── package.json
+│   └── package-lock.json
 ├── docs/                   Installatiehandleiding
 ├── tests/smoke.mjs          API-smoketest
 ├── .editorconfig
@@ -529,7 +592,7 @@ De formatteringscontrole kan bestaande afwijkingen signaleren en is nog geen ver
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run build
 npm run format:check
 cd ..
@@ -555,7 +618,7 @@ De [smoketest](tests/smoke.mjs) controleert onder andere login/logout, gebruiker
 
 ### 7.4 GitHub Actions
 
-De [CI-workflow](.github/workflows/docker.yml) draait bij pull requests; de huidige push-triggers bevatten nog `main` en oude refactorbranches. `develop` toevoegen aan de push-triggers is vervolgonderhoud. De workflow voert backendtests, Compose-validatie, de Docker-build, HTTP-readiness, controles op SQL-tabellen en de API-smoketest uit. Raadpleeg [Actions](https://github.com/TeunHSytrius/SOC3-Project/actions) voor het resultaat van de betreffende commit.
+De [CI-workflow](.github/workflows/docker.yml) draait bij pull requests; de push-triggers controleren `main` en `develop`. De workflow voert backendtests, Compose-validatie, de Docker-build, HTTP-readiness, controles op SQL-tabellen en de API-smoketest uit. Raadpleeg [Actions](https://github.com/TeunHSytrius/SOC3-Project/actions) voor het resultaat van de betreffende commit.
 
 Let bij nieuwe Sprint 2-endpoints op `tests/smoke.mjs`: deze bevat nog Sprint 1-controles die verwachten dat onder andere `alerts`, `cases`, `keys` en `ingest/alerts` HTTP 404 teruggeven. Werk de relevante verwachting samen met de nieuwe functionaliteit bij en voeg positieve en negatieve tests toe. Verwijder niet alle tests om CI groen te krijgen.
 
@@ -563,7 +626,7 @@ De native startprocedure is toegevoegd in [PR #13](https://github.com/TeunHSytri
 
 ## 8. Problemen oplossen
 
-Bij rode C#-referenties: open `SOC3.slnx`, controleer .NET SDK 10 en voer `dotnet restore SOC3.slnx` en `dotnet build SOC3.slnx` uit. Bij rode React/TypeScript-imports: voer `npm install` en `npm run build` uit in `frontend` en controleer de Node- en TypeScript-instellingen van je IDE. Zie 1.5 voor de dagelijkse ontwikkelroute.
+Bij rode C#-referenties: open `SOC3.slnx`, controleer .NET SDK 10 en voer `dotnet restore SOC3.slnx` en `dotnet build SOC3.slnx` uit. Bij rode React/TypeScript-imports: voer `npm ci` en `npm run build` uit in `frontend` en controleer de Node- en TypeScript-instellingen van je IDE. Zie 1.5 voor de dagelijkse ontwikkelroute.
 
 | Probleem | Controle |
 | --- | --- |
@@ -574,7 +637,7 @@ Bij rode C#-referenties: open `SOC3.slnx`, controleer .NET SDK 10 en voer `dotne
 | ConnectionStrings:Soc ontbreekt | Stel User Secrets of de omgevingsvariabele ConnectionStrings__Soc in. |
 | SQL Server niet bereikbaar | Controleer service, host, TCP/IP, poort, database, authenticatie en certificaat. |
 | Frontend bereikt API niet | Controleer de health-URL, beide processen en het Vite API-target. |
-| npm-installatie mislukt | Controleer Node.js-versie en de foutmelding. |
+| npm-installatie mislukt | Controleer Node.js 24, je werkmap en of `package-lock.json` lokaal aanwezig is. Zie de update-instructies bovenaan. |
 | Database niet zichtbaar | Controleer in DataGrip/SSMS of je met dezelfde server en database als de backend verbonden bent. |
 
 Docker-diagnostiek:

@@ -1,8 +1,9 @@
 name: Docker build and smoke test
 on:
   push:
-    branches: [main, refactor/readable-code, refactor/app-structure]
+    branches: [main, develop]
   pull_request:
+    branches: [main, develop]
   workflow_dispatch:
 permissions:
   contents: read
@@ -48,7 +49,9 @@ jobs:
           dotnet-version: '10.0.x'
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version-file: 'frontend/.nvmrc'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
       - name: Start SQL Server only
         run: docker compose up -d --wait --wait-timeout 360 sqlserver
       - name: Configure local development database
@@ -59,7 +62,7 @@ jobs:
       - name: Install and build native frontend
         working-directory: frontend
         run: |
-          npm install
+          npm ci
           npm run build
       - name: Start native backend and frontend and verify integration
         shell: bash

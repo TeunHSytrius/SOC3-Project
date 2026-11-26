@@ -2,6 +2,34 @@
 
 [Terug naar README](../README.md)
 
+## 0. Lokale installatie om te programmeren
+
+Wil je zelf programmeren? Installeer ook de lokale SDK en packages, zelfs als je de applicatie via Docker start. Docker installeert dependencies in containers, niet in je lokale IDE.
+
+1. Installeer [Git](https://git-scm.com/downloads), [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (niet alleen de runtime), [Node.js 24 LTS](https://nodejs.org/) inclusief npm en een recente IDE met .NET 10- en `.slnx`-ondersteuning, bijvoorbeeld Rider of Visual Studio. Voor VS Code: gebruik C# Dev Kit.
+2. Clone de repository en open `SOC3.slnx` in Rider/Visual Studio (in VS Code: open de hoofdmap).
+
+```bash
+git clone https://github.com/TeunHSytrius/SOC3-Project.git
+cd SOC3-Project
+git switch develop
+```
+
+3. Installeer de backend- en frontenddependencies lokaal. Voer dit uit vanuit de hoofdmap:
+
+```bash
+dotnet restore SOC3.slnx
+dotnet build SOC3.slnx --no-restore
+cd frontend
+npm ci
+npm run build
+cd ..
+```
+
+Na `dotnet restore` zijn de NuGet-packages beschikbaar voor C#. Na `npm ci` bevat `frontend/node_modules` de React-, TypeScript- en overige frontendpackages. Beide buildcommando's moeten slagen. Je hebt hiervoor geen draaiende SQL Server nodig. Wacht tot de IDE klaar is met indexeren. Ontbrekende referenties en imports horen nu opgelost te zijn, tenzij er een echte code-, SDK- of IDE-fout is.
+
+Controleer bij problemen `dotnet --list-sdks`, `node --version` en `npm --version` in de IDE-terminal. Herhaal restore/install wanneer dependencies wijzigen. Gebruik `npm ci` om de vastgelegde dependencyversies te installeren. De databaseverbinding en het daadwerkelijk opstarten zijn aparte stappen hieronder. Gebruik Node 24 zoals vastgelegd in `frontend/.nvmrc`; wijzig de lockfile alleen bij bewuste dependencywijzigingen en commit deze samen met `package.json`.
+
 ## 1. Installatie — Windows, macOS en Linux
 
 ### 1.1 Wat heb je nodig?
@@ -38,11 +66,13 @@ docker compose up --build --wait --wait-timeout 360
 Gebruik bij een bestaande kopie vanuit de hoofdmap:
 
 ```bash
-git pull --ff-only origin main
+git status
+git switch develop
+git pull --ff-only origin develop
 docker compose up --build --wait --wait-timeout 360
 ```
 
-Het commando bouwt de frontend en backend, wacht op de SQL Server-healthcheck en controleert daarna de API. Bij een succesvolle start staan app en sqlserver op healthy. Open [http://localhost:8081](http://localhost:8081). Log in met een groepsaccount bovenaan deze README en het initiële wachtwoord `Demo2026!`.
+Het commando bouwt de frontend en backend, wacht op de SQL Server-healthcheck en controleert daarna de API. Bij een succesvolle start staan app en sqlserver op healthy. Open [http://localhost:8081](http://localhost:8081). Log in met een groepsaccount uit de [README](../README.md) en het initiële wachtwoord `Demo2026!`.
 
 ```bash
 docker compose ps
@@ -152,7 +182,7 @@ De backend en frontend kunnen rechtstreeks op je laptop draaien. Je hebt dan wel
 ### 2.1 Benodigdheden
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
-- [Node.js](https://nodejs.org/) 22.12 of hoger (bij voorkeur een ondersteunde LTS-versie).
+- [Node.js](https://nodejs.org/) 24 LTS (aanbevolen).
 - [Git](https://git-scm.com/downloads).
 - Microsoft SQL Server 2022 Developer voor lokale ontwikkeling, of een bestaande bereikbare SQL Server.
 - Optioneel: [DataGrip](https://www.jetbrains.com/datagrip/) of [SQL Server Management Studio (SSMS)](https://learn.microsoft.com/en-us/ssms/install/install).
@@ -200,7 +230,7 @@ Open terminal 2 vanuit de hoofdmap:
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
