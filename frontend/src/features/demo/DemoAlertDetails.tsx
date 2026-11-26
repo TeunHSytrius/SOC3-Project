@@ -1,7 +1,6 @@
 import { Badge, Button, PageHeader, Panel } from '../../components/Ui';
 import { fmt } from '../../types/domain';
 import { priorityKind, statusKind } from './demoAlertPresentation';
-import DemoBanner from './DemoBanner';
 import type { DemoAlert } from './demoAlerts';
 
 interface DemoAlertDetailsProps {
@@ -14,10 +13,9 @@ export default function DemoAlertDetails({ alert, onBack }: DemoAlertDetailsProp
     <div className="fragment">
       <PageHeader
         title={alert.title}
-        sub={alert.number}
+        sub={`${alert.number} · Voorbeeldmelding`}
         action={<Button onClick={onBack}>Terug naar alerts</Button>}
       />
-      <DemoBanner />
       <Panel title="Melding" sub={alert.organizationName}>
         <div className="demo-detail">
           <div className="demo-detail-status">

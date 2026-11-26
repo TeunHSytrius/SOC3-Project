@@ -73,7 +73,7 @@ Onderstaande indeling beschrijft de technische inhoud van deze versie, niet de f
 | Auditlog | Basis beschikbaar | Platformactiviteiten en paginering; geen volledige operationele audit |
 | Ingest, triage, tickets, SLA, onderzoeken en rapportages | Nog te realiseren | Geen afgeronde workflows of geaccepteerde user stories |
 
-**Voorbeelddata zijn geen werkende alertverwerking.** De klikbare alerts worden in de frontend gemaakt en niet in SQL opgeslagen. De groep bepaalt aan de hand van het FO, TO en Taiga welke onderdelen aan de acceptatiecriteria voldoen.
+**Voorbeelddata zijn geen werkende alertverwerking.** De interface duidt de voorbeelden aan met korte labels in plaats van een afzonderlijke banner. De klikbare alerts worden in de frontend gemaakt en niet in SQL opgeslagen. De groep bepaalt aan de hand van het FO, TO en Taiga welke onderdelen aan de acceptatiecriteria voldoen.
 
 ## 3. Architectuur en database
 
