@@ -62,6 +62,7 @@ export default class App extends React.Component<Record<string, never>, State> {
       page: startPage(user),
       org: '',
       selected: null,
+      modal: null,
       error: '',
       notice: '',
     });
@@ -87,7 +88,7 @@ export default class App extends React.Component<Record<string, never>, State> {
     try {
       await logoutUser();
     } finally {
-      this.setState({ ...emptyWorkspaceData(), user: null, error: '', notice: '', busy: false });
+      this.setState({ ...emptyWorkspaceData(), user: null, selected: null, modal: null, error: '', notice: '', busy: false });
     }
   };
 
@@ -96,7 +97,7 @@ export default class App extends React.Component<Record<string, never>, State> {
     if (isUnauthorized(error) && this.state.user) {
       clearSession();
       this.invalidateRefresh();
-      this.setState({ ...emptyWorkspaceData(), user: null, error: message, busy: false });
+      this.setState({ ...emptyWorkspaceData(), user: null, selected: null, modal: null, error: message, busy: false });
       return;
     }
     this.setState({ error: message, notice: '' });

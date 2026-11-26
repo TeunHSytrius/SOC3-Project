@@ -9,23 +9,10 @@ class Client {
     if (
       csrf &&
       ["POST", "PATCH"].includes(method) &&
-      !path.startsWith("ingest/")
+      path !== "auth/csrf"
     ) {
       const csrfResponse = await this.request("auth/csrf");
       headers = { ...headers, "X-CSRF-TOKEN": csrfResponse.data.token };
-    }
-    // Use the last fetched version in explicit concurrency tests; otherwise fetch the current version.
-    const match = path.match(/^(alerts|cases)\/([^/]+)/);
-    if (
-      csrf &&
-      ["POST", "PATCH"].includes(method) &&
-      match &&
-      body &&
-      !body.rowVersion
-    ) {
-      const current = await this.request(match[1] + "/" + match[2]);
-      if (current.status === 200)
-        body = { ...body, rowVersion: current.data.rowVersion };
     }
     const response = await fetch(`${base}/api/v1/${path}`, {
       method,
@@ -78,7 +65,7 @@ class Client {
 }
 const guest = new Client();
 await guest.ok("health");
-const denied = await guest.request("alerts");
+const denied = await guest.request("users");
 assert.equal(denied.status, 401);
 assert(
   denied.data.message && denied.data.traceId,
@@ -88,7 +75,6 @@ const admin = new Client();
 await admin.login("beheerder");
 const orgs = await admin.ok("organizations");
 assert(orgs.length >= 3);
-assert((await admin.ok("alerts")).length >= 8);
 const errors = await admin.ok("errors");
 assert(
   errors.some((e) => e.traceId === denied.data.traceId && e.status === 401),
@@ -117,16 +103,6 @@ const delta = orgs.find((o) => o.name === "Delta Logistics");
 assert(north && delta);
 const analyst = new Client();
 await analyst.login("analist");
-const demoAlerts = await analyst.ok("alerts");
-assert(demoAlerts.length >= 8);
-const networkDemo = demoAlerts.find((a) => a.number === "ALT-1003");
-assert(
-  networkDemo?.security?.simulated &&
-    networkDemo.security.sourceIp &&
-    networkDemo.security.destinationIp &&
-    networkDemo.security.evidence,
-  "Seed network alert must contain usable fictional evidence",
-);
 assert.equal((await analyst.request("errors")).status, 403);
 assert.equal(
   (
@@ -139,9 +115,8 @@ assert.equal(
 );
 const customer = new Client();
 await customer.login("klant");
-assert.equal((await customer.request("alerts")).status, 403);
 assert.equal((await customer.request("users")).status, 403);
-assert.equal((await customer.request("organizations/" + delta.id)).status, 403);
+assert.equal((await customer.request("organizations/" + delta.id)).status, 404);
 
 // Account management: a separate test account preserves the seeded demo accounts.
 const unique = Date.now();
@@ -235,246 +210,15 @@ const temporaryOrg = await admin.post("organizations", {
 });
 const renamed = await admin.ok(`organizations/${temporaryOrg.id}`, {
   method: "PATCH",
-  body: { name: "Hernoemde klant " + unique, responseMinutes: 90 },
+  body: { name: "Hernoemde klant " + unique },
 });
 assert.equal(renamed.id, temporaryOrg.id);
 assert.equal(renamed.name, "Hernoemde klant " + unique);
-assert.equal(renamed.responseMinutes, 90);
 await admin.post(`organizations/${temporaryOrg.id}/deactivate`);
 assert.equal(
   (await admin.ok(`organizations/${temporaryOrg.id}`)).isActive,
   false,
 );
-const key = await admin.post("keys", {
-  name: "Smoke test " + Date.now(),
-  organizationId: north.id,
-});
-assert(key.secret);
-assert(!(await admin.ok("keys")).some((k) => k.secret || k.hash));
-const tool = new Client();
-const payload = {
-  externalEventId: "smoke-" + Date.now(),
-  title: "MVP smoke test",
-  occurredAt: new Date().toISOString(),
-  severity: "High",
-  payload: {
-    description: "Fictieve melding voor de lokale test.",
-    category: "Authenticatie",
-    sourceIp: "192.0.2.10",
-    destinationIp: "198.51.100.10",
-    hostname: "DEMO-DC01",
-    username: "demo.user",
-    detectionRule: "AUTH-001",
-    simulated: true,
-  },
-};
-const ingestOpts = {
-  method: "POST",
-  headers: { "X-API-Key": key.secret },
-  body: payload,
-};
-assert.equal(
-  (
-    await tool.request("ingest/alerts", {
-      ...ingestOpts,
-      body: { ...payload, organizationId: delta.id },
-    })
-  ).status,
-  400,
-);
-const first = await tool.request("ingest/alerts", ingestOpts);
-assert.equal(first.status, 201);
-const alert = first.data;
-assert.equal(alert.slaStatus, "Pending");
-assert.equal(alert.organizationId, north.id);
-assert.equal(alert.rawPayload, JSON.stringify(payload));
-assert.equal(alert.security.category, "Authenticatie");
-assert.equal(alert.security.sourceIp, "192.0.2.10");
-assert.equal(alert.description, payload.payload.description);
-assert.equal(JSON.parse(alert.normalizedPayload).class_uid, 2004);
-assert.equal(JSON.parse(alert.normalizedPayload).severity_id, 4);
-const replay = await tool.request("ingest/alerts", ingestOpts);
-assert.equal(replay.status, 200);
-assert.equal(replay.data.id, alert.id);
-assert.equal(
-  (
-    await tool.request("ingest/alerts", {
-      ...ingestOpts,
-      body: { ...payload, title: "Gewijzigd" },
-    })
-  ).status,
-  409,
-);
-assert.equal(
-  (
-    await analyst.request(`alerts/${alert.id}/claim`, {
-      method: "POST",
-      body: {},
-      csrf: false,
-    })
-  ).status,
-  400,
-  "CSRF vereist",
-);
-const claimed = await analyst.post(`alerts/${alert.id}/claim`);
-assert(claimed.firstHandledAt);
-assert.equal(claimed.slaStatus, "Met");
-assert.equal(claimed.status, "UnderReview");
-assert.equal(claimed.ownerId, (await analyst.ok("auth/me")).id);
-assert.notEqual(
-  claimed.rowVersion,
-  alert.rowVersion,
-  "Claim must update rowversion",
-);
-assert(
-  claimed.history.some((h) => h.text === "Alert opgepakt"),
-  "Claim history must be inserted",
-);
-const persistedClaim = await analyst.ok(`alerts/${alert.id}`);
-assert.equal(persistedClaim.rowVersion, claimed.rowVersion);
-assert(
-  persistedClaim.history.some((h) => h.text === "Alert opgepakt"),
-  "Claim history must persist",
-);
-assert.equal(
-  (
-    await analyst.request(`alerts/${alert.id}/triage`, {
-      method: "POST",
-      body: {
-        rowVersion: alert.rowVersion,
-        outcome: "Bevestigd incident",
-        reason: "Verouderde versie",
-      },
-    })
-  ).status,
-  409,
-);
-assert.equal(
-  (
-    await analyst.request(`alerts/${alert.id}/claim`, {
-      method: "POST",
-      body: {},
-    })
-  ).status,
-  409,
-);
-await analyst.post(`alerts/${alert.id}/triage`, {
-  outcome: "Bevestigd incident",
-  reason: "Demotest",
-});
-const promoted = await analyst.post(`alerts/${alert.id}/promote`, {
-  title: "Smoke test case",
-});
-assert(promoted.caseId);
-const id = promoted.caseId;
-const senior = new Client();
-await senior.login("senior");
-const analystUser = await analyst.ok("auth/me");
-assert.equal(
-  (
-    await analyst.request(`cases/${id}`, {
-      method: "PATCH",
-      body: { status: "UnderInvestigation" },
-    })
-  ).status,
-  409,
-  "Coordinator assignment required",
-);
-const assigned = await senior.ok(`cases/${id}`, {
-  method: "PATCH",
-  body: {
-    userId: analystUser.id,
-    priority: "High",
-    reason: "Demo prioritering",
-    nextAction: "Onderzoek uitvoeren",
-  },
-});
-assert.equal(assigned.status, "UnderInvestigation");
-const noteText = "Interne testnotitie " + unique;
-await analyst.post(`cases/${id}/events`, {
-  kind: "Notitie",
-  text: noteText,
-  visible: false,
-});
-await analyst.post(`cases/${id}/observables`, {
-  value: "192.0.2.25",
-  type: "IP",
-  assessment: "Verdacht",
-});
-const persistedCase = await analyst.ok(`cases/${id}`);
-assert(
-  persistedCase.entries.some(
-    (e) => e.kind === "Notitie" && e.text === noteText && e.actor,
-  ),
-);
-const allCases = await analyst.ok("cases");
-assert(
-  allCases.some((c) => c.id !== id),
-  "A second case is required to check note isolation",
-);
-assert(
-  allCases
-    .filter((c) => c.id !== id)
-    .every((c) => !c.entries.some((e) => e.text === noteText)),
-  "A note must belong to its own case only",
-);
-assert(
-  persistedCase.entries.some(
-    (e) => e.kind === "Observable" && e.text.includes("192.0.2.25"),
-  ),
-);
-assert.equal((await customer.request(`portal/cases/${id}`)).status, 404);
-await analyst.ok(`cases/${id}`, { method: "PATCH", body: { visible: true } });
-await analyst.post(`cases/${id}/events`, {
-  kind: "Actie",
-  text: "Klantzichtbare actie",
-  visible: true,
-});
-const portal = await customer.ok(`portal/cases/${id}`);
-assert(portal.entries.some((e) => e.text === "Klantzichtbare actie"));
-assert(
-  !portal.entries.some((e) => e.text === noteText || e.kind === "Observable"),
-);
-assert.equal(
-  (
-    await analyst.request(`alerts/${alert.id}`, {
-      headers: { "X-Workspace-Id": delta.id },
-    })
-  ).status,
-  404,
-);
-assert.equal(
-  (
-    await analyst.request(`cases/${id}`, {
-      method: "PATCH",
-      body: { status: "Closed" },
-    })
-  ).status,
-  409,
-);
-await analyst.ok(`cases/${id}`, {
-  method: "PATCH",
-  body: { status: "Resolved" },
-});
-assert.equal(
-  (
-    await analyst.request(`cases/${id}`, {
-      method: "PATCH",
-      body: { status: "Closed" },
-    })
-  ).status,
-  400,
-);
-const closed = await analyst.ok(`cases/${id}`, {
-  method: "PATCH",
-  body: {
-    status: "Closed",
-    summary: "Onderzoek en acties afgerond.",
-    conclusion: "Demotest afgerond.",
-  },
-});
-assert.equal(closed.status, "Closed");
-assert.equal((await analyst.ok(`alerts/${alert.id}`)).status, "Resolved");
 const removable = await admin.post("users", {
   name: "Verwijdertest",
   email: "remove-" + unique + "@soc.demo",
@@ -504,74 +248,22 @@ assert(
     (a) => a.action === "Gebruiker verwijderd" && a.target === removable.id,
   ),
 );
-const archive = await admin.ok("ticket-register");
-const registered = archive.find((t) => t.id === id);
-assert(
-  registered &&
-    registered.status === "Closed" &&
-    registered.closedAt &&
-    registered.organizationId === north.id,
-);
-assert(
-  archive.every(
-    (t) =>
-      !("title" in t) &&
-      !("entries" in t) &&
-      !("scopeId" in t) &&
-      !("alertIds" in t),
-  ),
-);
-const adminCase = await admin.ok(`cases/${id}`);
-assert(adminCase.entries.some((e) => e.text === noteText));
-assert(adminCase.entries.some((e) => e.kind === "Observable"));
-assert(adminCase.alertIds.includes(alert.id));
-assert(
-  (await admin.ok("cases")).some((c) => c.id === id && c.status === "Closed"),
-);
-assert((await admin.ok(`alerts/${alert.id}`)).rawPayload);
-assert.equal(
-  (
-    await admin.request(`cases/${id}/events`, {
-      method: "POST",
-      body: { kind: "Notitie", text: "Verboden beheerderswijziging" },
-    })
-  ).status,
-  403,
-);
-assert.equal(
-  (
-    await admin.request(`alerts/${alert.id}/claim`, {
-      method: "POST",
-      body: {},
-    })
-  ).status,
-  403,
-);
-assert.equal((await customer.request("ticket-register")).status, 403);
-assert(
-  (await customer.ok("portal/cases")).some(
-    (t) => t.id === id && t.status === "Closed",
-  ),
-);
-assert(
-  (await analyst.ok("cases")).some((t) => t.id === id && t.status === "Closed"),
-);
-await admin.post(`keys/${key.id}/revoke`);
-assert.equal(
-  (
-    await tool.request("ingest/alerts", {
-      method: "POST",
-      headers: { "X-API-Key": key.secret },
-      body: payload,
-    })
-  ).status,
-  401,
-);
-assert(
-  (await admin.ok("audit")).some(
-    (a) => a.action === "Alert promote" && a.target === alert.number,
-  ),
-);
-console.log(
-  "PASS: login, rollen, accountbewerking, ingest, securitymapping, CSRF, triage, toewijzing, workflow, afscherming, afsluiten, audit en intrekking sleutel.",
-);
+// Tenant isolation and current workspace assignments.
+const customerOrganizations = await customer.ok("organizations");
+assert.deepEqual(customerOrganizations.map((organization) => organization.id), [north.id]);
+const access = await customer.ok("me/access");
+assert(access.workspaces.length > 0);
+assert(access.workspaces.every((workspace) => workspace.workspaceId === north.id));
+assert.equal((await customer.request("audit")).status, 403);
+assert.equal((await admin.request("organizations", {
+  method: "POST", csrf: false, body: { name: "Forbidden without CSRF" },
+})).status, 400);
+
+// Later sprint functionality must be absent from the API, not only hidden in the menu.
+for (const path of ["alerts", "cases", "keys", "portal/cases", "ticket-register"]) {
+  assert.equal((await admin.request(path)).status, 404, path);
+}
+assert.equal((await guest.request("ingest/alerts", { method: "POST", body: {} })).status, 404);
+await customer.post("auth/logout");
+assert.equal((await customer.request("auth/me")).status, 401);
+console.log("PASS: Sprint 1 login/logout, accountbeheer, klantbeheer, rol- en klanttoegang, CSRF, audit, ontbrekende latere endpoints.");
