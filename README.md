@@ -45,17 +45,18 @@ Open Terminal of PowerShell:
 ```bash
 git clone https://github.com/TeunHSytrius/SOC3-Project.git
 cd SOC3-Project
+git switch develop
 ```
 
 Heb je de repository al? Controleer je lokale wijzigingen voordat je wisselt van branch of nieuwe wijzigingen ophaalt:
 
 ```bash
 git status
-git switch main
-git pull --ff-only origin main
+git switch develop
+git pull --ff-only origin develop
 ```
 
-De gezamenlijke integratiebranch in deze repository is `main`. Test een nog niet gemergede pull request op de bijbehorende werkbranch.
+`develop` is de gezamenlijke ontwikkelbranch. `main` bevat de stabiele sprintversie. Heb je nog een clone van vóór het opschonen van de geschiedenis? Bewaar lokaal werk en ongepushte commits eerst en clone bij voorkeur opnieuw in een aparte map.
 
 ### 1.2 Met Docker starten
 
@@ -151,6 +152,99 @@ SOC_SQL_PORT=14334
 ```
 
 Voor native ontwikkeling moet bij een afwijkende API-poort ook het Vite-target worden aangepast via `VITE_API_TARGET` in `frontend/.env.local`. Zie [de uitgebreide handleiding](docs/INSTALLATIE.md).
+
+### 1.5 Dagelijks ontwikkelen (Rider, Visual Studio of VS Code)
+
+Gebruik voor het schrijven van code bij voorkeur de native ontwikkelroute. Docker kan daarbij nog steeds alleen SQL Server draaien. De volledige Docker-demo uit 1.2 is vooral bedoeld voor een geïntegreerde test of demonstratie.
+
+**IDE en dependencies eenmalig instellen**
+
+1. Open in Rider of Visual Studio het bestand `SOC3.slnx` in de hoofdmap. In VS Code open je de hele repositorymap met C#-ondersteuning (bijvoorbeeld C# Dev Kit) en TypeScript-ondersteuning.
+2. Controleer of .NET SDK 10 en Node.js 22.12+ (bij voorkeur een ondersteunde LTS-versie) beschikbaar zijn in je IDE-terminal.
+3. Haal de NuGet-packages op en bouw de solution vanuit de hoofdmap:
+
+```bash
+dotnet restore SOC3.slnx
+dotnet build SOC3.slnx --no-restore
+```
+
+4. Installeer de frontendpackages (ook na wijzigingen aan `package.json`):
+
+```bash
+cd frontend
+npm install
+npm run build
+cd ..
+```
+
+Open het project als een geheel, niet alleen een losse `.cs`- of `.tsx`-file. Rider moet de solution indexeren en NuGet herstellen; voor TypeScript moet `frontend/node_modules` aanwezig zijn. Als de IDE een andere SDK of Node-interpreter gebruikt dan de terminal, selecteer dan de correcte installatie in de IDE-instellingen. In Rider kun je de .NET SDK en Node.js-interpreter via Settings zoeken. Herlaad de solution indien nodig. Rode onderstrepingen na een geslaagde build kunnen ook een IDE-indexeringsprobleem zijn; fouten in de build zelf moet je oplossen. Installeer geen willekeurige packages om een foutmelding weg te krijgen.
+
+**Start van je werkdag**
+
+```bash
+git status
+git switch develop
+git pull --ff-only origin develop
+git switch -c feature/us-46-data-model
+```
+
+Gebruik het nummer van jouw Trello-story. Bestaat je werkbranch al, wissel dan naar die branch in plaats van hem opnieuw aan te maken. Zie hoofdstuk 6 voor het bijwerken van een bestaande branch.
+
+**Database starten**
+
+Gebruik je eigen SQL Server zoals in 1.3, of start alleen SQL Server via Docker:
+
+```bash
+docker compose up -d --wait sqlserver
+```
+
+Voor de standaard lokale Docker-database kun je vanuit de hoofdmap de volgende verbinding instellen:
+
+```bash
+dotnet user-secrets set "ConnectionStrings:Soc" "Server=127.0.0.1,14333;Database=Soc3Dev;User Id=sa;Password=SocDemo!2026Local;Encrypt=True;TrustServerCertificate=True" --project backend/Soc.Api/Soc.Api.csproj
+```
+
+Dit is uitsluitend voor de lokale demo met de standaard Docker-instellingen. Heb je de poort of het wachtwoord aangepast, gebruik dan je eigen waarden. Gebruik voor een eigen SQL Server de instellingen uit 1.3. Iedereen werkt met een eigen ontwikkel-database. Draai niet tegelijkertijd de volledige Docker-app op poort 8081.
+
+**Backend (terminal 1, vanuit de hoofdmap)**
+
+```bash
+dotnet watch --project backend/Soc.Api/Soc.Api.csproj run --launch-profile "Local Development"
+```
+
+De API draait op http://localhost:8081. `dotnet watch` volgt broncodewijzigingen en past ondersteunde wijzigingen toe via Hot Reload of herstart de applicatie wanneer dat nodig is. Wil je breakpoints gebruiken, start dan in Rider het API-project `Soc.Api` met het profiel `Local Development` in Debug-modus in plaats van een tweede API-proces te starten.
+
+**Frontend (terminal 2, vanuit de hoofdmap)**
+
+```bash
+cd frontend
+npm run dev
+```
+
+Open http://localhost:5173. Vite verwerkt wijzigingen aan React/TypeScript tijdens het ontwikkelen en stuurt `/api` door naar de backend op poort 8081. Je hoeft dus niet bij iedere codewijziging Docker opnieuw te bouwen. Gebruik de browserconsole en Network-tab om frontendfouten en HTTP-verzoeken te bekijken; bekijk de backendterminal voor serverfouten.
+
+Stop de ontwikkelprocessen met Ctrl+C. Stop eventueel SQL Server met `docker compose stop sqlserver`. Verwijder geen volumes met `-v` tenzij je bewust lokale gegevens wilt wissen.
+
+**Waar schrijf je nieuwe code?**
+
+| Werk | Locatie |
+| --- | --- |
+| HTTP-endpoints en statuscodes | `backend/Soc.Api/Controllers` |
+| Bedrijfslogica | `backend/Soc.Business/Services` |
+| Request- en responsemodellen | `backend/Soc.Business/DTOs` |
+| Repositories en interfaces | `backend/Soc.Business/Repositories` |
+| EF Core-entiteiten | `backend/Soc.Data/Entities` en `backend/Soc.Data/Domain` |
+| Databasemapping en context | `backend/Soc.Data/Context` |
+| Schermen per functionaliteit | `frontend/src/features` |
+| Herbruikbare UI | `frontend/src/components` |
+| API-verzoeken en types | `frontend/src/services` en `frontend/src/types` |
+| Tests | `backend/Soc.Tests` en `tests/smoke.mjs` |
+
+Lees eerst de bijbehorende Trello-story, FO/TO en bestaande implementatie. Volg bestaande patterns voor controllers, services, dependency injection, datatoegang en frontendcomponenten. Voeg geen tweede datamodel of losse databaseverbinding toe zonder teamafspraak. De backend bepaalt de toegangsrechten; de frontend mag niet rechtstreeks met SQL communiceren.
+
+**Databasewijzigingen**
+
+Pas entiteiten en EF Core-mappings samen aan, controleer relaties en constraints en test met je eigen ontwikkel-database. De huidige initialisatie gebruikt `EnsureCreatedAsync` en aanvullende initialisatiecode; dit vervangt geen migraties en past bestaande tabellen niet automatisch aan bij elke modelwijziging. Gebruik voor een gecontroleerde test zo nodig een nieuwe lege database met een nieuwe naam in User Secrets. Verwijder nooit gegevens van een ander groepslid of een gedeelde database. Leg de uiteindelijke schemawijziging en migratiestrategie vast in US-46.
 
 ## 2. Inloggen en controleren
 
@@ -318,40 +412,62 @@ De feedback van de opdrachtgever over het vijfstappenproces, SLA en bewaartermij
 
 ## 6. Samenwerken via GitHub en Trello
 
-Trello bevat de Product Backlog, Sprint Backlog, acceptatiecriteria en checklists. GitHub bevat de implementatie, commits, pull requests, reviews en testresultaten. De integratiebranch `main` bevat de gezamenlijke code.
+Trello bevat de Product Backlog, Sprint Backlog, acceptatiecriteria en checklists. GitHub bevat de implementatie, commits, pull requests, reviews en testresultaten.
 
-De volgende werkafspraken sluiten aan op de oorspronkelijke repository; pas ze in overleg met het team toe. Technische afdwinging via branchregels en verplichte statuschecks moet apart worden gecontroleerd.
-
-### 6.1 Branches en commits
+### 6.1 Branchstrategie
 
 | Branch | Gebruik |
 | --- | --- |
-| `main` | Gezamenlijke geïntegreerde versie |
+| `main` | Stabiele, opgeleverde sprintversie |
+| `develop` | Gezamenlijke ontwikkelbranch |
 | `feature/*` | Nieuwe functionaliteit |
 | `bugfix/*` | Bugfixes |
 | `refactor/*` | Verbeteren van bestaande code |
 | `chore/*` | Onderhoud en configuratie |
 | `docs/*` | Documentatie |
 
-Maak een werkbranch vanaf de actuele hoofdbranch:
+```text
+feature/* ----+
+bugfix/* -----+--> develop --> main
+docs/* -------+
+```
+
+Maak alleen een werkbranch wanneer je daadwerkelijk aan een ticket begint. Werk niet rechtstreeks op `main` of `develop`. Beide branches horen beschermd te zijn.
+
+### 6.2 Werkbranch aanmaken en bijwerken
 
 ```bash
 git status
-git switch main
-git pull --ff-only origin main
+git switch develop
+git pull --ff-only origin develop
 git switch -c feature/us-45-process-roles
 ```
 
-Gebruik het nummer van je eigen Trello-story. Houd commits logisch afgebakend, met een beschrijvend Engels bericht, bijvoorbeeld:
+Gebruik het echte Trello-storynummer en een korte Engelse omschrijving: `feature/us-45-process-roles`, `bugfix/us-47-organization-access`. Voor onderhoud zonder story kan bijvoorbeeld `docs/update-development-guide` worden gebruikt.
 
-```text
-feat: add process role validation (US-45)
-fix: correct organization access checks (US-47)
-test: add cross-tenant authorization tests (US-48)
-docs: update local development instructions
+Als je al op je werkbranch werkt en develop is bijgewerkt:
+
+```bash
+git status
+git fetch origin
+git merge origin/develop
 ```
 
-Voeg alleen de bestanden toe die bij je wijziging horen, controleer de diff en push je branch:
+Commit of bewaar je lokale wijzigingen eerst. Los eventuele mergeconflicten op, bouw en test opnieuw. Gebruik geen force push op gedeelde branches. Een rebase op een eigen, niet-gedeelde werkbranch kan ook, maar is niet nodig voor deze workflow.
+
+### 6.3 Committen en pushen
+
+Gebruik beschrijvende Engelse Conventional Commits:
+
+| Type | Gebruik |
+| --- | --- |
+| `feat` | Nieuwe functionaliteit |
+| `fix` | Fout oplossen |
+| `refactor` | Code verbeteren zonder gedrag te wijzigen |
+| `test` | Tests toevoegen of aanpassen |
+| `docs` | Documentatie |
+| `chore` | Onderhoud |
+| `ci` | Automatische build- en testconfiguratie |
 
 ```bash
 git status
@@ -362,18 +478,24 @@ git commit -m "feat: add process role validation (US-45)"
 git push -u origin feature/us-45-process-roles
 ```
 
-Vervang `<bestanden>` door de daadwerkelijke bestandspaden. Werk niet rechtstreeks op main. Herschrijf geen gedeelde geschiedenis zonder teamafspraak.
+Vervang `<bestanden>` door de daadwerkelijke bestandspaden en de branchnaam door die van jouw ticket. Commit geen IDE-cache, `node_modules`, build-output, wachtwoorden of databasebestanden. Houd wijzigingen beperkt tot je eigen story.
 
-### 6.2 Pull requests en Definition of Done
+### 6.4 Pull requests, reviews en mergen
 
-Open een pull request naar main en vermeld:
+Open op GitHub een PR met **base `develop`** en **compare jouw werkbranch**. Vermeld de Trello-story en link, wat er is gewijzigd, wat daadwerkelijk is getest en eventuele afwijkingen van het FO/TO of gevolgen voor andere onderdelen. Vermeld hergebruik en AI-ondersteuning waar relevant.
 
-- Trello-story en link, relevante requirements en de wijziging.
-- Wat daadwerkelijk is getest, inclusief resultaten en beperkingen.
-- Eventuele afwijkingen van het FO/TO en gevolgen voor andere onderdelen.
-- Hergebruik, samenwerking en AI-ondersteuning waar relevant.
+Laat minimaal één ander groepslid de wijziging beoordelen. Met de afgesproken actieve rulesets vervallen eerdere goedkeuringen bij nieuwe commits en moeten reviewgesprekken opgelost zijn. Controleer de GitHub Actions-resultaten en merge geen code met mislukte tests zonder de oorzaak op te lossen. De statuschecks zijn nog niet technisch verplicht in de rulesets.
 
-Laat een ander groepslid de wijziging beoordelen. Verwerk reviewfeedback en controleer de actuele CI-status. Sluit de Trello-kaart pas wanneer de afgesproken acceptatiecriteria en Definition of Done aantoonbaar zijn behaald. Bewaar PR-links en testbewijs bij de kaart. Een groene build alleen is geen volledige acceptatietest.
+| Van | Naar | Merge-methode |
+| --- | --- | --- |
+| Werkbranch | `develop` | Squash and merge |
+| `develop` | `main` | Create a merge commit bij sprintoplevering |
+
+Verwijder na het mergen de afgeronde werkbranch als niemand die meer nodig heeft. Werk je lokale `develop` bij voordat je een nieuw ticket begint.
+
+### 6.5 Definition of Done
+
+Controleer de acceptatiecriteria, de backend- en frontendbuild, relevante tests en eventuele gevolgen voor autorisatie, klantisolatie en de database. Werk documentatie bij indien nodig. Zet de Trello-kaart pas op Done wanneer de afgesproken criteria zijn behaald en de PR is goedgekeurd en gemerged. Bewaar PR-links en testbewijs bij de kaart.
 
 ## 7. Codeafspraken en testen
 
@@ -433,11 +555,15 @@ De [smoketest](tests/smoke.mjs) controleert onder andere login/logout, gebruiker
 
 ### 7.4 GitHub Actions
 
-De [CI-workflow](.github/workflows/docker.yml) voert backendtests, Compose-validatie, de Docker-build, HTTP-readiness, controles op SQL-tabellen en de API-smoketest uit. Raadpleeg [Actions](https://github.com/TeunHSytrius/SOC3-Project/actions) voor het resultaat van de betreffende commit.
+De [CI-workflow](.github/workflows/docker.yml) draait bij pull requests; de huidige push-triggers bevatten nog `main` en oude refactorbranches. `develop` toevoegen aan de push-triggers is vervolgonderhoud. De workflow voert backendtests, Compose-validatie, de Docker-build, HTTP-readiness, controles op SQL-tabellen en de API-smoketest uit. Raadpleeg [Actions](https://github.com/TeunHSytrius/SOC3-Project/actions) voor het resultaat van de betreffende commit.
+
+Let bij nieuwe Sprint 2-endpoints op `tests/smoke.mjs`: deze bevat nog Sprint 1-controles die verwachten dat onder andere `alerts`, `cases`, `keys` en `ingest/alerts` HTTP 404 teruggeven. Werk de relevante verwachting samen met de nieuwe functionaliteit bij en voeg positieve en negatieve tests toe. Verwijder niet alle tests om CI groen te krijgen.
 
 De native startprocedure is toegevoegd in [PR #13](https://github.com/TeunHSytrius/SOC3-Project/pull/13). De CI bevat ook een native job: SQL Server draait in een testcontainer, terwijl de backend via User Secrets en het lokale startprofiel en de frontend via Vite rechtstreeks op de Linux-runner draaien. De job controleert de frontend, API-health en API-smoketest via de Vite-proxy. Bekijk het resultaat per commit in GitHub Actions. Installatie van een native SQL Server en de lokale IDE-/databaseclientconfiguratie op individuele laptops worden hiermee niet getest.
 
 ## 8. Problemen oplossen
+
+Bij rode C#-referenties: open `SOC3.slnx`, controleer .NET SDK 10 en voer `dotnet restore SOC3.slnx` en `dotnet build SOC3.slnx` uit. Bij rode React/TypeScript-imports: voer `npm install` en `npm run build` uit in `frontend` en controleer de Node- en TypeScript-instellingen van je IDE. Zie 1.5 voor de dagelijkse ontwikkelroute.
 
 | Probleem | Controle |
 | --- | --- |
