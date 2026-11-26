@@ -28,7 +28,7 @@ export default function UsersPage({ state, update, navigate, customerName, run, 
               </td>
               <td>{account.email}</td>
               <td>{account.role}</td>
-              <td>{account.organizationIds.map((x) => customerName(x)).join(', ') || '—'}</td>
+              <td>{account.organizationIds.map((organizationId) => customerName(organizationId)).join(', ') || '—'}</td>
               <td>
                 <Badge
                   value={account.isActive ? 'Actief' : 'Inactief'}

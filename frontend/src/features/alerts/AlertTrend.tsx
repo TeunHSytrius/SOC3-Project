@@ -7,20 +7,20 @@ type Period = '24h' | '7d';
 type Bucket = { start: number; end: number; label: string; counts: Record<Priority, number> };
 function makeBuckets(period: Period, alerts: Alert[]): Bucket[] {
   const now = new Date(),
-    number = period === '24h' ? 12 : 7;
+    bucketCount = period === '24h' ? 12 : 7;
   const buckets: Bucket[] = [];
-  for (let i = 0; i < number; i++) {
+  for (let bucketIndex = 0; bucketIndex < bucketCount; bucketIndex++) {
     const start =
       period === '24h'
-        ? new Date(now.getTime() - (number - i) * 7200000)
-        : new Date(now.getFullYear(), now.getMonth(), now.getDate() - (number - 1 - i));
+        ? new Date(now.getTime() - (bucketCount - bucketIndex) * 7200000)
+        : new Date(now.getFullYear(), now.getMonth(), now.getDate() - (bucketCount - 1 - bucketIndex));
     const end =
       period === '24h'
         ? new Date(start.getTime() + 7200000)
         : new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
     buckets.push({
       start: start.getTime(),
-      end: i === number - 1 ? now.getTime() + 1 : end.getTime(),
+      end: bucketIndex === bucketCount - 1 ? now.getTime() + 1 : end.getTime(),
       label:
         period === '24h'
           ? start.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
@@ -30,23 +30,23 @@ function makeBuckets(period: Period, alerts: Alert[]): Bucket[] {
   }
   for (const alert of alerts) {
     const time = Date.parse(alert.createdAt);
-    const bucket = buckets.find((b) => time >= b.start && time < b.end);
+    const bucket = buckets.find((bucket) => time >= bucket.start && time < bucket.end);
     if (bucket) bucket.counts[alert.priority]++;
   }
   return buckets;
 }
-const total = (b: Bucket) => Object.values(b.counts).reduce((sum, n) => sum + n, 0);
+const total = (bucket: Bucket) => Object.values(bucket.counts).reduce((sum, alertCount) => sum + alertCount, 0);
 export default function AlertTrend({ alerts }: { alerts: Alert[] }) {
   const [period, setPeriod] = useState<Period>('7d');
   const buckets = makeBuckets(period, alerts);
-  const count = buckets.reduce((sum, b) => sum + total(b), 0),
+  const count = buckets.reduce((sum, bucket) => sum + total(bucket), 0),
     peak = Math.max(0, ...buckets.map(total));
   const step = Math.max(1, Math.ceil(peak / 4)),
     maximum = step * 4;
   const simulated = alerts.filter(
-    (a) =>
-      a.security?.simulated &&
-      buckets.some((b) => Date.parse(a.createdAt) >= b.start && Date.parse(a.createdAt) < b.end),
+    (alert) =>
+      alert.security?.simulated &&
+      buckets.some((bucket) => Date.parse(alert.createdAt) >= bucket.start && Date.parse(alert.createdAt) < bucket.end),
   ).length;
   return (
     <Panel
@@ -85,41 +85,41 @@ export default function AlertTrend({ alerts }: { alerts: Alert[] }) {
             aria-label={count + ' ontvangen alerts; piek ' + peak}
           >
             <div className="trend-y">
-              {[4, 3, 2, 1, 0].map((n) => (
-                <span key={n}>{n * step}</span>
+              {[4, 3, 2, 1, 0].map((tick) => (
+                <span key={tick}>{tick * step}</span>
               ))}
             </div>
             <div className="trend-plot">
               <div className="trend-lines">
-                {[4, 3, 2, 1, 0].map((n) => (
-                  <span key={n} />
+                {[4, 3, 2, 1, 0].map((tick) => (
+                  <span key={tick} />
                 ))}
               </div>
               <div
                 className="trend-columns"
                 style={{ gridTemplateColumns: 'repeat(' + buckets.length + ',minmax(0,1fr))' }}
               >
-                {buckets.map((b) => (
+                {buckets.map((bucket) => (
                   <div
-                    key={b.start}
+                    key={bucket.start}
                     className="trend-column"
                     title={
-                      b.label +
+                      bucket.label +
                       ' — ' +
-                      priorities.map((p) => labels[p] + ': ' + b.counts[p]).join(', ')
+                      priorities.map((priority) => labels[priority] + ': ' + bucket.counts[priority]).join(', ')
                     }
                   >
                     <div
                       className="trend-stack"
-                      style={{ height: (total(b) / maximum) * 100 + '%' }}
+                      style={{ height: (total(bucket) / maximum) * 100 + '%' }}
                     >
                       {priorities.map(
-                        (p) =>
-                          b.counts[p] > 0 && (
+                        (priority) =>
+                          bucket.counts[priority] > 0 && (
                             <div
-                              key={p}
-                              className={'trend-segment trend-' + p}
-                              style={{ flex: b.counts[p] }}
+                              key={priority}
+                              className={'trend-segment trend-' + priority}
+                              style={{ flex: bucket.counts[priority] }}
                             />
                           ),
                       )}
@@ -132,18 +132,18 @@ export default function AlertTrend({ alerts }: { alerts: Alert[] }) {
               className="trend-x"
               style={{ gridTemplateColumns: 'repeat(' + buckets.length + ',minmax(0,1fr))' }}
             >
-              {buckets.map((b) => (
-                <span key={b.start}>{b.label}</span>
+              {buckets.map((bucket) => (
+                <span key={bucket.start}>{bucket.label}</span>
               ))}
             </div>
           </div>
         </div>
         {!count && <p>Geen alerts ontvangen in deze periode.</p>}
         <div className="trend-legend">
-          {priorities.map((p) => (
-            <span key={p}>
-              <i className={'trend-' + p} />
-              {labels[p]}
+          {priorities.map((priority) => (
+            <span key={priority}>
+              <i className={'trend-' + priority} />
+              {labels[priority]}
             </span>
           ))}
         </div>
@@ -154,20 +154,20 @@ export default function AlertTrend({ alerts }: { alerts: Alert[] }) {
               <thead>
                 <tr>
                   <th>Vanaf</th>
-                  {priorities.map((p) => (
-                    <th key={p}>{labels[p]}</th>
+                  {priorities.map((priority) => (
+                    <th key={priority}>{labels[priority]}</th>
                   ))}
                   <th>Totaal</th>
                 </tr>
               </thead>
               <tbody>
-                {buckets.map((b) => (
-                  <tr key={b.start}>
-                    <td>{b.label}</td>
-                    {priorities.map((p) => (
-                      <td key={p}>{b.counts[p]}</td>
+                {buckets.map((bucket) => (
+                  <tr key={bucket.start}>
+                    <td>{bucket.label}</td>
+                    {priorities.map((priority) => (
+                      <td key={priority}>{bucket.counts[priority]}</td>
                     ))}
-                    <td>{total(b)}</td>
+                    <td>{total(bucket)}</td>
                   </tr>
                 ))}
               </tbody>

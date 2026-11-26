@@ -1,3 +1,4 @@
+import { formData } from '../shared/formData';
 import type { State, Alert, ResearchCase } from '../../types/soc';
 import { Icon, Badge, Button, Field, Select, Table, Panel, PageHeader } from '../../components/Ui';
 import {
@@ -16,14 +17,7 @@ import {
 } from '../../types/domain';
 import { priorityColor } from './AlertCards';
 import { AlertSecurityDetails } from './SecurityDetails';
-type Navigate = (page: string, selected?: string | null) => void;
-type UpdateState = (update: Partial<State>) => void;
-type RunAction = (
-  path: string,
-  data: Record<string, unknown>,
-  message: string,
-  after?: (result: any) => void,
-) => Promise<void>;
+import type { Navigate, UpdateState, RunAction } from '../../types/workspace';
 interface AlertDetailProps {
   alert: Alert;
   state: Pick<State, 'user' | 'busy'>;
@@ -41,12 +35,6 @@ function prettyJson(raw: string) {
     return raw;
   }
 }
-function formData(event: React.FormEvent<HTMLFormElement>) {
-  event.preventDefault();
-  return Object.fromEntries(new FormData(event.currentTarget));
-}
-import type React from 'react';
-
 export default function AlertDetailPage({
   alert,
   state,
@@ -124,8 +112,8 @@ export default function AlertDetailPage({
             )}
             {canTriage && (
               <form
-                onSubmit={(e) =>
-                  run(`alerts/${alert.id}/triage`, formData(e), 'Triage opgeslagen.')
+                onSubmit={(event) =>
+                  run(`alerts/${alert.id}/triage`, formData(event), 'Triage opgeslagen.')
                 }
               >
                 <Field label="Triage-uitkomst">

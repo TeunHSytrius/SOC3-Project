@@ -44,7 +44,7 @@ export default function AdminDashboard({
     ['Open alerts', alerts.filter(active).length, 'Alle klanten', 'alerts'],
     [
       'SLA overschreden',
-      alerts.filter((a) => sla(a).kind === 'danger').length,
+      alerts.filter((alert) => sla(alert).kind === 'danger').length,
       'Eerste behandeling',
       'alerts',
     ],
@@ -54,13 +54,13 @@ export default function AdminDashboard({
     ['Actieve API-sleutels', keys.filter((key) => key.isActive).length, 'Bronintegraties', 'keys'],
     [
       'Lopende tickets',
-      tickets.filter((t) => t.status !== 'Closed').length,
+      tickets.filter((ticket) => ticket.status !== 'Closed').length,
       'Alle klanten',
       'ticket-register',
     ],
     [
       'Afgesloten tickets',
-      tickets.filter((t) => t.status === 'Closed').length,
+      tickets.filter((ticket) => ticket.status === 'Closed').length,
       'Historisch register',
       'ticket-register',
     ],
@@ -120,7 +120,7 @@ export default function AdminDashboard({
                 </td>
                 <td>
                   <Button onClick={() => onCustomerTickets(org.id)}>
-                    Tickets ({tickets.filter((t) => t.organizationId === org.id).length})
+                    Tickets ({tickets.filter((ticket) => ticket.organizationId === org.id).length})
                   </Button>
                 </td>
               </tr>
