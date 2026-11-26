@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import Pagination from '../../components/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import type { State } from '../../types/soc';
 import type { WorkspaceActions } from '../../types/workspace';
-import { Button, Panel, PageHeader, Table } from '../../components/Ui';
+import { Panel, PageHeader, Table } from '../../components/Ui';
 import { fmt } from '../../types/domain';
 
 const PAGE_SIZE = 15;
@@ -13,7 +14,6 @@ interface AuditPageProps {
 }
 
 export default function AuditPage({ state, update, customerName }: AuditPageProps) {
-  const [page, setPage] = useState(1);
   const searchQuery = state.search.trim().toLowerCase();
 
   const matchingEntries = state.audit.filter((entry) => {
@@ -29,15 +29,11 @@ export default function AuditPage({ state, update, customerName }: AuditPageProp
     );
   });
 
-  // Keep the current page valid if the audit log changes after a refresh.
-  const pageCount = Math.max(1, Math.ceil(matchingEntries.length / PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount);
-  const startIndex = (currentPage - 1) * PAGE_SIZE;
-  const visibleEntries = matchingEntries.slice(startIndex, startIndex + PAGE_SIZE);
+  const pagination = usePagination(matchingEntries, PAGE_SIZE);
 
   function handleSearchChange(value: string) {
     update({ search: value });
-    setPage(1);
+    pagination.setPage(1);
   }
 
   return (
@@ -56,9 +52,9 @@ export default function AuditPage({ state, update, customerName }: AuditPageProp
 
         <Table
           head={['Tijd', 'Gebruiker', 'Actie', 'Klant', 'Object']}
-          empty={!visibleEntries.length}
+          empty={!pagination.visibleRecords.length}
         >
-          {visibleEntries.map((entry) => (
+          {pagination.visibleRecords.map((entry) => (
             <tr key={entry.id}>
               <td>{fmt(entry.createdAt)}</td>
               <td>{entry.actor}</td>
@@ -69,24 +65,7 @@ export default function AuditPage({ state, update, customerName }: AuditPageProp
           ))}
         </Table>
 
-        {matchingEntries.length > 0 && (
-          <nav className="wire-pagination" aria-label="Auditlog paginering">
-            <Button disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>
-              Vorige
-            </Button>
-
-            <span aria-live="polite">
-              Pagina {currentPage} van {pageCount} · {startIndex + 1}–{startIndex + visibleEntries.length} van {matchingEntries.length}
-            </span>
-
-            <Button
-              disabled={currentPage === pageCount}
-              onClick={() => setPage(currentPage + 1)}
-            >
-              Volgende
-            </Button>
-          </nav>
-        )}
+        <Pagination {...pagination} label="Auditlog paginering" />
       </Panel>
     </div>
   );

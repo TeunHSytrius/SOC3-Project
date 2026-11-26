@@ -131,8 +131,9 @@
   font-size: 12px;
   font-weight: 600;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
 }
 .wire-pagination {
   display: flex;
@@ -150,7 +151,7 @@
   align-items: start;
 }
 .wire-banner {
-  padding: 13px 16px;
+  padding: 10px 12px;
   border-top: 1px solid var(--border);
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
@@ -171,7 +172,7 @@
 }
 .wire-data dt,
 .wire-data dd {
-  padding: 9px 0;
+  padding: 6px 0;
   border-bottom: 1px solid var(--border);
 }
 .wire-next {

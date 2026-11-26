@@ -1,0 +1,41 @@
+.error,
+.notice {
+  padding: 12px 14px;
+  border-radius: 7px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.error {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: var(--danger-text);
+}
+.notice {
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  color: var(--success-text);
+}
+.error button,
+.notice button {
+  border: 0;
+  color: inherit;
+  background: none;
+  font-size: 18px;
+}
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 35px;
+}
+
+.secret {
+  display: block;
+  overflow-wrap: anywhere;
+  padding: 13px;
+  background: var(--surface-raised);
+  border-radius: 6px;
+  margin-bottom: 14px;
+}

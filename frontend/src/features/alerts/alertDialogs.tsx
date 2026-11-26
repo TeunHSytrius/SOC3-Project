@@ -1,9 +1,9 @@
 import { Field, Select } from '../../components/Ui';
-import { isClosed, labels, nextCaseStates, priorities, roles } from '../../types/domain';
-import { text, area, choose, check } from '../shared/dialogFields';
+import { isClosed, priorities } from '../../types/domain';
+import { text, area, choose } from '../shared/dialogFields';
 import type { DialogDefinition, DialogProps } from '../shared/dialogTypes';
 
-export function getAlertDialog({ state: currentState, run, update, navigate }: DialogProps): DialogDefinition | null {
+export function getAlertDialog({ state: currentState, run, navigate }: DialogProps): DialogDefinition | null {
   const alert = currentState.alerts.find((item) => item.id === currentState.selected);
   if (currentState.modal !== 'newAlert' && !alert) return null;
   let title: string;
@@ -44,11 +44,11 @@ export function getAlertDialog({ state: currentState, run, update, navigate }: D
       submit = (values) => run(`alerts/${alert.id}/triage`, values, 'Triage opgeslagen.');
       break;
     case 'caseFromAlert':
-      title = 'Case maken of koppelen';
+      title = 'Ticket maken of koppelen';
       fields = (
         <div className="fragment">
-          {text('title', 'Titel voor een nieuwe case', false, alert.title)}
-          <Field label="Of koppel aan een bestaande case">
+          {text('title', 'Titel voor een nieuw ticket', false, alert.title)}
+          <Field label="Of koppel aan een bestaand ticket">
             <Select
               name="caseId"
               options={currentState.cases
@@ -59,7 +59,7 @@ export function getAlertDialog({ state: currentState, run, update, navigate }: D
                     !isClosed(researchCase),
                 )
                 .map((researchCase) => ({ id: researchCase.id, name: researchCase.number + ' · ' + researchCase.title }))}
-              placeholder="Nieuwe case maken"
+              placeholder="Nieuw ticket maken"
             />
           </Field>
         </div>

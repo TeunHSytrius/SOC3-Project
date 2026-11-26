@@ -1,20 +1,8 @@
-import type { State, Alert, ResearchCase } from '../../types/soc';
-import { Icon, Badge, Button, Field, Select, Table, Panel, PageHeader } from '../../components/Ui';
-import {
-  labels,
-  priorities,
-  states,
-  caseStates,
-  active,
-  isClosed,
-  fmt,
-  sla,
-  caseMatchesView,
-  sortRecords,
-  nextCaseStates,
-  roles,
-} from '../../types/domain';
-import type { Navigate, UpdateState, RunAction } from '../../types/workspace';
+import type { State } from '../../types/soc';
+import { Button, Field, Select } from '../../components/Ui';
+import { priorities, states, caseStates, caseMatchesView } from '../../types/domain';
+import type { UpdateState } from '../../types/workspace';
+
 interface QueueFiltersProps {
   type: 'alerts' | 'cases';
   state: State;
@@ -45,7 +33,7 @@ export default function QueueFilters({
               ? status === 'Escalated'
               : ['Dismissed', 'Resolved'].includes(status)),
       )
-    : caseStates.filter((status) => caseMatchesView({ status } as ResearchCase, filters.archiveFilter));
+    : caseStates.filter((status) => caseMatchesView({ status }, filters.archiveFilter));
   const alerts = filters.alerts.filter((alert) => !filters.org || alert.organizationId === filters.org);
   const categories = [
     ...new Set(alerts.map((alert) => alert.security?.category || 'Niet geclassificeerd')),

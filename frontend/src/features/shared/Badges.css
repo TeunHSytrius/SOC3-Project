@@ -1,0 +1,34 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.badge.danger {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+.badge.warn {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+.badge.good {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+.badge.blue {
+  background: var(--info-bg);
+  color: var(--info-text);
+}
+.badge.neutral {
+  background: var(--surface-raised);
+  color: var(--muted);
+}
+
+.badge.critical {
+  background: var(--purple-bg);
+  color: var(--purple-text);
+}

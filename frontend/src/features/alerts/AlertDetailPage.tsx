@@ -1,21 +1,8 @@
 import { formData } from '../shared/formData';
-import type { State, Alert, ResearchCase } from '../../types/soc';
-import { Icon, Badge, Button, Field, Select, Table, Panel, PageHeader } from '../../components/Ui';
-import {
-  labels,
-  priorities,
-  states,
-  caseStates,
-  active,
-  isClosed,
-  fmt,
-  sla,
-  caseMatchesView,
-  sortRecords,
-  nextCaseStates,
-  roles,
-} from '../../types/domain';
-import { priorityColor } from './AlertCards';
+import type { Alert, State } from '../../types/soc';
+import { Badge, Button, Field, Select, Panel, PageHeader } from '../../components/Ui';
+import { active, fmt, labels, sla } from '../../types/domain';
+import { priorityColor } from '../shared/priorityColor';
 import { AlertSecurityDetails } from './SecurityDetails';
 import type { Navigate, UpdateState, RunAction } from '../../types/workspace';
 interface AlertDetailProps {
@@ -47,7 +34,7 @@ export default function AlertDetailPage({
 }: AlertDetailProps) {
   const senior = state.user.role === 'Senior analist';
   const canTriage =
-    isAnalyst && active(alert) && !!alert.owner && (senior || alert.owner === state.user.name);
+    isAnalyst && active(alert) && !!alert.ownerId && (senior || alert.ownerId === state.user.id);
   return (
     <div className="wire-screen">
       <PageHeader
@@ -101,7 +88,7 @@ export default function AlertDetailPage({
         <Panel title="Triage">
           <div className="bodypad">
             <p>Huidige uitkomst: {alert.triage || 'Nog niet beoordeeld'}</p>
-            {isAnalyst && active(alert) && !alert.owner && (
+            {isAnalyst && active(alert) && !alert.ownerId && (
               <Button
                 primary
                 disabled={state.busy}
@@ -142,7 +129,7 @@ export default function AlertDetailPage({
                 </Button>
               </form>
             )}
-            {isAnalyst && active(alert) && alert.owner && !canTriage && (
+            {isAnalyst && active(alert) && alert.ownerId && !canTriage && (
               <p>Deze alert is toegewezen aan een andere analist.</p>
             )}
             <div className="actions wire-next">
@@ -151,12 +138,12 @@ export default function AlertDetailPage({
                   alert.triage,
                 ) && (
                   <Button onClick={() => update({ modal: 'caseFromAlert' })}>
-                    Case maken / koppelen
+                    Ticket maken / koppelen
                   </Button>
                 )}
               {alert.caseId && (
                 <Button onClick={() => navigate('cases', alert.caseId)}>
-                  Open gekoppelde case
+                  Open gekoppeld ticket
                 </Button>
               )}
               {senior && ['Dismissed', 'Resolved'].includes(alert.status) && !alert.caseId && (

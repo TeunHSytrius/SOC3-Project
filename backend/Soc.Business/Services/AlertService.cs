@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Soc.Data.Context;
 using Soc.Data.Entities;
 using static Soc.Business.Services.SocService;
+
 namespace Soc.Business.Services;
 
 public sealed class AlertService(TenantDbFactory factory, SocService platform)
@@ -14,6 +15,7 @@ public sealed class AlertService(TenantDbFactory factory, SocService platform)
             return Soc.Data.Entities.Enums.SlaStatus.Breached;
         return alert.FirstHandledAt.HasValue ? Soc.Data.Entities.Enums.SlaStatus.Met : Soc.Data.Entities.Enums.SlaStatus.Pending;
     }
+
     internal static object AlertDto(Alert alert, Guid organizationId)
     {
         return new
@@ -39,6 +41,7 @@ public sealed class AlertService(TenantDbFactory factory, SocService platform)
             alert.Deadline,
             alert.FirstHandledAt,
             alert.Owner,
+            alert.OwnerId,
             alert.Triage,
             alert.CaseId,
             history = alert.History
@@ -51,6 +54,7 @@ public sealed class AlertService(TenantDbFactory factory, SocService platform)
                 })
         };
     }
+
     internal static bool NeedsCase(string? value) => value is "Nader onderzoek" or "Bevestigd incident" or "True positive" or "Onbeslist";
     internal static void Event(Alert alert, string actor, string text)
     {
@@ -60,6 +64,7 @@ public sealed class AlertService(TenantDbFactory factory, SocService platform)
             Text = text
         });
     }
+
     internal static Alert NewAlert(
         Guid scope,
         CreateAlertRequest request,
@@ -113,6 +118,7 @@ public sealed class AlertService(TenantDbFactory factory, SocService platform)
         await tenantDb.SaveChangesAsync();
         return AlertDto(alert, tenant.Id);
     }
+
     public async Task<object> Alerts(AppUser currentUser, Guid? workspace, Guid? scope)
     {
         Require(CanReadInternal(currentUser));
@@ -120,7 +126,7 @@ public sealed class AlertService(TenantDbFactory factory, SocService platform)
         foreach (var (tenant, scopes) in await platform.ReadWorkspaces(currentUser, workspace, scope))
         {
             await using var tenantDb = factory.Open(tenant);
-            foreach (var alert in await tenantDb.Alerts.Include(record => record.History).Where(record => scopes.Contains(record.ScopeId)).ToListAsync())
+            foreach (var alert in await tenantDb.Alerts.AsNoTracking().Include(record => record.History).Where(record => scopes.Contains(record.ScopeId)).ToListAsync())
                 result.Add((alert.CreatedAt, AlertDto(alert, tenant.Id)));
             foreach (var scopeId in scopes)
                 LogTenant(tenantDb, scopeId, currentUser.Name, "Alertoverzicht bekeken", "Alerts");
@@ -128,6 +134,7 @@ public sealed class AlertService(TenantDbFactory factory, SocService platform)
         }
         return result.OrderBy(record => record.Time).Select(record => record.Dto);
     }
+
     public async Task<object> AlertAction(AppUser currentUser, Guid id, string action, AlertActionRequest input, Guid? workspace, Guid? scope)
     {
         Require(action == "get" ? CanReadInternal(currentUser) : Analyst(currentUser));

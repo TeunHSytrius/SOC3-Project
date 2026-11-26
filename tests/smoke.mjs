@@ -148,10 +148,16 @@ const unique = Date.now();
 const created = await admin.post("users", {
   name: "Accounttest",
   email: `accounttest-${unique}@soc.demo`,
-  password: "TestAccount2026!",
+  password: " TestAccount2026! ",
   role: "Klant",
   organizationIds: [north.id],
 });
+const createdClient = new Client();
+await createdClient.post("auth/login", {
+  username: `accounttest-${unique}@soc.demo`,
+  password: " TestAccount2026! ",
+});
+assert.equal((await createdClient.ok("auth/me")).id, created.id);
 const update = {
   name: "Accounttest gewijzigd",
   email: `accounttest-edit-${unique}@soc.demo`,
@@ -170,7 +176,7 @@ assert.equal(
 );
 const edited = await admin.ok(`users/${created.id}`, {
   method: "PATCH",
-  body: { ...update, password: "NewAccount2026!" },
+  body: { ...update, password: " NewAccount2026! " },
 });
 assert.equal(edited.name, update.name);
 assert.equal(edited.email, update.email);
@@ -189,7 +195,7 @@ assert.equal(
 );
 await editedClient.post("auth/login", {
   username: update.email,
-  password: "NewAccount2026!",
+  password: " NewAccount2026! ",
 });
 assert.equal((await editedClient.ok("organizations"))[0].id, delta.id);
 await admin.ok(`users/${created.id}`, {
@@ -202,7 +208,7 @@ assert.equal(
   (
     await inactiveClient.request("auth/login", {
       method: "POST",
-      body: { username: update.email, password: "NewAccount2026!" },
+      body: { username: update.email, password: " NewAccount2026! " },
     })
   ).status,
   401,
@@ -210,7 +216,7 @@ assert.equal(
 await admin.ok(`users/${created.id}`, { method: "PATCH", body: update });
 await inactiveClient.post("auth/login", {
   username: update.email,
-  password: "NewAccount2026!",
+  password: " NewAccount2026! ",
 });
 await admin.ok(`users/${created.id}`, {
   method: "PATCH",
@@ -314,6 +320,7 @@ const claimed = await analyst.post(`alerts/${alert.id}/claim`);
 assert(claimed.firstHandledAt);
 assert.equal(claimed.slaStatus, "Met");
 assert.equal(claimed.status, "UnderReview");
+assert.equal(claimed.ownerId, (await analyst.ok("auth/me")).id);
 assert.notEqual(
   claimed.rowVersion,
   alert.rowVersion,

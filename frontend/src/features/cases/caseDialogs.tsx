@@ -1,9 +1,9 @@
-import { Field, Select } from '../../components/Ui';
-import { isClosed, labels, nextCaseStates, priorities, roles } from '../../types/domain';
+import { Field } from '../../components/Ui';
+import { labels, nextCaseStates, priorities } from '../../types/domain';
 import { text, area, choose, check } from '../shared/dialogFields';
 import type { DialogDefinition, DialogProps } from '../shared/dialogTypes';
 
-export function getCaseDialog({ state: currentState, run, update, navigate }: DialogProps): DialogDefinition | null {
+export function getCaseDialog({ state: currentState, run }: DialogProps): DialogDefinition | null {
   const ticket = currentState.cases.find((item) => item.id === currentState.selected);
   if (!ticket) return null;
   let title: string;
@@ -69,17 +69,17 @@ export function getCaseDialog({ state: currentState, run, update, navigate }: Di
         );
       break;
     case 'caseReopen':
-      title = 'Case heropenen';
+      title = 'Ticket heropenen';
       fields = area('reason', 'Reden');
       submit = (values) =>
         run(
           `cases/${ticket.id}/status`,
           { ...values, status: 'UnderInvestigation' },
-          'Case heropend.',
+          'Ticket heropend.',
         );
       break;
     case 'caseStatus':
-      title = 'Casestatus wijzigen';
+      title = 'Ticketstatus wijzigen';
       fields = (
         <div className="fragment">
           {choose('status', 'Nieuwe status', nextCaseStates(ticket.status))}
@@ -87,10 +87,10 @@ export function getCaseDialog({ state: currentState, run, update, navigate }: Di
           {area('conclusion', 'Conclusie (verplicht bij afsluiten)', false)}
         </div>
       );
-      submit = (values) => run(`cases/${ticket.id}/status`, values, 'Casestatus gewijzigd.');
+      submit = (values) => run(`cases/${ticket.id}/status`, values, 'Ticketstatus gewijzigd.');
       break;
     case 'owner':
-      title = ticket.status === 'Open' ? 'Prioriteren en toewijzen' : 'Case overdragen';
+      title = ticket.status === 'Open' ? 'Prioriteren en toewijzen' : 'Ticket overdragen';
       fields = (
         <div className="fragment">
           {choose(
@@ -121,7 +121,7 @@ export function getCaseDialog({ state: currentState, run, update, navigate }: Di
         run(
           `cases/${ticket.id}/owner`,
           values,
-          ticket.status === 'Open' ? 'Case toegewezen.' : 'Case overgedragen.',
+          ticket.status === 'Open' ? 'Ticket toegewezen.' : 'Ticket overgedragen.',
         );
       break;
     default:
