@@ -1,119 +1,50 @@
 import type { State } from '../../types/soc';
-import { Icon, Button, Panel, PageHeader } from '../../components/Ui';
-import { getDashboardOverview } from './dashboardOverview';
-import DashboardStats from './DashboardStats';
-import DashboardAlerts from '../alerts/DashboardAlerts';
-import DashboardTickets from './DashboardTickets';
-import PlatformManagement from './PlatformManagement';
-import type { Navigate, UpdateState } from '../../types/workspace';
-interface DashboardPageProps {
-  state: Pick<State, 'org' | 'user' | 'orgs' | 'users' | 'keys' | 'errors' | 'alerts' | 'cases'>;
-  isAdmin: boolean;
-  isAnalyst: boolean;
-  customerName: (id: string) => string;
-  navigate: Navigate;
-  update: UpdateState;
-  showQueue: (
-    page: 'alerts' | 'cases',
-    view?: State['archiveFilter'],
-    mine?: boolean,
-    ownerFilter?: string,
-  ) => void;
+import type { WorkspaceActions } from '../../types/workspace';
+import { Badge, Button, PageHeader, Panel, Table } from '../../components/Ui';
+
+interface DashboardProps extends WorkspaceActions {
+  state: State;
 }
 
-export default function DashboardPage({
-  state,
-  isAdmin,
-  isAnalyst,
-  customerName,
-  navigate,
-  update,
-  showQueue,
-}: DashboardPageProps) {
-  const { metrics, ticketCounts, alertQueue, ticketQueue, recentAlerts } = getDashboardOverview(state, isAdmin);
+export default function DashboardPage({ state, navigate, isAdmin }: DashboardProps) {
+  const { user, orgs, users } = state;
+  if (!user) return null;
 
   return (
-    <div className="fragment soc-dashboard">
-      <PageHeader
-        title={isAdmin ? 'Beheerdersdashboard' : 'Werkoverzicht'}
-        sub={
-          isAdmin
-            ? 'Platformbeheer en toezicht op de beveiligingsmeldingen.'
-            : 'Je werkvoorraad, nieuwe meldingen en lopende onderzoeken.'
-        }
-        action={
-          isAnalyst && (
-            <Button primary onClick={() => update({ modal: 'newAlert' })}>
-              <Icon name="plus" /> Alert toevoegen
-            </Button>
-          )
-        }
-      />
-      {isAdmin && <PlatformManagement state={state} navigate={navigate} />}
-      <section aria-label="Werkvoorraad">
-        {isAdmin && <h2 className="dashboard-section-title">SOC-overzicht</h2>}
-        <DashboardStats items={metrics} />
-        <div className="dashboard-queues">
-          <Panel
-            title="Alertwachtrij"
-            sub="Nog niet toegewezen · oudste eerst (FIFO)"
-            action={
-              <Button onClick={() => showQueue('alerts', 'open', false, 'unassigned')}>
-                Wachtrij openen <Icon name="arrow" size={16} />
-              </Button>
-            }
-          >
-            <DashboardAlerts
-              alerts={alertQueue}
-              customerName={customerName}
-              open={(id) => navigate('alerts', id)}
-            />
-          </Panel>
-          <Panel
-            title={isAdmin ? 'Actieve tickets' : 'Mijn actieve tickets'}
-            sub="Meest recent aangemaakt"
-            action={<Button onClick={() => showQueue('cases', 'open', !isAdmin)}>Bekijk tickets <Icon name="arrow" size={16} /></Button>}
-          >
-            <DashboardTickets
-              tickets={ticketQueue}
-              customerName={customerName}
-              navigate={navigate}
-            />
-            <div className="dashboard-ticket-links" aria-label="Ticketfasen">
-              <Button onClick={() => showQueue('cases', 'new')}>Nieuw ({ticketCounts.new})</Button>
-              <Button onClick={() => showQueue('cases', 'waiting')}>
-                Wacht op klant ({ticketCounts.waiting})
-              </Button>
-              <Button onClick={() => showQueue('cases', 'resolved')}>
-                Af te sluiten ({ticketCounts.resolved})
-              </Button>
-              <Button onClick={() => showQueue('cases', 'closed')}>Archief ({ticketCounts.closed})</Button>
-            </div>
-          </Panel>
+    <div className="fragment">
+      <PageHeader title="Dashboard" sub={'Welkom, ' + user.name} />
+      {isAdmin ? (
+        <div className="stats">
+          <button type="button" className="stat admin-stat" onClick={() => navigate('customers')}>
+            <div className="statline">Actieve klanten</div>
+            <strong>{orgs.filter((organization) => organization.isActive).length}</strong>
+            <small>Organisaties beheren</small>
+          </button>
+          <button type="button" className="stat admin-stat" onClick={() => navigate('users')}>
+            <div className="statline">Actieve gebruikers</div>
+            <strong>{users.filter((account) => account.isActive).length}</strong>
+            <small>Accounts en rollen beheren</small>
+          </button>
         </div>
-      </section>
-      <section aria-label="Recente meldingen">
-        <Panel
-            title="Recent ontvangen meldingen"
-            sub="Alle statussen · nieuwste eerst"
-            action={
-              <Button
-                onClick={() => {
-                  showQueue('alerts', 'all');
-                  update({ listSort: 'newest' });
-                }}
-              >
-                Alle alerts <Icon name="arrow" size={16} />
-              </Button>
-            }
-          >
-            <DashboardAlerts
-              alerts={recentAlerts}
-              customerName={(id) => customerName(id)}
-              open={(id) => navigate('alerts', id)}
-            />
+      ) : (
+        <Panel title="Mijn werkruimte" sub="Organisaties waartoe je toegang hebt">
+          <Table head={['Organisatie', 'Status']} empty={!orgs.length}>
+            {orgs.map((organization) => (
+              <tr key={organization.id}>
+                <td>{organization.name}</td>
+                <td><Badge value="Actief" kind="good" /></td>
+              </tr>
+            ))}
+          </Table>
         </Panel>
-      </section>
+      )}
+      <Panel title="Mijn account">
+        <div className="bodypad">
+          <p>Rol: {user.role}</p>
+          <p>Tweestapsverificatie: {user.twoFactorEnabled ? 'Actief' : 'Niet actief'}</p>
+          <Button onClick={() => navigate('account')}>Account bekijken</Button>
+        </div>
+      </Panel>
     </div>
   );
 }

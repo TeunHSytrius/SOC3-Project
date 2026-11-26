@@ -18,25 +18,23 @@ public sealed class OrganizationService(SocDbContext db, SocService platform)
     public async Task<Tenant> Organization(AppUser user, Guid id)
     {
         var tenant = await platform.Tenant(id);
-        Require(user.Role == "Beheerder" || tenant.IsActive && (await platform.Scopes(user, id)).Count > 0);
+        Require(user.Role == "Beheerder" || tenant.IsActive && (await platform.Scopes(user, id)).Count > 0, "Klant niet gevonden.", 404);
         return tenant;
     }
     public async Task<Tenant> CreateOrganization(AppUser user, CreateOrganizationRequest input)
     {
         Admin(user);
-        var organization = await platform.CreateTenant(Required(input.Name, 120), SlaMinutes(input.ResponseMinutes));
+        var organization = await platform.CreateTenant(Required(input.Name, 120));
         await platform.Log(user, "Klant aangemaakt", organization.Id);
         return organization;
     }
-    public async Task<Tenant> RenameOrganization(AppUser user, Guid id, string? name, int? responseMinutes = null)
+    public async Task<Tenant> RenameOrganization(AppUser user, Guid id, string? name)
     {
         Admin(user);
         var value = Required(name, 120);
         var organization = await platform.Tenant(id);
         Require(!await db.Tenants.AnyAsync(organization => organization.Id != id && organization.Name == value), "Naam bestaat al.", 409);
         organization.Name = value;
-        if (responseMinutes.HasValue)
-            organization.ResponseMinutes = SlaMinutes(responseMinutes);
         await platform.Log(user, "Klantinstellingen gewijzigd", organization.Id, organization.Id.ToString());
         return organization;
     }

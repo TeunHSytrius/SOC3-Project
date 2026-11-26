@@ -139,21 +139,4 @@ public sealed class UserManagementService(SocDbContext db, UserManager<AppUser> 
         return await platform.PublicUser(user);
     }
 
-    public async Task<List<object>> Analysts(AppUser currentUser)
-    {
-        Require(Analyst(currentUser));
-        var permitted = (await platform.Workspaces(currentUser)).Select(workspace => workspace.Tenant.Id).ToHashSet();
-        var list = new List<object>();
-        foreach (var analyst in await users.Users.Where(account => account.IsActive && (account.Role == "Analist" || account.Role == "Senior analist")).ToListAsync())
-        {
-            var organizationIds = await db.Assignments.Where(assignment => assignment.UserId == analyst.Id).Select(assignment => assignment.TenantId).Distinct().ToListAsync();
-            list.Add(new
-            {
-                id = analyst.Id,
-                analyst.Name,
-                organizationIds = organizationIds.Where(permitted.Contains)
-            });
-        }
-        return list;
-    }
 }

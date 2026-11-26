@@ -1,9 +1,9 @@
 import { Field } from '../../components/Ui';
 import { roles } from '../../types/domain';
-import { text, choose } from '../shared/dialogFields';
+import { text } from '../shared/dialogFields';
 import type { DialogDefinition, DialogProps } from '../shared/dialogTypes';
 
-export function getAdminDialog({ state: currentState, run, update }: DialogProps): DialogDefinition | null {
+export function getAdminDialog({ state: currentState, run }: DialogProps): DialogDefinition | null {
   const account = currentState.users.find((item) => item.id === currentState.selected);
   let title: string;
   let fields: DialogDefinition['fields'];
@@ -19,24 +19,12 @@ export function getAdminDialog({ state: currentState, run, update }: DialogProps
       fields = (
         <div className="fragment">
           {text('name', 'Organisatienaam', true, editing ? org.name : '')}
-          <Field label="Reactie-SLA (minuten)">
-            <input
-              type="number"
-              name="responseMinutes"
-              min={1}
-              max={10080}
-              step={1}
-              required
-              defaultValue={editing ? org.responseMinutes : 60}
-            />
-          </Field>
-          <small>Geldt voor nieuwe alerts. Bestaande deadlines blijven behouden.</small>
         </div>
       );
       submit = (values) =>
         run(
           editing ? `organizations/${org.id}` : 'organizations',
-          { ...values, responseMinutes: Number(values.responseMinutes) },
+          values,
           editing ? 'Klantinstellingen gewijzigd.' : 'Klant aangemaakt.',
         );
       break;
@@ -119,22 +107,6 @@ export function getAdminDialog({ state: currentState, run, update }: DialogProps
       };
       break;
     }
-    case 'key':
-      title = 'API-sleutel genereren';
-      fields = (
-        <div className="fragment">
-          {choose(
-            'organizationId',
-            'Klant',
-            currentState.orgs.filter((organization) => organization.isActive),
-          )}
-          {text('name', 'Naam van securitytool')}
-        </div>
-      );
-      submit = (values) =>
-        run('keys', values, 'API-sleutel aangemaakt.', (result) => update({ secret: result.secret }),
-        );
-      break;
     default:
       return null;
   }

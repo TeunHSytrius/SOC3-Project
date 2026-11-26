@@ -84,20 +84,6 @@ public sealed partial class SocService
         await db.SaveChangesAsync();
         await transaction.CommitAsync();
     }
-    async Task EnrichOriginalDemoAlertsAsync()
-    {
-        foreach (var tenant in await db.Tenants.Where(organization => organization.Name == "Northstar Finance" || organization.Name == "Delta Logistics" || organization.Name == "Atlas Health").ToListAsync())
-        {
-            await using var tenantDb = factory.Open(tenant);
-            var candidates = await tenantDb.Alerts.Where(alert => alert.SourceIntegrationId == null && alert.ExternalEventId == null && alert.PayloadHash == null).ToListAsync();
-            foreach (var alert in candidates)
-            {
-                if (DemoAlertContext.Enrich(alert))
-                    LogTenant(tenantDb, alert.ScopeId, "Demo-initialisatie", "Fictieve securitycontext aangevuld", alert.Number);
-            }
-            await tenantDb.SaveChangesAsync();
-        }
-    }
     public async Task InitializeAsync()
     {
         await db.Database.EnsureCreatedAsync();
@@ -109,7 +95,6 @@ public sealed partial class SocService
             foreach (var tenant in await db.Tenants.ToListAsync())
                 await factory.UpgradeDemoAsync(tenant);
             await InitializeTeamAccountsAsync();
-            await EnrichOriginalDemoAlertsAsync();
             return;
         }
         var demoTenants = new List<Tenant>();
@@ -181,72 +166,6 @@ public sealed partial class SocService
                 "Beheerder" => [],
                 _ => organizationIds
             });
-        }
-        var samples = new (string Title, string Description, string Source, string Priority, double Hours, int Tenant)[]
-        {
-            ("Verdachte inlogpogingen", "Meerdere mislukte aanmeldingen op een serviceaccount.", "Microsoft Sentinel", "Urgent", -5, 0),
-            ("Malware gedetecteerd", "Endpointbeveiliging heeft een verdacht bestand geblokkeerd.", "Defender", "High", -7, 1),
-            ("Ongebruikelijke dataoverdracht", "Afwijkend uitgaand netwerkverkeer gedetecteerd.", "Splunk", "Immediate", -.4, 0),
-            ("Phishingmelding", "Gebruiker meldt een verdachte e-mail.", "Defender", "Moderate", -3, 2),
-            ("Afwijkende VPN-login", "Inloggen vanaf een onbekende locatie.", "Sentinel", "High", -2, 0),
-            ("Poortscan gedetecteerd", "Ongebruikelijke scans op een interne host.", "Suricata", "Low", -1, 1),
-            ("Verdacht PowerShell-proces", "Endpoint heeft afwijkende uitvoering gemeld.", "Defender", "Urgent", -.6, 2),
-            ("Geblokkeerde verbinding", "Firewall heeft ongebruikelijk verkeer geblokkeerd.", "Firewall", "Moderate", -.2, 1)
-        };
-        for (int sampleIndex = 0; sampleIndex < samples.Length; sampleIndex++)
-        {
-            var sample = samples[sampleIndex];
-            var tenant = demoTenants[sample.Tenant];
-            var scope = await db.Scopes.FirstAsync(availableScope => availableScope.TenantId == tenant.Id);
-            await using var tenantDb = factory.Open(tenant);
-            var alert = AlertService.NewAlert(scope.Id, new CreateAlertRequest { Title = sample.Title, Description = sample.Description, Priority = sample.Priority }, sample.Source, DateTimeOffset.UtcNow.AddHours(sample.Hours));
-            alert.Number = $"ALT-{1001 + sampleIndex}";
-            DemoAlertContext.Enrich(alert);
-            tenantDb.Alerts.Add(alert);
-            if (sampleIndex == 4)
-            {
-                var researchCase = new ResearchCase
-                {
-                    ScopeId = scope.Id,
-                    Number = "CASE-201",
-                    Title = "Onderzoek afwijkende VPN-login",
-                    Priority = alert.Priority,
-                    Status = TicketStatus.UnderInvestigation,
-                    OwnerId = demoAnalyst.Id,
-                    Owner = demoAnalyst.Name,
-                    CustomerVisible = true
-                };
-                researchCase.Entries.Add(new()
-                {
-                    Actor = demoAnalyst.Name,
-                    Kind = "Notitie",
-                    Text = "Loginlog gecontroleerd; aanvullend onderzoek nodig.",
-                    Visible = false
-                });
-                researchCase.Entries.Add(new()
-                {
-                    Actor = demoAnalyst.Name,
-                    Kind = "Actie",
-                    Text = "Klant geïnformeerd over het onderzoek.",
-                    Visible = true
-                });
-                tenantDb.Cases.Add(researchCase);
-                alert.CaseId = researchCase.Id;
-                alert.Triage = "True positive";
-                alert.Status = AlertStatus.Escalated;
-                alert.FirstHandledAt = DateTimeOffset.UtcNow.AddHours(-1.5);
-                alert.OwnerId = demoAnalyst.Id;
-                alert.Owner = demoAnalyst.Name;
-            }
-            if (sampleIndex == 7)
-            {
-                alert.Status = AlertStatus.Dismissed;
-                alert.Triage = "False positive";
-                alert.FirstHandledAt = DateTimeOffset.UtcNow.AddHours(-.1);
-                alert.OwnerId = accounts[1].Id;
-                alert.Owner = accounts[1].Name;
-            }
-            await tenantDb.SaveChangesAsync();
         }
         await Log(demoAnalyst, "Demonstratiegegevens aangemaakt");
         await InitializeTeamAccountsAsync();

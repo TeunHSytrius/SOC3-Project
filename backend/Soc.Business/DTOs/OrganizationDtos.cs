@@ -4,10 +4,6 @@ namespace Soc.Business.DTOs;
 public record CreateOrganizationRequest
 {
     public string Name { get; init; } = string.Empty;
-    public int? ResponseMinutes
-    {
-        get; init;
-    }
 }
 
 /// <summary>Response model for a tenant organisation.</summary>
@@ -18,10 +14,6 @@ public record OrganizationResponse
         get; init;
     }
     public string Name { get; init; } = string.Empty;
-    public int ResponseMinutes
-    {
-        get; init;
-    }
     public bool IsActive
     {
         get; init;
