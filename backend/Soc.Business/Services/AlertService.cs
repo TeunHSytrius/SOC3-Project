@@ -18,22 +18,90 @@ public sealed class AlertService(SocDbContext db, TenantDbFactory factory, SocSe
             return Soc.Data.Entities.Enums.SlaStatus.Breached;
         return alert.FirstHandledAt.HasValue ? Soc.Data.Entities.Enums.SlaStatus.Met : Soc.Data.Entities.Enums.SlaStatus.Pending;
     }
-    static object AlertDto(Alert a, Guid tenant) => new { id = a.Id, organizationId = tenant, a.ScopeId, a.Number, a.Title, a.Description, a.Source, a.RawPayload, a.NormalizedPayload, security = SecurityAlertDetails.FromRaw(a.RawPayload), a.SourceIntegrationId, a.ExternalEventId, a.OccurredAt, a.RowVersion, a.Priority, a.Status, slaStatus = GetSlaStatus(a), a.CreatedAt, a.Deadline, a.FirstHandledAt, a.Owner, a.Triage, a.CaseId, history = a.History.OrderBy(x => x.At).Select(x => new { x.At, x.Actor, x.Text }) };
-    internal static bool NeedsCase(string? value) => value is "Nader onderzoek" or "Bevestigd incident" or "True positive" or "Onbeslist";
-    internal static void Event(Alert a, string actor, string text) => a.History.Add(new() { Actor = actor, Text = text });
-    internal static Alert NewAlert(Guid scope, CreateAlertRequest request, string source, DateTimeOffset? received = null, int responseMinutes = DefaultResponseMinutes)
+    private static object AlertDto(Alert alert, Guid organizationId)
     {
-        var p = Priority(request.Priority);
-        var created = received ?? DateTimeOffset.UtcNow;
-        var a = new Alert { ScopeId = scope, Number = "ALT-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(), Title = Required(request.Title, 120), Description = Required(request.Description, 2000), Source = source, Priority = p, CreatedAt = created, Deadline = created.AddMinutes(responseMinutes), RawPayload = JsonSerializer.Serialize(new { request.Title, request.Description, request.Priority }) };
-        a.History.Add(new()
+        return new
         {
-            At = created,
+            id = alert.Id,
+            organizationId,
+            alert.ScopeId,
+            alert.Number,
+            alert.Title,
+            alert.Description,
+            alert.Source,
+            alert.RawPayload,
+            alert.NormalizedPayload,
+            security = SecurityAlertDetails.FromRaw(alert.RawPayload),
+            alert.SourceIntegrationId,
+            alert.ExternalEventId,
+            alert.OccurredAt,
+            alert.RowVersion,
+            alert.Priority,
+            alert.Status,
+            slaStatus = GetSlaStatus(alert),
+            alert.CreatedAt,
+            alert.Deadline,
+            alert.FirstHandledAt,
+            alert.Owner,
+            alert.Triage,
+            alert.CaseId,
+            history = alert.History
+                .OrderBy(historyEntry => historyEntry.At)
+                .Select(historyEntry => new
+                {
+                    historyEntry.At,
+                    historyEntry.Actor,
+                    historyEntry.Text
+                })
+        };
+    }
+    internal static bool NeedsCase(string? value) => value is "Nader onderzoek" or "Bevestigd incident" or "True positive" or "Onbeslist";
+    internal static void Event(Alert alert, string actor, string text)
+    {
+        alert.History.Add(new AlertEvent
+        {
+            Actor = actor,
+            Text = text
+        });
+    }
+    internal static Alert NewAlert(
+        Guid scope,
+        CreateAlertRequest request,
+        string source,
+        DateTimeOffset? received = null,
+        int responseMinutes = DefaultResponseMinutes)
+    {
+        var priority = Priority(request.Priority);
+        var createdAt = received ?? DateTimeOffset.UtcNow;
+
+        var alert = new Alert
+        {
+            ScopeId = scope,
+            Number = "ALT-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            Title = Required(request.Title, 120),
+            Description = Required(request.Description, 2000),
+            Source = source,
+            Priority = priority,
+            CreatedAt = createdAt,
+            Deadline = createdAt.AddMinutes(responseMinutes),
+            RawPayload = JsonSerializer.Serialize(new
+            {
+                request.Title,
+                request.Description,
+                request.Priority
+            })
+        };
+
+        alert.History.Add(new()
+        {
+            At = createdAt,
             Actor = source,
             Text = "Alert ontvangen"
         });
-        return a;
+
+        return alert;
     }
+
     public async Task<(int Status, object Data)> Ingest(string? key, byte[] body)
     {
         Require(!string.IsNullOrWhiteSpace(key), "Ongeldige API-sleutel.", 401);

@@ -25,7 +25,56 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
             _ => false
         };
     }
-    static object CaseDto(ResearchCase c, Guid tenant, bool internalView) => new { id = c.Id, organizationId = tenant, c.ScopeId, c.Number, c.Title, c.Priority, c.Status, c.Owner, ownerId = internalView ? (Guid?)c.OwnerId : null, c.CreatedAt, c.ClosedAt, c.CustomerVisible, c.RowVersion, summary = c.Summary, conclusion = internalView ? c.Conclusion : null, alertIds = internalView ? c.Alerts.Select(x => x.Id).ToArray() : Array.Empty<Guid>(), entries = c.Entries.Where(x => internalView || x.Visible).Select(x => new EntryRow(x.Id, x.At, x.Actor, x.Kind, x.Text, x.Visible)).Concat(internalView ? c.Observables.Select(x => new EntryRow(x.Id, x.At, x.Actor, "Observable", $"{x.Type}: {x.Value} — {x.Assessment ?? "Niet beoordeeld"}", false)) : Enumerable.Empty<EntryRow>()).OrderBy(x => x.At) };
+    private static object CaseDto(ResearchCase researchCase, Guid organizationId, bool internalView)
+    {
+        var visibleEntries = researchCase.Entries
+            .Where(entry => internalView || entry.Visible)
+            .Select(entry => new EntryRow(
+                entry.Id,
+                entry.At,
+                entry.Actor,
+                entry.Kind,
+                entry.Text,
+                entry.Visible));
+
+        // Observables contain internal investigation information.
+        if (internalView)
+        {
+            var observableEntries = researchCase.Observables
+                .Select(observable => new EntryRow(
+                    observable.Id,
+                    observable.At,
+                    observable.Actor,
+                    "Observable",
+                    $"{observable.Type}: {observable.Value} — {observable.Assessment ?? "Niet beoordeeld"}",
+                    false));
+
+            visibleEntries = visibleEntries.Concat(observableEntries);
+        }
+
+        return new
+        {
+            id = researchCase.Id,
+            organizationId,
+            researchCase.ScopeId,
+            researchCase.Number,
+            researchCase.Title,
+            researchCase.Priority,
+            researchCase.Status,
+            researchCase.Owner,
+            ownerId = internalView ? (Guid?)researchCase.OwnerId : null,
+            researchCase.CreatedAt,
+            researchCase.ClosedAt,
+            researchCase.CustomerVisible,
+            researchCase.RowVersion,
+            summary = researchCase.Summary,
+            conclusion = internalView ? researchCase.Conclusion : null,
+            alertIds = internalView
+                ? researchCase.Alerts.Select(alert => alert.Id).ToArray()
+                : Array.Empty<Guid>(),
+            entries = visibleEntries.OrderBy(entry => entry.At)
+        };
+    }
     public record EntryRow(Guid Id, DateTimeOffset At, string Actor, string Kind, string Text, bool Visible);
     static void ValidateObservable(string type, string value, string assessment)
     {
@@ -41,7 +90,15 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
         };
         Require(valid, "Observable heeft geen geldig formaat voor dit type.", 400);
     }
-    static IQueryable<ResearchCase> CaseQuery(TenantDbContext td) => td.Cases.Include(x => x.Entries).Include(x => x.Observables).Include(x => x.Alerts).ThenInclude(x => x.History).AsSplitQuery();
+    private static IQueryable<ResearchCase> CaseQuery(TenantDbContext tenantDb)
+    {
+        return tenantDb.Cases
+            .Include(researchCase => researchCase.Entries)
+            .Include(researchCase => researchCase.Observables)
+            .Include(researchCase => researchCase.Alerts)
+                .ThenInclude(alert => alert.History)
+            .AsSplitQuery();
+    }
     public async Task<object> Cases(AppUser u, Guid? workspace, Guid? scope)
     {
         Require(CanReadInternal(u) || u.Role is "Klant" or "Accountmanager");
