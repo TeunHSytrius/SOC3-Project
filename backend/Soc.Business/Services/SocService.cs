@@ -133,6 +133,24 @@ public sealed class SocService(SocDbContext db,TenantDbFactory factory,UserManag
         if((alert.FirstHandledAt??DateTimeOffset.UtcNow)>alert.Deadline)return Soc.Data.Entities.Enums.SlaStatus.Breached;
         return alert.FirstHandledAt.HasValue?Soc.Data.Entities.Enums.SlaStatus.Met:Soc.Data.Entities.Enums.SlaStatus.Pending;
     }
+    // Administrative register: identifiers and lifecycle metadata only.
+    // Do not include titles, owners, scope IDs, observables, payloads or investigation entries.
+    public async Task<object> TicketRegister(AppUser u)
+    {
+        Admin(u);
+        var rows = new List<object>();
+        foreach (var tenant in await db.Tenants.OrderBy(t=>t.Name).ToListAsync())
+        {
+            await using var td = factory.Open(tenant);
+            var cases = await td.Cases.AsNoTracking()
+                .Select(x=>new { x.Id, x.Number, x.Status, x.CreatedAt, x.ClosedAt })
+                .OrderByDescending(x=>x.CreatedAt).ToListAsync();
+            foreach (var item in cases)
+                rows.Add(new { item.Id, item.Number, item.Status, item.CreatedAt, item.ClosedAt, organizationId=tenant.Id });
+        }
+        await Log(u,"Ticketregister bekeken");
+        return rows;
+    }
     static object AlertDto(Alert a,Guid tenant)=>new{id=a.Id,organizationId=tenant,a.ScopeId,a.Number,a.Title,a.Description,a.Source,a.RawPayload,a.NormalizedPayload,security=SecurityAlertDetails.FromRaw(a.RawPayload),a.SourceIntegrationId,a.ExternalEventId,a.OccurredAt,a.RowVersion,a.Priority,a.Status,slaStatus=GetSlaStatus(a),a.CreatedAt,a.Deadline,a.FirstHandledAt,a.Owner,a.Triage,a.CaseId,history=a.History.OrderBy(x=>x.At).Select(x=>new{x.At,x.Actor,x.Text})};
     static object CaseDto(ResearchCase c,Guid tenant,bool internalView)=>new{id=c.Id,organizationId=tenant,c.ScopeId,c.Number,c.Title,c.Priority,c.Status,c.Owner,ownerId=internalView?(Guid?)c.OwnerId:null,c.CreatedAt,c.ClosedAt,c.CustomerVisible,c.RowVersion,summary=c.Summary,conclusion=internalView?c.Conclusion:null,alertIds=internalView?c.Alerts.Select(x=>x.Id).ToArray():Array.Empty<Guid>(),entries=c.Entries.Where(x=>internalView||x.Visible).Select(x=>new EntryRow(x.Id,x.At,x.Actor,x.Kind,x.Text,x.Visible)).Concat(internalView?c.Observables.Select(x=>new EntryRow(x.Id,x.At,x.Actor,"Observable",$"{x.Type}: {x.Value} — {x.Assessment??"Niet beoordeeld"}",false)):Enumerable.Empty<EntryRow>()).OrderBy(x=>x.At)};
     public record EntryRow(Guid Id,DateTimeOffset At,string Actor,string Kind,string Text,bool Visible);

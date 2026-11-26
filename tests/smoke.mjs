@@ -18,15 +18,15 @@ class Client {
   post(path,body={}){return this.ok(path,{method:'POST',body});}
   login(role){return this.post('auth/login',{username:`${role}@soc.demo`,password:'Demo2026!'});}
 }
-const guest=new Client();await guest.ok('health');assert.equal((await guest.request('alerts')).status,401);
-const admin=new Client();await admin.login('beheerder');const orgs=await admin.ok('organizations');assert(orgs.length>=3);assert.equal((await admin.request('alerts')).status,403);
+const guest=new Client();await guest.ok('health');const denied=await guest.request('alerts');assert.equal(denied.status,401);assert(denied.data.message&&denied.data.traceId,'401 must explain failure and include trace ID');
+const admin=new Client();await admin.login('beheerder');const orgs=await admin.ok('organizations');assert(orgs.length>=3);assert.equal((await admin.request('alerts')).status,403);const errors=await admin.ok('errors');assert(errors.some(e=>e.traceId===denied.data.traceId&&e.status===401));assert(errors.every(e=>!('body' in e)&&!('headers' in e)));
 // Group accounts are seeded once; their role/profile can be changed through user management.
 const teamUsers=await admin.ok('users');
 for(const email of ['teun@soc.demo','dominique@soc.demo','sergio@soc.demo','hamza@soc.demo','ruben@soc.demo','thijs@soc.demo'])assert(teamUsers.some(u=>u.email===email),`Demoaccount ontbreekt: ${email}`);
 assert(!teamUsers.some(u=>u.email==='riza@soc.demo'&&u.isActive),'Voormalig groepsaccount mag niet actief zijn');
 const north=orgs.find(o=>o.name==='Northstar Finance');const delta=orgs.find(o=>o.name==='Delta Logistics');assert(north&&delta);
 const analyst=new Client();await analyst.login('analist');assert((await analyst.ok('alerts')).length>=8);
-assert.equal((await analyst.request('auth/me',{headers:{'X-SOC-User':'00000000-0000-0000-0000-000000000000'}})).status,401,'Wrong tab identity must not use the shared cookie');
+assert.equal((await analyst.request('errors')).status,403);assert.equal((await analyst.request('auth/me',{headers:{'X-SOC-User':'00000000-0000-0000-0000-000000000000'}})).status,401,'Wrong tab identity must not use the shared cookie');
 const customer=new Client();await customer.login('klant');assert.equal((await customer.request('alerts')).status,403);assert.equal((await customer.request('users')).status,403);assert.equal((await customer.request('organizations/'+delta.id)).status,403);
 
 // Account management: a separate test account preserves the seeded demo accounts.
@@ -76,18 +76,28 @@ const senior=new Client();await senior.login('senior');
 const analystUser=await analyst.ok('auth/me');
 assert.equal((await analyst.request(`cases/${id}`,{method:'PATCH',body:{status:'UnderInvestigation'}})).status,409,'Coordinator assignment required');
 const assigned=await senior.ok(`cases/${id}`,{method:'PATCH',body:{userId:analystUser.id,priority:'High',reason:'Demo prioritering',nextAction:'Onderzoek uitvoeren'}});assert.equal(assigned.status,'UnderInvestigation');
-await analyst.post(`cases/${id}/events`,{kind:'Notitie',text:'Interne testnotitie',visible:false});
+const noteText='Interne testnotitie '+unique;
+await analyst.post(`cases/${id}/events`,{kind:'Notitie',text:noteText,visible:false});
 await analyst.post(`cases/${id}/observables`,{value:'192.0.2.25',type:'IP',assessment:'Verdacht'});
-const persistedCase=await analyst.ok(`cases/${id}`);assert(persistedCase.entries.some(e=>e.text==='Interne testnotitie'));assert(persistedCase.entries.some(e=>e.kind==='Observable'&&e.text.includes('192.0.2.25')));
+const persistedCase=await analyst.ok(`cases/${id}`);assert(persistedCase.entries.some(e=>e.kind==='Notitie'&&e.text===noteText&&e.actor));
+const allCases=await analyst.ok('cases');assert(allCases.some(c=>c.id!==id),'A second case is required to check note isolation');assert(allCases.filter(c=>c.id!==id).every(c=>!c.entries.some(e=>e.text===noteText)),'A note must belong to its own case only');assert(persistedCase.entries.some(e=>e.kind==='Observable'&&e.text.includes('192.0.2.25')));
 assert.equal((await customer.request(`portal/cases/${id}`)).status,404);
 await analyst.ok(`cases/${id}`,{method:'PATCH',body:{visible:true}});
 await analyst.post(`cases/${id}/events`,{kind:'Actie',text:'Klantzichtbare actie',visible:true});
-const portal=await customer.ok(`portal/cases/${id}`);assert(portal.entries.some(e=>e.text==='Klantzichtbare actie'));assert(!portal.entries.some(e=>e.text==='Interne testnotitie'||e.kind==='Observable'));
+const portal=await customer.ok(`portal/cases/${id}`);assert(portal.entries.some(e=>e.text==='Klantzichtbare actie'));assert(!portal.entries.some(e=>e.text===noteText||e.kind==='Observable'));
 assert.equal((await analyst.request(`alerts/${alert.id}`,{headers:{'X-Workspace-Id':delta.id}})).status,404);
 assert.equal((await analyst.request(`cases/${id}`,{method:'PATCH',body:{status:'Closed'}})).status,409);
 await analyst.ok(`cases/${id}`,{method:'PATCH',body:{status:'Resolved'}});
 assert.equal((await analyst.request(`cases/${id}`,{method:'PATCH',body:{status:'Closed'}})).status,400);
 const closed=await analyst.ok(`cases/${id}`,{method:'PATCH',body:{status:'Closed',summary:'Onderzoek en acties afgerond.',conclusion:'Demotest afgerond.'}});assert.equal(closed.status,'Closed');assert.equal((await analyst.ok(`alerts/${alert.id}`)).status,'Resolved');
+const archive=await admin.ok('ticket-register');
+const registered=archive.find(t=>t.id===id);
+assert(registered&&registered.status==='Closed'&&registered.closedAt&&registered.organizationId===north.id);
+assert(archive.every(t=>!('title' in t)&&!('entries' in t)&&!('scopeId' in t)&&!('alertIds' in t)));
+assert.equal((await admin.request(`cases/${id}`)).status,403);
+assert.equal((await customer.request('ticket-register')).status,403);
+assert((await customer.ok('portal/cases')).some(t=>t.id===id&&t.status==='Closed'));
+assert((await analyst.ok('cases')).some(t=>t.id===id&&t.status==='Closed'));
 await admin.post(`keys/${key.id}/revoke`);assert.equal((await tool.request('ingest/alerts',{method:'POST',headers:{'X-API-Key':key.secret},body:payload})).status,401);
 assert((await admin.ok('audit')).some(a=>a.action==='Alert promote'&&a.target===alert.number));
 console.log('PASS: login, rollen, accountbewerking, ingest, securitymapping, CSRF, triage, toewijzing, workflow, afscherming, afsluiten, audit en intrekking sleutel.');
