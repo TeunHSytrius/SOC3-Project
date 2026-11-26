@@ -18,4 +18,21 @@ public sealed class AlertsController(SocService service):ControllerBase
     private async Task<IActionResult> Action(Guid id,string action,Input input)=>Ok(await service.AlertAction(await service.UserAsync(User),id,action,input,Workspace,Scope));
 }
 [ApiController,Route("api/v1/ingest")]
-public sealed class IngestController(SocService service):ControllerBase { [EnableRateLimiting("ingest"),HttpPost("alerts")] public async Task<IActionResult> Ingest(Input input)=>StatusCode(201,await service.Ingest(Request.Headers["X-API-Key"].FirstOrDefault(),input)); }
+public sealed class IngestController(SocService service):ControllerBase
+{
+    [EnableRateLimiting("ingest"),HttpPost("alerts"),Consumes("application/json"),RequestSizeLimit(1048576)]
+    public async Task<IActionResult> Ingest()
+    {
+        if(Request.ContentLength>1048576)return StatusCode(413);
+        using var body=new MemoryStream();
+        var buffer=new byte[8192];
+        int read;
+        while((read=await Request.Body.ReadAsync(buffer.AsMemory(),HttpContext.RequestAborted))>0)
+        {
+            if(body.Length+read>1048576)return StatusCode(413);
+            body.Write(buffer,0,read);
+        }
+        var result=await service.Ingest(Request.Headers["X-API-Key"].FirstOrDefault(),body.ToArray());
+        return StatusCode(result.Status,result.Data);
+    }
+}
