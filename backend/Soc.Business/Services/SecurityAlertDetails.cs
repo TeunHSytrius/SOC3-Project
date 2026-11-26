@@ -15,8 +15,8 @@ public sealed record SecurityAlertDetails(
     string? Username,
     string? DetectionRule,
     bool Simulated,
-    string? Evidence=null,
-    string? Investigation=null)
+    string? Evidence = null,
+    string? Investigation = null)
 {
     public static SecurityAlertDetails Read(JsonElement payload)
     {
@@ -36,7 +36,7 @@ public sealed record SecurityAlertDetails(
 
         return new(Get("category"), Get("description"), Get("sourceIp"),
             Get("destinationIp"), Get("hostname"), Get("username"),
-            Get("detectionRule"), simulated,Get("evidence"),Get("investigation"));
+            Get("detectionRule"), simulated, Get("evidence"), Get("investigation"));
     }
 
     public static SecurityAlertDetails FromRaw(string raw)
@@ -74,7 +74,14 @@ public sealed record SecurityAlertDetails(
             type_uid = 200401,
             severity_id = severity,
             time = (alert.OccurredAt ?? alert.CreatedAt).ToUnixTimeMilliseconds(),
-            metadata = new { version = "1.8.0", product = new { name = alert.Source } },
+            metadata = new
+            {
+                version = "1.8.0",
+                product = new
+                {
+                    name = alert.Source
+                }
+            },
             finding_info = new
             {
                 uid = alert.ExternalEventId,

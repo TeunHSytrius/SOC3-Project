@@ -1,0 +1,214 @@
+import type { State, Alert, ResearchCase } from '../../types/soc';
+import { Icon, Badge, Button, Field, Select, Table, Panel, PageHeader } from '../../components/Ui';
+import {
+  labels,
+  priorities,
+  states,
+  caseStates,
+  active,
+  isClosed,
+  fmt,
+  sla,
+  caseMatchesView,
+  sortRecords,
+  nextCaseStates,
+  roles,
+} from '../../types/domain';
+import { priorityColor } from '../alerts/AlertCards';
+import CaseWorkflow from './CaseWorkflow';
+type Navigate = (page: string, selected?: string | null) => void;
+type UpdateState = (update: Partial<State>) => void;
+type RunAction = (
+  path: string,
+  data: Record<string, unknown>,
+  message: string,
+  after?: (result: any) => void,
+) => Promise<void>;
+interface CaseDetailProps {
+  ticket: ResearchCase;
+  state: Pick<State, 'user' | 'alerts'>;
+  isAdmin: boolean;
+  isAnalyst: boolean;
+  canReadInternal: boolean;
+  customerName: (id: string) => string;
+  navigate: Navigate;
+  run: RunAction;
+  update: UpdateState;
+}
+
+export default function CaseDetailPage({
+  ticket,
+  state,
+  isAdmin,
+  isAnalyst,
+  canReadInternal,
+  customerName,
+  navigate,
+  run,
+  update,
+}: CaseDetailProps) {
+  const senior = state.user.role === 'Senior analist';
+  const canEdit = isAnalyst && (senior || ticket.ownerId === state.user.id);
+  return (
+    <div className="fragment">
+      <button className="back" onClick={() => navigate('cases')}>
+        ← Terug naar cases
+      </button>
+      <PageHeader
+        title="Onderzoek / Case"
+        sub={
+          isAdmin
+            ? 'Beheerder · volledig dossier, alleen lezen'
+            : 'Casegegevens en onderzoekstijdlijn'
+        }
+      />
+      <div className={'wire-banner case-banner ' + priorityColor(ticket.priority)}>
+        <div>
+          <small>
+            {ticket.number} · {customerName(ticket.organizationId)}
+          </small>
+          <h2>{ticket.title}</h2>
+        </div>
+        <div>
+          <Badge value={ticket.status} />
+          <p>Eigenaar: {ticket.owner}</p>
+        </div>
+      </div>
+      {canReadInternal && <CaseWorkflow research={ticket} />}
+      <div className="detailgrid">
+        <Panel title="Casegegevens">
+          <div className="bodypad">
+            <dl>
+              <dt>Prioriteit</dt>
+              <dd>
+                <Badge value={ticket.priority} />
+              </dd>
+              <dt>Eigenaar</dt>
+              <dd>{ticket.owner}</dd>
+              <dt>Aangemaakt</dt>
+              <dd>{fmt(ticket.createdAt)}</dd>
+              <dt>Afgesloten</dt>
+              <dd>{fmt(ticket.closedAt)}</dd>
+              {canReadInternal && (
+                <div className="fragment">
+                  <dt>Klantzichtbaar</dt>
+                  <dd>{ticket.customerVisible ? 'Ja' : 'Nee'}</dd>
+                  <dt>Gekoppelde alerts</dt>
+                  <dd>
+                    {ticket.alertIds.map((id) => {
+                      const a = state.alerts.find((x) => x.id === id);
+                      return (
+                        <div key={id}>
+                          <button className="rowlink" onClick={() => navigate('alerts', id)}>
+                            {a?.number} · {a?.title}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </dd>
+                  <dt>Observables</dt>
+                  <dd>
+                    {ticket.entries
+                      .filter((e) => e.kind === 'Observable')
+                      .map((e) => (
+                        <div className="wire-observable" key={e.id}>
+                          {e.text}
+                        </div>
+                      ))}
+                    {!ticket.entries.some((e) => e.kind === 'Observable') && '—'}
+                  </dd>
+                  <dt>Samenvatting</dt>
+                  <dd>{ticket.summary || '—'}</dd>
+                  <dt>Conclusie</dt>
+                  <dd>{ticket.conclusion || '—'}</dd>
+                </div>
+              )}
+            </dl>
+            {state.user.role === 'Senior analist' && isClosed(ticket) && (
+              <Button onClick={() => update({ modal: 'caseReopen' })}>Case heropenen</Button>
+            )}
+            {canEdit && !isClosed(ticket) && (
+              <div className="actions">
+                {ticket.status !== 'Open' && (
+                  <Button primary onClick={() => update({ modal: 'caseStatus' })}>
+                    Status wijzigen
+                  </Button>
+                )}
+                {(ticket.status !== 'Open' || senior) && (
+                  <Button onClick={() => update({ modal: 'owner' })}>
+                    {ticket.status === 'Open' ? 'Prioriteren en toewijzen' : 'Overdragen'}
+                  </Button>
+                )}
+                {ticket.status === 'Open' && !senior && (
+                  <small>Wacht op prioritering en toewijzing door senior.</small>
+                )}
+                <Button
+                  onClick={() =>
+                    run(
+                      `cases/${ticket.id}/visibility`,
+                      { visible: !ticket.customerVisible },
+                      'Zichtbaarheid aangepast.',
+                    )
+                  }
+                >
+                  {ticket.customerVisible ? 'Verbergen voor klant' : 'Vrijgeven aan klant'}
+                </Button>
+              </div>
+            )}
+          </div>
+        </Panel>
+        <Panel
+          title="Onderzoekstijdlijn"
+          sub={ticket.number + ' · Notities, observables, acties en bewijsreferenties'}
+          action={
+            !isClosed(ticket) &&
+            state.user.role === 'Klant' && (
+              <Button primary onClick={() => update({ modal: 'entry', error: '' })}>
+                Reageren
+              </Button>
+            )
+          }
+        >
+          {canEdit && !isClosed(ticket) && (
+            <div className="case-entry-actions">
+              <Button primary onClick={() => update({ modal: 'note', error: '' })}>
+                + Notitie
+              </Button>
+              <Button onClick={() => update({ modal: 'observable', error: '' })}>
+                + Observable
+              </Button>
+              <Button onClick={() => update({ modal: 'actionEntry', error: '' })}>+ Actie</Button>
+              <Button onClick={() => update({ modal: 'evidenceRef', error: '' })}>
+                + Bewijsreferentie
+              </Button>
+            </div>
+          )}
+          <div className="timeline">
+            {!ticket.entries.length && <p>Geen onderzoeksinformatie beschikbaar.</p>}
+            {ticket.entries
+              .slice()
+              .reverse()
+              .map((e) => (
+                <div key={e.id}>
+                  <span className="timeline-dot" />
+                  <strong>
+                    {e.kind}{' '}
+                    {canReadInternal && (
+                      <Badge
+                        value={e.visible ? 'Klantzichtbaar' : 'Intern'}
+                        kind={e.visible ? 'good' : 'neutral'}
+                      />
+                    )}
+                  </strong>
+                  <p>{e.text}</p>
+                  <small>
+                    {e.actor} · {fmt(e.at)}
+                  </small>
+                </div>
+              ))}
+          </div>
+        </Panel>
+      </div>
+    </div>
+  );
+}

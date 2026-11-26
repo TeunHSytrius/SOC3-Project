@@ -17,12 +17,14 @@ public sealed class ApiErrorLog
         lock (gate)
         {
             entries.Enqueue(entry);
-            while (entries.Count > 500) entries.Dequeue();
+            while (entries.Count > 500)
+                entries.Dequeue();
         }
     }
     public ApiErrorEntry[] Recent()
     {
-        lock (gate) return entries.Reverse().ToArray();
+        lock (gate)
+            return entries.Reverse().ToArray();
     }
 }
 
@@ -70,7 +72,8 @@ public sealed class ApiErrorMiddleware(RequestDelegate next, ILogger<ApiErrorMid
         }
         catch (Exception ex)
         {
-            if (context.Response.HasStarted) throw;
+            if (context.Response.HasStarted)
+                throw;
             exceptionType = ex.GetType().Name;
             var status = 500;
             var message = Reason(status);
@@ -105,7 +108,11 @@ public sealed class ApiErrorMiddleware(RequestDelegate next, ILogger<ApiErrorMid
             context.Response.Headers.CacheControl = "no-store";
             context.Response.Headers["X-Trace-Id"] = context.TraceIdentifier;
             context.Response.StatusCode = status;
-            await context.Response.WriteAsJsonAsync(new { message, traceId = context.TraceIdentifier });
+            await context.Response.WriteAsJsonAsync(new
+            {
+                message,
+                traceId = context.TraceIdentifier
+            });
             // The server log contains the exception type and stack, not the exception message.
             if (status >= 500)
                 logger.LogError("API exception {Type}; trace {TraceId}; stack {Stack}", exceptionType, context.TraceIdentifier, ex.StackTrace);
@@ -115,7 +122,8 @@ public sealed class ApiErrorMiddleware(RequestDelegate next, ILogger<ApiErrorMid
             var route = (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText ?? "(onbekende API-route)";
             var status = context.Response.StatusCode;
             // The normal anonymous logout attempt on initial page load is not an error event.
-            if (status == 401 && context.Request.Path == "/api/v1/auth/logout") return;
+            if (status == 401 && context.Request.Path == "/api/v1/auth/logout")
+                return;
             var entry = new ApiErrorEntry(DateTimeOffset.UtcNow, status, context.Request.Method, route,
                 reason ?? Reason(status), context.TraceIdentifier, exceptionType);
             log.Add(entry);

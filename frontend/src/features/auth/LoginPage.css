@@ -187,8 +187,17 @@
 }
 
 @media (max-width: 360px) {
-  .login-header { padding-inline: 12px; }
-  .login-content { padding-inline: 12px; }
-  .login-form { padding: 16px; }
+  .login-header {
+    padding-inline: 12px;
+  }
+  .login-content {
+    padding-inline: 12px;
+  }
+  .login-form {
+    padding: 16px;
+  }
 }
-.login-field, .login-form { min-width: 0; }
+.login-field,
+.login-form {
+  min-width: 0;
+}
