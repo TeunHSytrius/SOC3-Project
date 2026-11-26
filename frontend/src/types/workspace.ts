@@ -2,8 +2,6 @@ import type { State } from './soc';
 
 export interface ActionResult {
   id?: string;
-  caseId?: string;
-  secret?: string;
 }
 
 export type Navigate = (page: string, selected?: string | null) => void;

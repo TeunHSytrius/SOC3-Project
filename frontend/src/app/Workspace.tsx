@@ -1,20 +1,14 @@
-import type { Alert, State } from '../types/soc';
+import type { State } from '../types/soc';
 import type { WorkspaceActions } from '../types/workspace';
 import { AppShell } from '../components/AppShell';
 import { Button, Icon } from '../components/Ui';
-import AlertsPage from '../features/alerts/AlertsPage';
-import TicketsPage from '../features/cases/TicketsPage';
 import CustomersPage from '../features/admin/CustomersPage';
 import UsersPage from '../features/admin/UsersPage';
-import ApiKeysPage from '../features/admin/ApiKeysPage';
 import AuditPage from '../features/admin/AuditPage';
 import ErrorLog from '../features/admin/ErrorLog';
-import TicketRegister from '../features/admin/TicketRegister';
 import DashboardPage from '../features/dashboard/DashboardPage';
-import ReportsPage from '../features/dashboard/ReportsPage';
 import AccountPage from '../features/auth/AccountPage';
 import ActionDialog from '../features/shared/ActionDialog';
-import AlertNotifications from '../features/alerts/AlertNotifications';
 import { getNavigation } from './navigation';
 
 interface WorkspaceProps {
@@ -24,44 +18,23 @@ interface WorkspaceProps {
   logout: () => Promise<void>;
   onTwoFactorEnabled: () => Promise<void>;
   onError: (error: unknown) => void;
-  showQueue: (page: 'alerts' | 'cases', view?: State['archiveFilter'], mine?: boolean, ownerFilter?: string) => void;
-  openNotification: (alert: Alert) => Promise<void>;
-  dismissNotification: (id: string) => void;
 }
 
-function WorkspacePage({ state, actions, refresh, showQueue, onTwoFactorEnabled, onError }: WorkspaceProps) {
+function WorkspacePage({ state, actions, refresh, onTwoFactorEnabled, onError }: WorkspaceProps) {
   const pageProps = { state, ...actions };
 
   // Navigation is a UI convenience; the API enforces authorization independently.
   switch (state.page) {
     case 'dashboard':
-      return <DashboardPage {...pageProps} showQueue={showQueue} />;
-    case 'reports':
-      return actions.canReadInternal ? <ReportsPage state={state} /> : null;
-    case 'alerts':
-      return <AlertsPage {...pageProps} />;
-    case 'cases':
-      return <TicketsPage {...pageProps} />;
+      return <DashboardPage {...pageProps} />;
     case 'customers':
-      return <CustomersPage {...pageProps} />;
+      return actions.isAdmin ? <CustomersPage {...pageProps} /> : null;
     case 'users':
-      return <UsersPage {...pageProps} />;
-    case 'keys':
-      return <ApiKeysPage {...pageProps} />;
+      return actions.isAdmin ? <UsersPage {...pageProps} /> : null;
     case 'audit':
-      return <AuditPage {...pageProps} />;
+      return actions.isAdmin ? <AuditPage {...pageProps} /> : null;
     case 'errors':
       return actions.isAdmin ? <ErrorLog errors={state.errors} reload={() => void refresh()} /> : null;
-    case 'ticket-register':
-      return actions.isAdmin ? (
-        <TicketRegister
-          tickets={state.ticketRegister}
-          organizations={state.orgs}
-          organizationId={state.org}
-          onOrganizationChange={(id) => actions.update({ org: id })}
-          reload={() => void refresh()}
-        />
-      ) : null;
     case 'account':
       return state.user ? (
         <AccountPage user={state.user} onTwoFactorEnabled={onTwoFactorEnabled} onSessionExpired={onError} />
@@ -72,7 +45,7 @@ function WorkspacePage({ state, actions, refresh, showQueue, onTwoFactorEnabled,
 }
 
 export default function Workspace(props: WorkspaceProps) {
-  const { state, actions, refresh, logout, openNotification, dismissNotification } = props;
+  const { state, actions, refresh, logout } = props;
   const { user, orgs, org } = state;
   if (!user) return null;
 
@@ -92,9 +65,6 @@ export default function Workspace(props: WorkspaceProps) {
         actions.update({
           org: id,
           selected: null,
-          ownerFilter: '',
-          sourceFilter: '',
-          category: '',
         })
       }
       navigationItems={getNavigation(user)}
@@ -125,15 +95,6 @@ export default function Workspace(props: WorkspaceProps) {
       )}
       <WorkspacePage {...props} />
       {state.modal && <ActionDialog state={state} {...actions} />}
-      {actions.canReadInternal && !user.requiresTwoFactorSetup && (
-        <AlertNotifications
-          alerts={state.alertNotifications}
-          customerName={actions.customerName}
-          onOpen={openNotification}
-          onDismiss={dismissNotification}
-          busy={state.busy || !!state.modal}
-        />
-      )}
     </AppShell>
   );
 }

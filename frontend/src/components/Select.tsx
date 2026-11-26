@@ -1,5 +1,4 @@
 import type React from 'react';
-import { labels } from '../types/domain';
 
 export function Select({
   options,
@@ -22,7 +21,7 @@ export function Select({
       {options.map((option) =>
         typeof option === 'string' ? (
           <option key={option} value={option}>
-            {labels[option] || option}
+            {option}
           </option>
         ) : (
           <option key={option.id} value={option.id}>

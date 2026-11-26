@@ -1,13 +1,11 @@
 import { Button } from '../../components/Ui';
 import { formData } from './formData';
 import type { DialogProps } from './dialogTypes';
-import { getAlertDialog } from '../alerts/alertDialogs';
-import { getCaseDialog } from '../cases/caseDialogs';
 import { getAdminDialog } from '../admin/adminDialogs';
 
 export default function ActionDialog(props: DialogProps) {
   const { state: currentState, update } = props;
-  const definition = getAlertDialog(props) ?? getCaseDialog(props) ?? getAdminDialog(props);
+  const definition = getAdminDialog(props);
   if (!definition) return null;
   const { title, fields, submit } = definition;
 

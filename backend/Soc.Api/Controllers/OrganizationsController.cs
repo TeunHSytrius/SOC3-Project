@@ -7,7 +7,7 @@ namespace Soc.Api.Controllers;
 [Authorize, ApiController, Route("api/v1/organizations")]
 public sealed class OrganizationsController(SocService service, OrganizationService organizations) : ControllerBase
 {
-    static OrganizationResponse Dto(Tenant organization) => new() { Id = organization.Id, Name = organization.Name, ResponseMinutes = organization.ResponseMinutes, IsActive = organization.IsActive, CreatedAt = organization.CreatedAt, DeactivatedAt = organization.DeactivatedAt };
+    static OrganizationResponse Dto(Tenant organization) => new() { Id = organization.Id, Name = organization.Name, IsActive = organization.IsActive, CreatedAt = organization.CreatedAt, DeactivatedAt = organization.DeactivatedAt };
     [HttpGet]
     public async Task<IActionResult> GetAll() => Ok((await organizations.Organizations(await service.UserAsync(User))).Select(Dto));
     [HttpGet("{id:guid}")]
@@ -22,7 +22,7 @@ public sealed class OrganizationsController(SocService service, OrganizationServ
         }, Dto(organization));
     }
     [HttpPatch("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, CreateOrganizationRequest input) => Ok(Dto(await organizations.RenameOrganization(await service.UserAsync(User), id, input.Name, input.ResponseMinutes)));
+    public async Task<IActionResult> Update(Guid id, CreateOrganizationRequest input) => Ok(Dto(await organizations.RenameOrganization(await service.UserAsync(User), id, input.Name)));
     [HttpPost("{id:guid}/deactivate")]
     public async Task<IActionResult> Deactivate(Guid id) => Ok(Dto(await organizations.SetOrganization(await service.UserAsync(User), id, false)));
     [HttpPost("{id:guid}/activate")]

@@ -77,15 +77,6 @@ function resolveRoute(path: string, body?: Record<string, unknown>) {
   let method = body === undefined ? 'GET' : 'POST';
   if (body !== undefined && /^(users|organizations)\/[^/]+$/.test(path)) method = 'PATCH';
 
-  // Map the UI actions to the routes defined in the technical design.
-  path = path.replace(/^(alerts\/[^/]+)\/case$/, '$1/promote');
-  if (/^cases\/[^/]+\/(status|owner|visibility)$/.test(path)) {
-    path = path.replace(/\/(status|owner|visibility)$/, '');
-    method = 'PATCH';
-  }
-  if (/^cases\/[^/]+\/entry$/.test(path)) {
-    path = path.replace(/\/entry$/, body?.kind === 'Observable' ? '/observables' : '/events');
-  }
   return { path, method };
 }
 

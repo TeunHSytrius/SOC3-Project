@@ -47,7 +47,6 @@ public sealed partial class SocService
     }
 
     public static bool Analyst(AppUser user) => user.Role is "Analist" or "Senior analist";
-    internal static bool CanReadInternal(AppUser user) => Analyst(user) || user.Role == "Beheerder";
     public static void Admin(AppUser user) => Require(user.Role == "Beheerder");
     internal static bool Closed(ResearchCase researchCase) => researchCase.Status == TicketStatus.Closed;
 
@@ -181,22 +180,6 @@ public sealed partial class SocService
             Require(result.Count > 0);
         return result;
     }
-    // Platform administrators may inspect all tenants, including inactive ones.
-    // Operational writes must still use the normal assigned, active workspace checks.
-    internal async Task<List<(Tenant Tenant, List<Guid> Scopes)>> ReadWorkspaces(AppUser user, Guid? tenant = null, Guid? scope = null)
-    {
-        if (user.Role != "Beheerder")
-            return await Workspaces(user, tenant, scope);
-        var result = new List<(Tenant, List<Guid>)>();
-        foreach (var organization in await db.Tenants.Where(organization => !tenant.HasValue || organization.Id == tenant.Value).ToListAsync())
-        {
-            var scopes = await db.Scopes.Where(availableScope => availableScope.TenantId == organization.Id && (!scope.HasValue || availableScope.Id == scope.Value)).Select(availableScope => availableScope.Id).ToListAsync();
-            if (scopes.Count > 0)
-                result.Add((organization, scopes));
-        }
-        return result;
-    }
-
     internal async Task<Tenant> CreateTenant(string name, int responseMinutes = DefaultResponseMinutes)
     {
         Require(!await db.Tenants.AnyAsync(organization => organization.Name == name), "Naam bestaat al.", 409);
