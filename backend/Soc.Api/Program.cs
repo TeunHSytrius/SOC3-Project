@@ -76,6 +76,10 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<SocService>();
+builder.Services.AddScoped<OrganizationService>();
+builder.Services.AddScoped<ApiKeyService>();
+builder.Services.AddScoped<AdministrationService>();
+builder.Services.AddScoped<UserManagementService>();
 builder.Services.AddScoped<AlertService>();
 builder.Services.AddScoped<AlertIngestService>();
 builder.Services.AddScoped<CaseService>();

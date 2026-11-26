@@ -5,16 +5,16 @@ using Soc.Data.Entities;
 namespace Soc.Api.Controllers;
 // Route contract from feature/tg-20-customer-management. Real database storage replaces branch's in-memory repository.
 [Authorize, ApiController, Route("api/v1/users")]
-public sealed class UsersController(SocService service) : ControllerBase
+public sealed class UsersController(SocService service, UserManagementService userManagement) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> List() => Ok(await service.ListUsers(await service.UserAsync(User)));
+    public async Task<IActionResult> List() => Ok(await userManagement.ListUsers(await service.UserAsync(User)));
     [HttpPost]
-    public async Task<IActionResult> Create(CreateUserRequest input) => StatusCode(201, await service.CreateUser(await service.UserAsync(User), input));
+    public async Task<IActionResult> Create(CreateUserRequest input) => StatusCode(201, await userManagement.CreateUser(await service.UserAsync(User), input));
     [HttpPatch("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, UpdateUserRequest input) => Ok(await service.UpdateUser(await service.UserAsync(User), id, input));
+    public async Task<IActionResult> Update(Guid id, UpdateUserRequest input) => Ok(await userManagement.UpdateUser(await service.UserAsync(User), id, input));
     [HttpPost("{id:guid}/remove")]
-    public async Task<IActionResult> Remove(Guid id) => Ok(await service.RemoveUser(await service.UserAsync(User), id));
+    public async Task<IActionResult> Remove(Guid id) => Ok(await userManagement.RemoveUser(await service.UserAsync(User), id));
     [HttpPost("{id:guid}/access")]
-    public async Task<IActionResult> Access(Guid id, ChangeUserAccessRequest input) => Ok(await service.ChangeAccess(await service.UserAsync(User), id, input));
+    public async Task<IActionResult> Access(Guid id, ChangeUserAccessRequest input) => Ok(await userManagement.ChangeAccess(await service.UserAsync(User), id, input));
 }
