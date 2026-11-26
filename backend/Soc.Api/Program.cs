@@ -14,13 +14,65 @@ var connection = builder.Configuration.GetConnectionString("Soc") ?? throw new I
 var demo = builder.Configuration.GetValue<bool>("Demo:Enabled");
 builder.Services.AddDataProtection().SetApplicationName("SOC3");
 if (builder.Configuration["DataProtection:KeyPath"] is string keyPath) builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keyPath));
-builder.Services.AddAntiforgery(o => { o.HeaderName = "X-CSRF-TOKEN"; o.Cookie.HttpOnly = true; o.Cookie.SecurePolicy = demo ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always; o.Cookie.SameSite = SameSiteMode.Lax; });
-builder.Services.AddRateLimiter(o => { o.RejectionStatusCode = 429; o.AddPolicy("login", ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "local", _ => new FixedWindowRateLimiterOptions { PermitLimit = 12, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 })); o.AddPolicy("ingest", ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "local", _ => new FixedWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 })); });
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-CSRF-TOKEN";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = demo ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+});
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = 429;
+    options.AddPolicy("login", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "local",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 12,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
+    options.AddPolicy("ingest", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "local",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 120,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+});
 builder.Services.AddDbContext<SocDbContext>(o => o.UseSqlServer(connection));
 builder.Services.AddSingleton(new TenantDbFactory(connection));
-builder.Services.AddIdentity<AppUser, IdentityRole<Guid>>(o => { o.User.RequireUniqueEmail = true; o.Password.RequiredLength = 8; o.Password.RequireNonAlphanumeric = true; o.Lockout.MaxFailedAccessAttempts = 5; }).AddEntityFrameworkStores<SocDbContext>().AddDefaultTokenProviders();
+builder.Services.AddIdentity<AppUser, IdentityRole<Guid>>(options =>
+{
+    options.User.RequireUniqueEmail = true;
+    options.Password.RequiredLength = 8;
+    options.Password.RequireNonAlphanumeric = true;
+    options.Lockout.MaxFailedAccessAttempts = 5;
+})
+.AddEntityFrameworkStores<SocDbContext>()
+.AddDefaultTokenProviders();
 builder.Services.AddScoped<IUserStore<AppUser>, ProtectedUserStore>();
-builder.Services.ConfigureApplicationCookie(o => { o.Cookie.HttpOnly = true; o.Cookie.SameSite = SameSiteMode.Lax; o.Cookie.SecurePolicy = demo ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always; o.ExpireTimeSpan = TimeSpan.FromHours(8); o.Events.OnRedirectToLogin = c => { c.Response.StatusCode = 401; return Task.CompletedTask; }; o.Events.OnRedirectToAccessDenied = c => { c.Response.StatusCode = 403; return Task.CompletedTask; }; });
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = demo ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+    options.Events.OnRedirectToLogin = context =>
+    {
+        context.Response.StatusCode = 401;
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = context =>
+    {
+        context.Response.StatusCode = 403;
+        return Task.CompletedTask;
+    };
+});
 builder.Services.AddControllers().AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<SocService>();
@@ -64,7 +116,35 @@ app.Use(async (ctx, next) =>
     await next();
 });
 app.UseRateLimiter();
-app.Use(async (ctx, next) => { if ((HttpMethods.IsPost(ctx.Request.Method) || HttpMethods.IsPatch(ctx.Request.Method)) && ctx.Request.Path.StartsWithSegments("/api/v1") && !ctx.Request.Path.StartsWithSegments("/api/v1/ingest")) { try { await ctx.RequestServices.GetRequiredService<IAntiforgery>().ValidateRequestAsync(ctx); } catch (AntiforgeryValidationException) { ctx.Response.StatusCode = 400; await ctx.Response.WriteAsJsonAsync(new { message = "Ongeldige CSRF-token. Vernieuw de pagina.", traceId = ctx.TraceIdentifier }); return; } } await next(); });
+// API-key ingestion has its own authentication. Browser mutations require CSRF protection.
+app.Use(async (context, next) =>
+{
+    bool isMutation = HttpMethods.IsPost(context.Request.Method) ||
+        HttpMethods.IsPatch(context.Request.Method);
+    bool isApi = context.Request.Path.StartsWithSegments("/api/v1");
+    bool isIngestion = context.Request.Path.StartsWithSegments("/api/v1/ingest");
+
+    if (isMutation && isApi && !isIngestion)
+    {
+        try
+        {
+            await context.RequestServices.GetRequiredService<IAntiforgery>()
+                .ValidateRequestAsync(context);
+        }
+        catch (AntiforgeryValidationException)
+        {
+            context.Response.StatusCode = 400;
+            await context.Response.WriteAsJsonAsync(new
+            {
+                message = "Ongeldige CSRF-token. Vernieuw de pagina.",
+                traceId = context.TraceIdentifier
+            });
+            return;
+        }
+    }
+
+    await next();
+});
 app.UseAuthorization();
 app.MapControllers();
 app.MapOpenApi();

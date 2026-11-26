@@ -129,8 +129,8 @@ public sealed class AlertService(SocDbContext db, TenantDbFactory factory, SocSe
             Require(root.TryGetProperty("payload", out var payload) && payload.ValueKind == JsonValueKind.Object, "Payload-object vereist.", 400);
             var severity = Priority(Read("severity"));
             var payloadHash = Convert.ToHexString(SHA256.HashData(body));
-            await using var td = factory.Open(t);
-            var existing = await td.Alerts.Include(x => x.History).SingleOrDefaultAsync(x => x.SourceIntegrationId == source.Id && x.ExternalEventId == eventId);
+            await using var tenantDb = factory.Open(t);
+            var existing = await tenantDb.Alerts.Include(x => x.History).SingleOrDefaultAsync(x => x.SourceIntegrationId == source.Id && x.ExternalEventId == eventId);
             if (existing != null)
             {
                 Require(existing.PayloadHash == payloadHash, "Event-ID bestaat met andere inhoud.", 409);
@@ -147,16 +147,16 @@ public sealed class AlertService(SocDbContext db, TenantDbFactory factory, SocSe
             a.PayloadHash = payloadHash;
             a.RawPayload = Encoding.UTF8.GetString(body);
             a.NormalizedPayload = SecurityAlertDetails.Normalize(a, details);
-            td.Alerts.Add(a);
-            LogTenant(td, a.ScopeId, source.Name, "Alert ontvangen", a.Number);
+            tenantDb.Alerts.Add(a);
+            LogTenant(tenantDb, a.ScopeId, source.Name, "Alert ontvangen", a.Number);
             try
             {
-                await td.SaveChangesAsync();
+                await tenantDb.SaveChangesAsync();
             }
             catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.SqlClient.SqlException sql && sql.Number is 2601 or 2627)
             {
-                td.ChangeTracker.Clear();
-                var duplicate = await td.Alerts.Include(x => x.History).SingleOrDefaultAsync(x => x.SourceIntegrationId == source.Id && x.ExternalEventId == eventId);
+                tenantDb.ChangeTracker.Clear();
+                var duplicate = await tenantDb.Alerts.Include(x => x.History).SingleOrDefaultAsync(x => x.SourceIntegrationId == source.Id && x.ExternalEventId == eventId);
                 if (duplicate == null)
                     throw;
                 Require(duplicate.PayloadHash == payloadHash, "Event-ID bestaat met andere inhoud.", 409);
@@ -165,33 +165,33 @@ public sealed class AlertService(SocDbContext db, TenantDbFactory factory, SocSe
             return (201, AlertDto(a, t.Id));
         }
     }
-    public async Task<object> AddAlert(AppUser u, CreateAlertRequest request)
+    public async Task<object> AddAlert(AppUser currentUser, CreateAlertRequest request)
     {
-        Require(Analyst(u));
+        Require(Analyst(currentUser));
         var t = await platform.Tenant(request.OrganizationId);
         Require(t.IsActive, "Klant is inactief.", 400);
-        var grants = await platform.Scopes(u, t.Id);
+        var grants = await platform.Scopes(currentUser, t.Id);
         var scope = request.ScopeId ?? grants.FirstOrDefault();
         Require(grants.Contains(scope));
-        await using var td = factory.Open(t);
+        await using var tenantDb = factory.Open(t);
         var a = NewAlert(scope, request, Required(request.Source, 80), responseMinutes: t.ResponseMinutes);
-        td.Alerts.Add(a);
-        LogTenant(td, scope, u.Name, "Alert handmatig ontvangen", a.Number);
-        await td.SaveChangesAsync();
+        tenantDb.Alerts.Add(a);
+        LogTenant(tenantDb, scope, currentUser.Name, "Alert handmatig ontvangen", a.Number);
+        await tenantDb.SaveChangesAsync();
         return AlertDto(a, t.Id);
     }
-    public async Task<object> Alerts(AppUser u, Guid? workspace, Guid? scope)
+    public async Task<object> Alerts(AppUser currentUser, Guid? workspace, Guid? scope)
     {
-        Require(CanReadInternal(u));
+        Require(CanReadInternal(currentUser));
         var result = new List<(DateTimeOffset Time, object Dto)>();
-        foreach (var (t, scopes) in await platform.ReadWorkspaces(u, workspace, scope))
+        foreach (var (t, scopes) in await platform.ReadWorkspaces(currentUser, workspace, scope))
         {
-            await using var td = factory.Open(t);
-            foreach (var a in await td.Alerts.Include(x => x.History).Where(x => scopes.Contains(x.ScopeId)).ToListAsync())
+            await using var tenantDb = factory.Open(t);
+            foreach (var a in await tenantDb.Alerts.Include(x => x.History).Where(x => scopes.Contains(x.ScopeId)).ToListAsync())
                 result.Add((a.CreatedAt, AlertDto(a, t.Id)));
             foreach (var sid in scopes)
-                LogTenant(td, sid, u.Name, "Alertoverzicht bekeken", "Alerts");
-            await td.SaveChangesAsync();
+                LogTenant(tenantDb, sid, currentUser.Name, "Alertoverzicht bekeken", "Alerts");
+            await tenantDb.SaveChangesAsync();
         }
         return result.OrderBy(x => x.Time).Select(x => x.Dto);
     }
@@ -238,52 +238,13 @@ public sealed class AlertService(SocDbContext db, TenantDbFactory factory, SocSe
                     Event(alert, currentUser.Name, "Alert opgepakt");
                     break;
                 case "triage":
-                    var outcome = Required(input.Outcome, 30);
-                    Require(new[] { "False positive", "Verwacht gedrag", "Nader onderzoek", "Bevestigd incident" }.Contains(outcome), "Ongeldige triage.", 400);
-                    alert.Triage = outcome;
-                    alert.Status = outcome is "False positive" or "Verwacht gedrag" ? AlertStatus.Dismissed : AlertStatus.UnderReview;
-                    Event(alert, currentUser.Name, $"Triage: {outcome} — {Required(input.Reason)}");
+                    ApplyTriage(alert, currentUser, input);
                     break;
                 case "promote":
-                    Require(NeedsCase(alert.Triage) && alert.CaseId == null, "Leg eerst triage nader onderzoek of bevestigd incident vast.", 409);
-                    ResearchCase researchCase;
-                    if (input.CaseId.HasValue)
-                    {
-                        researchCase = await tenantDb.Cases.SingleOrDefaultAsync(x => x.Id == input.CaseId && x.ScopeId == alert.ScopeId) ?? throw new SocException(400, "Case niet gevonden in dezelfde scope.");
-                        Require(!Closed(researchCase), "Case is afgesloten.", 409);
-                        Require(researchCase.OwnerId == currentUser.Id || currentUser.Role == "Senior analist", "Case heeft een andere eigenaar.", 403);
-                        tenantDb.Entry(researchCase).Property(x => x.Title).IsModified = true;
-                    }
-                    else
-                    {
-                        researchCase = new()
-                        {
-                            ScopeId = alert.ScopeId,
-                            Number = "CASE-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
-                            Title = Required(input.Title, 120),
-                            Priority = alert.Priority,
-                            OwnerId = currentUser.Id,
-                            Owner = currentUser.Name
-                        };
-                        researchCase.Entries.Add(new()
-                        {
-                            Actor = currentUser.Name,
-                            Kind = "Status",
-                            Text = "Onderzoek aangemaakt vanuit " + alert.Number
-                        });
-                        tenantDb.Cases.Add(researchCase);
-                    }
-                    alert.CaseId = researchCase.Id;
-                    alert.Status = AlertStatus.Escalated;
-                    Event(alert, currentUser.Name, "Gekoppeld aan " + researchCase.Number);
+                    await PromoteAlertAsync(tenantDb, alert, currentUser, input);
                     break;
                 case "reopen":
-                    Require(currentUser.Role == "Senior analist" && alert.Status is (AlertStatus.Dismissed or AlertStatus.Resolved) && alert.CaseId == null, "Heropenen niet toegestaan.", 409);
-                    alert.Status = AlertStatus.PendingReview;
-                    alert.Triage = null;
-                    alert.OwnerId = null;
-                    alert.Owner = null;
-                    Event(alert, currentUser.Name, "Heropend: " + Required(input.Reason));
+                    ReopenAlert(alert, currentUser, input);
                     break;
                 default:
                     throw new SocException(404, "Onbekende actie.");
@@ -295,4 +256,59 @@ public sealed class AlertService(SocDbContext db, TenantDbFactory factory, SocSe
         }
         throw new SocException(404, "Alert niet gevonden.");
     }
+
+    private static void ApplyTriage(Alert alert, AppUser currentUser, AlertActionRequest input)
+    {
+        var outcome = Required(input.Outcome, 30);
+        Require(new[] { "False positive", "Verwacht gedrag", "Nader onderzoek", "Bevestigd incident" }.Contains(outcome), "Ongeldige triage.", 400);
+        alert.Triage = outcome;
+        alert.Status = outcome is "False positive" or "Verwacht gedrag" ? AlertStatus.Dismissed : AlertStatus.UnderReview;
+        Event(alert, currentUser.Name, $"Triage: {outcome} — {Required(input.Reason)}");
+    }
+
+    private static async Task PromoteAlertAsync(TenantDbContext tenantDb, Alert alert, AppUser currentUser, AlertActionRequest input)
+    {
+        Require(NeedsCase(alert.Triage) && alert.CaseId == null, "Leg eerst triage nader onderzoek of bevestigd incident vast.", 409);
+        ResearchCase researchCase;
+        if (input.CaseId.HasValue)
+        {
+            researchCase = await tenantDb.Cases.SingleOrDefaultAsync(x => x.Id == input.CaseId && x.ScopeId == alert.ScopeId) ?? throw new SocException(400, "Case niet gevonden in dezelfde scope.");
+            Require(!Closed(researchCase), "Case is afgesloten.", 409);
+            Require(researchCase.OwnerId == currentUser.Id || currentUser.Role == "Senior analist", "Case heeft een andere eigenaar.", 403);
+            tenantDb.Entry(researchCase).Property(x => x.Title).IsModified = true;
+        }
+        else
+        {
+            researchCase = new()
+            {
+                ScopeId = alert.ScopeId,
+                Number = "CASE-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+                Title = Required(input.Title, 120),
+                Priority = alert.Priority,
+                OwnerId = currentUser.Id,
+                Owner = currentUser.Name
+            };
+            researchCase.Entries.Add(new()
+            {
+                Actor = currentUser.Name,
+                Kind = "Status",
+                Text = "Onderzoek aangemaakt vanuit " + alert.Number
+            });
+            tenantDb.Cases.Add(researchCase);
+        }
+        alert.CaseId = researchCase.Id;
+        alert.Status = AlertStatus.Escalated;
+        Event(alert, currentUser.Name, "Gekoppeld aan " + researchCase.Number);
+    }
+
+    private static void ReopenAlert(Alert alert, AppUser currentUser, AlertActionRequest input)
+    {
+        Require(currentUser.Role == "Senior analist" && alert.Status is (AlertStatus.Dismissed or AlertStatus.Resolved) && alert.CaseId == null, "Heropenen niet toegestaan.", 409);
+        alert.Status = AlertStatus.PendingReview;
+        alert.Triage = null;
+        alert.OwnerId = null;
+        alert.Owner = null;
+        Event(alert, currentUser.Name, "Heropend: " + Required(input.Reason));
+    }
+
 }
