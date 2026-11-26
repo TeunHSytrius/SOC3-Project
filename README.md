@@ -608,6 +608,15 @@ De demo draait lokaal via HTTP; de verbinding met SQL Server vraagt encryptie aa
 
 ## 9. Ontwikkelen en testen
 
+### Leesbare code
+
+- Controllers verzorgen HTTP; AlertService en CaseService bevatten de operationele bedrijfsregels. SocService verzorgt gedeelde toegang, platformbeheer en demo-initialisatie.
+- Entity Framework Core gebruikt aparte bestanden voor platformcontext, tenantcontext en tenantfactory.
+- React gebruikt gewone featurecomponenten voor het dashboard, filters, ticketlijst en detailschermen. App beheert sessie, data en acties.
+- Gebruik beschrijvende variabelen en methoden, korte functies en vier spaties voor C# / twee voor TypeScript. Geef commentaar bij de reden van een bedrijfsregel of beveiligingsmaatregel, niet bij vanzelfsprekende code.
+- Gebruik de formatter uit de IDE of `dotnet format whitespace SOC3.slnx` en `npx prettier@3.6.2 --write "frontend/src/**/*.{ts,tsx,css}"`. De bestaande REST-routes en database blijven behouden.
+
+
 De `.gitignore` sluit lokale builds, IDE-instellingen, caches, geheimen, databasebestanden, certificaten en tijdelijke bestanden uit. Commit wel broncode, SQL-scripts en migraties, package-lock.json, projectbestanden, `.env.example`, gedeelde Compose-configuratie en CI-workflows. Gitignore verwijdert geen al getrackte bestanden en is geen beveiliging tegen eerder gecommitteerde geheimen.
 
 ### Lokale frontendontwikkeling (aanbevolen)

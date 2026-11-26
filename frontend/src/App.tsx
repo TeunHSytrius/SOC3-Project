@@ -1,4 +1,9 @@
 import React from 'react';
+import DashboardPage from './features/dashboard/DashboardPage';
+import QueueFilters from './features/shared/QueueFilters';
+import TicketTable from './features/cases/TicketTable';
+import AlertDetailPage from './features/alerts/AlertDetailPage';
+import CaseDetailPage from './features/cases/CaseDetailPage';
 import TwoFactorSetup from './features/auth/TwoFactorSetup';
 import {api,sessionKey} from './services/api';
 import type {State, User, Alert, ResearchCase} from './types/soc';
@@ -137,120 +142,12 @@ class App extends React.Component<Record<string, never>,State> {
 {this.canReadInternal&&!s.user.requiresTwoFactorSetup&&<AlertNotifications alerts={s.alertNotifications} customerName={id=>this.name(id)} onOpen={this.openAlertNotification} onDismiss={this.dismissAlertNotification} busy={s.busy||!!s.modal}/>}
 </AppShell>}
 
- stats(items){return <div className="stats">{items.map(([label,value,desc,icon,tone])=><div className="stat" key={label}><div className="statline"><span>{label}</span><span className={'stat-icon '+tone}><Icon name={icon}/></span></div><strong>{value}</strong><small>{desc}</small></div>)}</div>}
  private showQueue(page:'alerts'|'cases',view:State['archiveFilter']='open',mine=false,ownerFilter=''){
    this.go(page);
    this.setState({archiveFilter:view,mine,ownerFilter,filter:'',listSort:'default'});
  }
- dashboard(){
-   const {org,user,orgs,users,keys,errors}=this.state;
-   const alerts=this.state.alerts.filter(alert=>!org||alert.organizationId===org);
-   const cases=this.state.cases.filter(ticket=>!org||ticket.organizationId===org);
-   const openAlerts=alerts.filter(active);
-   const unassigned=openAlerts.filter(alert=>!alert.owner&&['New','PendingReview'].includes(alert.status));
-   const risk=openAlerts.filter(alert=>sla(alert).kind==='warn');
-   const overdue=openAlerts.filter(alert=>sla(alert).kind==='danger');
-   const handled=alerts.filter(alert=>alert.firstHandledAt);
-   const onTime=handled.filter(alert=>sla(alert).kind==='good').length;
-   const percentage=handled.length?Math.round(100*onTime/handled.length):null;
-   const activeCases=cases.filter(ticket=>caseMatchesView(ticket,'open'));
-   const myCases=activeCases.filter(ticket=>ticket.ownerId===user?.id);
-   const reviewCases=cases.filter(ticket=>caseMatchesView(ticket,'resolved'));
-   const newCases=cases.filter(ticket=>caseMatchesView(ticket,'new'));
-   const senior=user?.role==='Senior analist';
-   const admin=this.isAdmin;
-   const workCases=admin?activeCases:myCases;
-   const summary=admin?
-     [['Nog op te pakken',unassigned.length,'Onbeheerde alerts','alerts','blue'],['Actieve tickets',activeCases.length,'Nieuw, in onderzoek of wachtend','cases','purple'],['SLA-risico',risk.length,'Minder dan 15 minuten','clock','warn'],['SLA te laat',overdue.length,'Open alerts buiten SLA','alerts','danger']]:
-     [['Nog op te pakken',unassigned.length,'Beschikbaar in de wachtrij','alerts','blue'],[senior?'Te prioriteren':'Mijn actieve tickets',senior?newCases.length:myCases.length,senior?'Nieuwe onderzoeken':'Aan mij toegewezen','cases','purple'],['SLA-risico',risk.length,'Minder dan 15 minuten','clock','warn'],['SLA te laat',overdue.length,'Open alerts buiten SLA','alerts','danger']];
-   return <div className="fragment soc-dashboard">
-     <PageHeader title={admin?'Beheerdersdashboard':'SOC dashboard'} sub={admin?'Platformbeheer en toezicht op de beveiligingsmeldingen.':'Je werkvoorraad, nieuwe meldingen en lopende onderzoeken.'} action={this.isAnalyst&&<Button primary onClick={()=>this.setState({modal:'newAlert'})}><Icon name="plus"/> Alert toevoegen</Button>}/>
-     {admin&&<section className="dashboard-management" aria-label="Platformbeheer">
-       <h2>Platformbeheer</h2>
-       <div className="dashboard-management-grid">
-         {[
-           {page:'customers',label:'Klanten',value:orgs.filter(item=>item.isActive).length,detail:'Actieve organisaties',icon:'customers'},
-           {page:'users',label:'Gebruikers',value:users.filter(item=>item.isActive).length,detail:'Actieve accounts',icon:'users'},
-           {page:'keys',label:'API-sleutels',value:keys.filter(item=>item.isActive).length,detail:'Actieve integraties',icon:'keys'},
-           {page:'errors',label:'Foutenlog',value:errors.length,detail:'Sinds backendstart',icon:'alerts'}
-         ].map(item=><button type="button" className="dashboard-management-item" key={item.page} onClick={()=>this.go(item.page)}><Icon name={item.icon}/><span><strong>{item.label}</strong><small>{item.detail}</small></span><b>{item.value}</b></button>)}
-       </div>
-       <Button onClick={()=>this.go('audit')}>Auditlog bekijken <Icon name="arrow" size={16}/></Button>
-     </section>}
-     <section aria-label="Werkvoorraad">
-       <h2 className="dashboard-section-title">{admin?'SOC-overzicht':'Werkvoorraad'}</h2>
-       {this.stats(summary)}
-       <div className="dashboard-queues">
-         <Panel title="Alertwachtrij" sub="Nog niet toegewezen · oudste eerst (FIFO)" action={<Button onClick={()=>this.showQueue('alerts','open',false,'unassigned')}>Wachtrij openen <Icon name="arrow" size={16}/></Button>}>
-           <DashboardAlerts alerts={sortRecords(unassigned,'oldest',true).slice(0,5)} customerName={id=>this.name(id)} open={id=>this.go('alerts',id)}/>
-         </Panel>
-         <Panel title="Recent ontvangen meldingen" sub="Alle statussen · nieuwste eerst" action={<Button onClick={()=>{this.showQueue('alerts','all');this.setState({listSort:'newest'});}}>Alle alerts <Icon name="arrow" size={16}/></Button>}>
-           <DashboardAlerts alerts={sortRecords(alerts,'newest',false).slice(0,5)} customerName={id=>this.name(id)} open={id=>this.go('alerts',id)}/>
-         </Panel>
-       </div>
-     </section>
-     <section aria-label="Ticketwerkvoorraad">
-       <h2 className="dashboard-section-title">Tickets</h2>
-       <div className="dashboard-ticket-links">
-         <Button onClick={()=>this.showQueue('cases','new')}>Nieuw ({newCases.length})</Button>
-         <Button onClick={()=>this.showQueue('cases','open',!admin)}>{admin?'Actieve tickets':'Mijn actieve tickets'} ({workCases.length})</Button>
-         <Button onClick={()=>this.showQueue('cases','waiting')}>Wacht op klant ({cases.filter(ticket=>caseMatchesView(ticket,'waiting')).length})</Button>
-         <Button onClick={()=>this.showQueue('cases','resolved')}>Af te sluiten ({reviewCases.length})</Button>
-         <Button onClick={()=>this.showQueue('cases','closed')}>Archief ({cases.filter(isClosed).length})</Button>
-       </div>
-       <Panel title={admin?'Actieve onderzoeken':'Mijn actieve onderzoeken'} sub="Meest recent aangemaakt" action={<Button onClick={()=>this.showQueue('cases','all')}>Alle tickets <Icon name="arrow" size={16}/></Button>}>
-         {this.caseTable(sortRecords(workCases,'newest',false).slice(0,5))}
-       </Panel>
-     </section>
-     <section aria-label="Rapportage">
-       <h2 className="dashboard-section-title">Rapportage</h2>
-       <AlertTrend alerts={alerts}/>
-       <Panel title="SLA-prestaties" sub="Op basis van de eerste behandeling">
-         <div className="slaoverview">
-           <div className="donut" style={{background:`conic-gradient(#14836c ${percentage||0}%, #e6edf1 0)`}}><div><strong>{percentage===null?'—':percentage+'%'}</strong><small>op tijd</small></div></div>
-           <div><p><span className="dot green"/> Binnen SLA <b>{onTime}</b></p><p><span className="dot red"/> Te laat behandeld <b>{handled.filter(alert=>sla(alert).kind==='danger').length}</b></p><p><span className="dot orange"/> Open met SLA-risico <b>{risk.length}</b></p></div>
-         </div>
-       </Panel>
-     </section>
-   </div>;
- }
- filters(type:'alerts'|'cases'){
-   const s=this.state;
-   const isAlerts=type==='alerts';
-   const items=(isAlerts?s.alerts:s.cases).filter(item=>!s.org||item.organizationId===s.org);
-   const visibleStatuses=isAlerts?
-     states.filter(status=>s.archiveFilter==='all'||(s.archiveFilter==='open'?['New','PendingReview','UnderReview'].includes(status):s.archiveFilter==='linked'?status==='Escalated':['Dismissed','Resolved'].includes(status))):
-     caseStates.filter(status=>caseMatchesView({status} as ResearchCase,s.archiveFilter));
-   const alerts=s.alerts.filter(alert=>!s.org||alert.organizationId===s.org);
-   const categories=[...new Set(alerts.map(alert=>alert.security?.category||'Niet geclassificeerd'))].sort();
-   const sources=[...new Set(alerts.map(alert=>alert.source))].sort();
-   const owners=[...new Set(items.map(item=>item.owner).filter(Boolean))].sort();
-   const advancedActive=!!(s.filter||s.ownerFilter||s.slaFilter||s.category||s.sourceFilter||s.fromDate||s.toDate);
-   return <div className="queue-filters compact-filters">
-     <div className="compact-filter-main">
-       <Field label="Zoeken"><input placeholder={isAlerts?'Alertnummer, titel, IP of hostname':'Ticketnummer, titel, notitie of observable'} value={s.search} onChange={e=>this.setState({search:e.target.value})}/></Field>
-       <Field label="Prioriteit"><Select options={priorities} value={s.priority} placeholder="Alle prioriteiten" onChange={e=>this.setState({priority:e.target.value})}/></Field>
-       <Field label="Sorteren"><Select options={[{id:'default',name:isAlerts&&s.archiveFilter==='open'?'Oudste eerst (FIFO)':s.archiveFilter==='closed'&&!isAlerts?'Laatst afgesloten eerst':'Nieuwste eerst'},{id:'oldest',name:'Oudste aangemaakt eerst'},{id:'newest',name:'Nieuwste aangemaakt eerst'},{id:'priority',name:'Hoogste prioriteit eerst'}]} value={s.listSort} onChange={e=>this.setState({listSort:e.target.value as State['listSort']})}/></Field>
-       <Button onClick={()=>this.setState({search:'',filter:'',priority:'',category:'',fromDate:'',toDate:'',mine:false,listSort:'default',ownerFilter:'',slaFilter:'',sourceFilter:''})}>Filters wissen</Button>
-     </div>
-     {this.isAnalyst&&<label className="check"><input type="checkbox" checked={s.mine} onChange={e=>this.setState({mine:e.target.checked})}/> Alleen mijn {isAlerts?'alerts':'tickets'}</label>}
-     <details className="advanced-filters" key={type}>
-       <summary>Meer filters{advancedActive?' (actief)':''}</summary>
-       <div className="queue-filter-grid">
-         <Field label="Klantorganisatie"><Select options={s.orgs.map(o=>({id:o.id,name:o.name+(o.isActive?'':' (inactief)')}))} value={s.org} placeholder="Alle klanten" onChange={e=>this.setState({org:e.target.value,ownerFilter:'',sourceFilter:'',category:''})}/></Field>
-         <Field label="Status"><Select options={visibleStatuses} value={s.filter} placeholder="Alle statussen in deze selectie" onChange={e=>this.setState({filter:e.target.value})}/></Field>
-         {this.canReadInternal&&<Field label="Eigenaar"><Select options={[{id:'unassigned',name:'Niet toegewezen'},...owners.map(owner=>({id:owner,name:owner}))]} value={s.ownerFilter} placeholder="Alle eigenaren" onChange={e=>this.setState({ownerFilter:e.target.value})}/></Field>}
-         {isAlerts&&<>
-           <Field label="SLA"><Select options={[{id:'neutral',name:'Nog niet behandeld'},{id:'warn',name:'Bijna overschreden'},{id:'danger',name:'Overschreden'},{id:'good',name:'Binnen SLA'}]} value={s.slaFilter} placeholder="Alle SLA-statussen" onChange={e=>this.setState({slaFilter:e.target.value})}/></Field>
-           <Field label="Categorie"><Select options={categories} value={s.category} placeholder="Alle categorieën" onChange={e=>this.setState({category:e.target.value})}/></Field>
-           <Field label="Securitytool"><Select options={sources} value={s.sourceFilter} placeholder="Alle bronnen" onChange={e=>this.setState({sourceFilter:e.target.value})}/></Field>
-         </>}
-         <Field label="Aangemaakt vanaf"><input type="date" value={s.fromDate} onChange={e=>this.setState({fromDate:e.target.value})}/></Field>
-         <Field label="Aangemaakt t/m"><input type="date" value={s.toDate} onChange={e=>this.setState({toDate:e.target.value})}/></Field>
-       </div>
-     </details>
-   </div>;
- }
+ dashboard(){return <DashboardPage state={this.state} isAdmin={!!this.isAdmin} isAnalyst={!!this.isAnalyst} customerName={id=>this.name(id)} navigate={(page,id)=>this.go(page,id)} update={update=>this.setState(update as Pick<State,keyof State>)} showQueue={(page,view,mine,ownerFilter)=>this.showQueue(page,view,mine,ownerFilter)}/>;}
+ filters(type:'alerts'|'cases'){return <QueueFilters type={type} state={this.state} canReadInternal={!!this.canReadInternal} isAnalyst={!!this.isAnalyst} update={update=>this.setState(update as Pick<State,keyof State>)}/>;}
  alertTable(list:Alert[]){return <Table head={['Alert','Klant','Prioriteit','Status','Ontvangen','SLA','']} empty={!list.length}>{list.map(a=><tr key={a.id}><td><button className="rowlink" onClick={()=>this.go('alerts',a.id)}>{a.title}</button><small>{a.number} · {a.source}{a.security?.category?' · '+a.security.category:''}{a.security?.simulated?' · Simulatie':''}</small></td><td>{this.name(a.organizationId)}</td><td><Badge value={a.priority}/></td><td><Badge value={a.status}/></td><td>{fmt(a.createdAt)}</td><td><Badge value={sla(a).text} kind={sla(a).kind}/></td><td><button className="arrowbtn" aria-label={'Open '+a.number} onClick={()=>this.go('alerts',a.id)}>→</button></td></tr>)}</Table>}
  alerts(){
    const s=this.state;
@@ -269,59 +166,8 @@ class App extends React.Component<Record<string, never>,State> {
      <AlertCards key={[s.org,s.archiveFilter,s.search,s.filter,s.priority,s.category,s.fromDate,s.toDate,s.mine,s.ownerFilter,s.slaFilter,s.sourceFilter,s.listSort].join('|')} alerts={list} customerName={id=>this.name(id)} open={id=>this.go('alerts',id)} busy={s.busy}/>
    </div>;
  }
- prettyJson(raw:string){try{return JSON.stringify(JSON.parse(raw),null,2)}catch{return raw}}
- alertDetail(a:Alert){
-   const senior=this.state.user.role==='Senior analist';
-   const canTriage=this.isAnalyst&&active(a)&&!!a.owner&&(senior||a.owner===this.state.user.name);
-   return <div className="wire-screen">
-     <PageHeader title="Alertdetails" sub={this.isAdmin?'Beheerder · alleen lezen':'Beoordelen van binnengekomen melding'}/>
-     <button className="back" onClick={()=>this.go('alerts')}>← Alerts</button>
-     <div className="wire-detail-grid">
-       <Panel title="Alertgegevens">
-         <div className="bodypad">
-           <div className={'wire-banner '+priorityColor(a.priority)}>
-             <small>{this.name(a.organizationId)} · {fmt(a.createdAt)} · {sla(a).text}</small>
-             <h2>{a.title}</h2>
-           </div>
-           <dl className="wire-data">
-             <dt>Alert-ID</dt><dd>{a.number}</dd>
-             <dt>Bron</dt><dd>{a.source}</dd>
-             <dt>Status</dt><dd><Badge value={a.status}/></dd>
-             <dt>Prioriteit</dt><dd>{labels[a.priority]}</dd>
-             <dt>Ontvangen</dt><dd>{fmt(a.createdAt)}</dd>
-             <dt>Deadline</dt><dd>{fmt(a.deadline)}</dd>
-             <dt>Eerste behandeling</dt><dd>{fmt(a.firstHandledAt)}</dd>
-             <dt>Eigenaar</dt><dd>{a.owner||'Niet toegewezen'}</dd>
-           </dl>
-           {!a.security?.description&&<p>{a.description}</p>}
-           <AlertSecurityDetails alert={a}/>
-           <details><summary>{a.security?.simulated?'Fictieve bron-JSON':'Originele JSON'}</summary><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{this.prettyJson(a.rawPayload)}</pre></details>
-         </div>
-       </Panel>
-       <Panel title="Triage">
-         <div className="bodypad">
-           <p>Huidige uitkomst: {a.triage||'Nog niet beoordeeld'}</p>
-           {this.isAnalyst&&active(a)&&!a.owner&&<Button primary disabled={this.state.busy} onClick={()=>this.run(`alerts/${a.id}/claim`,{},'Alert opgepakt.')}>Oppakken</Button>}
-           {canTriage&&<form onSubmit={e=>this.run(`alerts/${a.id}/triage`,formData(e),'Triage opgeslagen.')}>
-             <Field label="Triage-uitkomst"><Select name="outcome" options={['False positive','Verwacht gedrag','Nader onderzoek','Bevestigd incident']} placeholder="Kies uitkomst" required/></Field>
-             <Field label="Toelichting (verplicht)"><textarea name="reason" rows={5} required placeholder="Beschrijf waarom de alert wordt afgesloten of onderzocht."/></Field>
-             <Button type="submit" primary disabled={this.state.busy}>Beoordeling opslaan</Button>
-           </form>}
-           {this.isAnalyst&&active(a)&&a.owner&&!canTriage&&<p>Deze alert is toegewezen aan een andere analist.</p>}
-           <div className="actions wire-next">
-             {canTriage&&['Nader onderzoek','Bevestigd incident','True positive','Onbeslist'].includes(a.triage)&&<Button onClick={()=>this.setState({modal:'caseFromAlert'})}>Case maken / koppelen</Button>}
-             {a.caseId&&<Button onClick={()=>this.go('cases',a.caseId)}>Open gekoppelde case</Button>}
-             {senior&&['Dismissed','Resolved'].includes(a.status)&&!a.caseId&&<Button onClick={()=>this.setState({modal:'reopen'})}>Heropenen</Button>}
-           </div>
-         </div>
-       </Panel>
-     </div>
-     <div className="detailgrid">
-       <Panel title="Statusgeschiedenis"><div className="timeline">{a.history.slice().reverse().map((h,i)=><div key={i}><span className="timeline-dot"/><strong>{h.text}</strong><small>{h.actor} · {fmt(h.at)}</small></div>)}</div></Panel>
-     </div>
-   </div>;
- }
- caseTable(list:ResearchCase[]){return <Table head={['Case','Klant','Prioriteit','Status','Eigenaar','Aangemaakt','Afgesloten','']} empty={!list.length}>{list.map(r=><tr key={r.id}><td><button className="rowlink" onClick={()=>this.go('cases',r.id)}>{r.title}</button><small>{r.number}</small></td><td>{this.name(r.organizationId)}</td><td><Badge value={r.priority}/></td><td><Badge value={r.status}/></td><td>{r.owner}</td><td>{fmt(r.createdAt)}</td><td>{fmt(r.closedAt)}</td><td><button className="arrowbtn" onClick={()=>this.go('cases',r.id)} aria-label={'Open '+r.number}>→</button></td></tr>)}</Table>}
+ alertDetail(alert:Alert){return <AlertDetailPage alert={alert} state={this.state} isAdmin={!!this.isAdmin} isAnalyst={!!this.isAnalyst} customerName={id=>this.name(id)} navigate={(page,id)=>this.go(page,id)} run={(...args)=>this.run(...args)} update={update=>this.setState(update as Pick<State,keyof State>)}/>;}
+ caseTable(tickets:ResearchCase[]){return <TicketTable tickets={tickets} customerName={id=>this.name(id)} onOpen={id=>this.go('cases',id)}/>;}
  cases(){
    const s=this.state;
    const selected=s.cases.find(ticket=>ticket.id===s.selected);
@@ -353,12 +199,7 @@ class App extends React.Component<Record<string, never>,State> {
      </Panel>
    </div>;
  }
- caseDetail(r:ResearchCase){const senior=this.state.user.role==='Senior analist';const canEdit=this.isAnalyst&&(senior||r.ownerId===this.state.user.id);return <div className="fragment"><button className="back" onClick={()=>this.go('cases')}>← Terug naar cases</button><PageHeader title="Onderzoek / Case" sub={this.isAdmin?'Beheerder · volledig dossier, alleen lezen':'Casegegevens en onderzoekstijdlijn'}/><div className={'wire-banner case-banner '+priorityColor(r.priority)}><div><small>{r.number} · {this.name(r.organizationId)}</small><h2>{r.title}</h2></div><div><Badge value={r.status}/><p>Eigenaar: {r.owner}</p></div></div>{this.canReadInternal&&<CaseWorkflow research={r}/>}<div className="detailgrid"><Panel title="Casegegevens"><div className="bodypad"><dl><dt>Prioriteit</dt><dd><Badge value={r.priority}/></dd><dt>Eigenaar</dt><dd>{r.owner}</dd><dt>Aangemaakt</dt><dd>{fmt(r.createdAt)}</dd><dt>Afgesloten</dt><dd>{fmt(r.closedAt)}</dd>{this.canReadInternal&&<div className="fragment"><dt>Klantzichtbaar</dt><dd>{r.customerVisible?'Ja':'Nee'}</dd><dt>Gekoppelde alerts</dt><dd>{r.alertIds.map(id=>{const a=this.state.alerts.find(x=>x.id===id);return <div key={id}><button className="rowlink" onClick={()=>this.go('alerts',id)}>{a?.number} · {a?.title}</button></div>})}</dd><dt>Observables</dt><dd>{r.entries.filter(e=>e.kind==='Observable').map(e=><div className="wire-observable" key={e.id}>{e.text}</div>)}{!r.entries.some(e=>e.kind==='Observable')&&'—'}</dd><dt>Samenvatting</dt><dd>{r.summary||'—'}</dd><dt>Conclusie</dt><dd>{r.conclusion||'—'}</dd></div>}</dl>{this.state.user.role==='Senior analist'&&isClosed(r)&&<Button onClick={()=>this.setState({modal:'caseReopen'})}>Case heropenen</Button>}{canEdit&&!isClosed(r)&&<div className="actions">{r.status!=='Open'&&<Button primary onClick={()=>this.setState({modal:'caseStatus'})}>Status wijzigen</Button>}{(r.status!=='Open'||senior)&&<Button onClick={()=>this.setState({modal:'owner'})}>{r.status==='Open'?'Prioriteren en toewijzen':'Overdragen'}</Button>}{r.status==='Open'&&!senior&&<small>Wacht op prioritering en toewijzing door senior.</small>}<Button onClick={()=>this.run(`cases/${r.id}/visibility`,{visible:!r.customerVisible},'Zichtbaarheid aangepast.')}>{r.customerVisible?'Verbergen voor klant':'Vrijgeven aan klant'}</Button></div>}</div></Panel><Panel title="Onderzoekstijdlijn" sub={r.number+" · Notities, observables, acties en bewijsreferenties"} action={!isClosed(r)&&this.state.user.role==='Klant'&&<Button primary onClick={()=>this.setState({modal:'entry',error:''})}>Reageren</Button>}>{canEdit&&!isClosed(r)&&<div className="case-entry-actions">
-       <Button primary onClick={()=>this.setState({modal:'note',error:''})}>+ Notitie</Button>
-       <Button onClick={()=>this.setState({modal:'observable',error:''})}>+ Observable</Button>
-       <Button onClick={()=>this.setState({modal:'actionEntry',error:''})}>+ Actie</Button>
-       <Button onClick={()=>this.setState({modal:'evidenceRef',error:''})}>+ Bewijsreferentie</Button>
-     </div>}<div className="timeline">{!r.entries.length&&<p>Geen onderzoeksinformatie beschikbaar.</p>}{r.entries.slice().reverse().map(e=><div key={e.id}><span className="timeline-dot"/><strong>{e.kind} {this.canReadInternal&&<Badge value={e.visible?'Klantzichtbaar':'Intern'} kind={e.visible?'good':'neutral'}/>}</strong><p>{e.text}</p><small>{e.actor} · {fmt(e.at)}</small></div>)}</div></Panel></div></div>}
+ caseDetail(ticket:ResearchCase){return <CaseDetailPage ticket={ticket} state={this.state} isAdmin={!!this.isAdmin} isAnalyst={!!this.isAnalyst} canReadInternal={!!this.canReadInternal} customerName={id=>this.name(id)} navigate={(page,id)=>this.go(page,id)} run={(...args)=>this.run(...args)} update={update=>this.setState(update as Pick<State,keyof State>)}/>;}
  customers(){return <div className="fragment"><PageHeader title="Klantenbeheer" sub="Beheer organisaties en hun actieve status." action={<Button primary onClick={()=>this.setState({modal:'customer'})}><Icon name="plus"/> Klant toevoegen</Button>}/><Panel title="Organisaties" sub={this.state.orgs.length+' geregistreerde organisaties'}><Table head={['Organisatie','Status','Reactie-SLA','Aangemaakt','Actie']}>{this.state.orgs.map(o=><tr key={o.id}><td><b>{o.name}</b></td><td><Badge value={o.isActive?'Actief':'Inactief'} kind={o.isActive?'good':'neutral'}/></td><td>{o.responseMinutes} min</td><td>{fmt(o.createdAt)}</td><td><div className="actions"><Button onClick={()=>{this.go('cases');this.setState({org:o.id,archiveFilter:'all'});}}>Tickets ({this.state.ticketRegister.filter(t=>t.organizationId===o.id).length})</Button><Button onClick={()=>this.setState({modal:'customerEdit',selected:o.id})}>Bewerken</Button><Button onClick={()=>{if(window.confirm(o.isActive?'Klant deactiveren? Historische gegevens blijven behouden.':'Klant activeren?'))this.run(`organizations/${o.id}/${o.isActive?'deactivate':'activate'}`,{},'Klantstatus bijgewerkt.')}}>{o.isActive?'Deactiveren':'Activeren'}</Button></div></td></tr>)}</Table></Panel></div>}
  users(){return <div className="fragment"><PageHeader title="Gebruikers & rollen" sub="Beheer accounts en klanttoegang." action={<Button primary onClick={()=>this.setState({modal:'user',selected:null})}><Icon name="plus"/> Gebruiker toevoegen</Button>}/><Panel title="Gebruikers"><Table head={['Naam','E-mail','Rol','Klanttoegang','Status','2FA','']}>{this.state.users.map(u=><tr key={u.id}><td><b>{u.name}</b></td><td>{u.email}</td><td>{u.role}</td><td>{u.organizationIds.map(x=>this.name(x)).join(', ')||'—'}</td><td><Badge value={u.isActive?'Actief':'Inactief'} kind={u.isActive?'good':'neutral'}/></td><td><Badge value={u.twoFactorEnabled?'Actief':'Niet actief'} kind={u.twoFactorEnabled?'good':'neutral'}/></td><td>{u.id!==this.state.user.id?<div className="actions"><Button onClick={()=>this.setState({modal:'userAccess',selected:u.id})}>Bewerken</Button><button type="button" className="remove-user" disabled={this.state.busy} onClick={()=>{if(window.confirm('Gebruiker '+u.name+' verwijderen? Toegang wordt ingetrokken. Ticket- en audithistorie blijft behouden.'))void this.run('users/'+u.id+'/remove',{},'Gebruiker verwijderd.');}}>Verwijderen</button></div>:<small>Eigen account</small>}</td></tr>)}</Table></Panel></div>}
  keys(){return <div className="fragment"><PageHeader title="API-sleutels" sub="Beheer sleutels waarmee externe tools alerts kunnen aanleveren." action={<Button primary onClick={()=>this.setState({modal:'key'})}><Icon name="plus"/> Sleutel maken</Button>}/>{this.state.secret&&<Panel title="Nieuwe sleutel — eenmalig zichtbaar"><div className="bodypad"><code className="secret">{this.state.secret}</code><p>Gebruik deze sleutel in de HTTP-header X-API-Key bij POST /api/v1/ingest/alerts.</p><Button onClick={()=>this.setState({secret:null})}>Verbergen</Button></div></Panel>}<Panel title="Integraties"><Table head={['Tool','Klant','Sleutel','Status','']} empty={!this.state.keys.length}>{this.state.keys.map(k=><tr key={k.id}><td>{k.name}</td><td>{this.name(k.organizationId)}</td><td><code>{k.prefix}…</code></td><td><Badge value={k.isActive?'Actief':'Ingetrokken'} kind={k.isActive?'good':'neutral'}/></td><td>{k.isActive&&<Button onClick={()=>{if(confirm('Sleutel definitief intrekken?'))this.run(`keys/${k.id}/revoke`,{},'Sleutel ingetrokken.')}}>Intrekken</Button>}</td></tr>)}</Table></Panel></div>}

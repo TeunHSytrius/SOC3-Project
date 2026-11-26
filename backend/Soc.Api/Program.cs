@@ -22,6 +22,8 @@ builder.Services.AddIdentity<AppUser,IdentityRole<Guid>>(o=>{o.User.RequireUniqu
 builder.Services.AddScoped<IUserStore<AppUser>,ProtectedUserStore>();
 builder.Services.ConfigureApplicationCookie(o=>{o.Cookie.HttpOnly=true;o.Cookie.SameSite=SameSiteMode.Lax;o.Cookie.SecurePolicy=demo?CookieSecurePolicy.SameAsRequest:CookieSecurePolicy.Always;o.ExpireTimeSpan=TimeSpan.FromHours(8);o.Events.OnRedirectToLogin=c=>{c.Response.StatusCode=401;return Task.CompletedTask;};o.Events.OnRedirectToAccessDenied=c=>{c.Response.StatusCode=403;return Task.CompletedTask;};});
 builder.Services.AddControllers().AddJsonOptions(o=>o.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));builder.Services.AddOpenApi();builder.Services.AddScoped<SocService>();
+builder.Services.AddScoped<AlertService>();
+builder.Services.AddScoped<CaseService>();
 builder.Services.AddSingleton<ApiErrorLog>();
 var app=builder.Build();
 app.UseMiddleware<ApiErrorMiddleware>();
