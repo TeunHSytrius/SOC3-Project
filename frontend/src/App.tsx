@@ -11,24 +11,9 @@ import type { WorkspaceActions, ActionResult } from './types/workspace';
 import DashboardPage from './features/dashboard/DashboardPage';
 import TwoFactorSetup from './features/auth/TwoFactorSetup';
 import { api, sessionKey } from './services/api';
-import type { State, User, Alert, ResearchCase } from './types/soc';
-import {
-  labels,
-  priorities,
-  roles,
-  states,
-  caseStates,
-  active,
-  isClosed,
-  fmt,
-  sla,
-  nextCaseStates,
-  alertGroup,
-  caseGroup,
-  caseMatchesView,
-  sortRecords,
-} from './types/domain';
-import { Icon, Badge, Button, Field, Select, Table, Panel, PageHeader } from './components/Ui';
+import type { State, User, Alert } from './types/soc';
+import { active, sortRecords } from './types/domain';
+import { Icon, Badge, Button, Panel, PageHeader } from './components/Ui';
 import { LoadingState } from './components/PageStates';
 import LoginPage from './features/auth/LoginPage';
 import { AppShell } from './components/AppShell';

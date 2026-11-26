@@ -55,10 +55,13 @@ public sealed partial class SocService
     private bool NeedsTwoFactor(AppUser user)
     {
         bool internalRole = user.Role is "Analist" or "Senior analist" or "Beheerder";
+        if (user.TwoFactorEnabled || !internalRole)
+            return false;
+
         bool demoAccount = config.GetValue<bool>("Demo:Enabled") &&
             user.Email!.EndsWith("@soc.demo", StringComparison.OrdinalIgnoreCase);
 
-        return !user.TwoFactorEnabled && internalRole && !demoAccount;
+        return !demoAccount;
     }
     public async Task<AppUser> UserAsync(System.Security.Claims.ClaimsPrincipal principal, bool allowSetup = false)
     {

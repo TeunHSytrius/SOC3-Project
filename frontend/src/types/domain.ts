@@ -27,37 +27,38 @@ export const states = ['New', 'PendingReview', 'UnderReview', 'Escalated', 'Dism
     'Resolved',
     'Closed',
   ];
-export const active = (a: Alert) => !['Dismissed', 'Resolved', 'Escalated'].includes(a.status),
-  isClosed = (c: ResearchCase) => c.status === 'Closed',
-  fmt = (d) =>
-    d
-      ? new Date(d).toLocaleString('nl-NL', {
+export const active = (alert: Alert) => !['Dismissed', 'Resolved', 'Escalated'].includes(alert.status);
+export const isClosed = (ticket: ResearchCase) => ticket.status === 'Closed';
+export const fmt = (date: string | null | undefined) =>
+    date
+      ? new Date(date).toLocaleString('nl-NL', {
           day: '2-digit',
           month: 'short',
           hour: '2-digit',
           minute: '2-digit',
         })
       : '—';
-export const sla = (a: Alert) => {
-  const diff =
-    (new Date(a.deadline).getTime() - new Date(a.firstHandledAt || Date.now()).getTime()) / 60000;
+export function sla(alert: Alert) {
+  const responseTime = alert.firstHandledAt
+    ? new Date(alert.firstHandledAt).getTime()
+    : Date.now();
+  const remainingMinutes = (new Date(alert.deadline).getTime() - responseTime) / 60000;
+
+  if (alert.slaStatus === 'Breached' || remainingMinutes < 0) {
+    return { kind: 'danger', text: 'Overschreden' };
+  }
+
+  if (alert.firstHandledAt) {
+    return { kind: 'good', text: 'Binnen SLA' };
+  }
+
+  const hours = Math.floor(remainingMinutes / 60);
+  const minutes = Math.floor(remainingMinutes % 60);
   return {
-    kind:
-      a.slaStatus === 'Breached' || diff < 0
-        ? 'danger'
-        : a.firstHandledAt
-          ? 'good'
-          : diff <= 15
-            ? 'warn'
-            : 'neutral',
-    text:
-      a.slaStatus === 'Breached' || diff < 0
-        ? 'Overschreden'
-        : a.firstHandledAt
-          ? 'Binnen SLA'
-          : `${Math.floor(diff / 60)}u ${Math.floor(diff % 60)}m`,
+    kind: remainingMinutes <= 15 ? 'warn' : 'neutral',
+    text: `${hours}u ${minutes}m`,
   };
-};
+}
 
 // Mirrors the allowed case status transitions in SocService.
 export function nextCaseStates(status: ResearchCase['status']): string[] {
