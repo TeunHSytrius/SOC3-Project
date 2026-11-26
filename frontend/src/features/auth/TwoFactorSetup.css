@@ -65,11 +65,43 @@
 }
 
 /* Keep the original component usable on narrow screens. */
-.two-factor-setup { width:100%; min-width:0; margin:1rem auto; }
-.two-factor-setup h2 { margin-bottom:1rem; }
-.two-factor-form button,.two-factor-result button { border:1px solid #444; background:#444; color:#fff; border-radius:6px; padding:10px; }
-.two-factor-qr { display:block; width:fit-content; max-width:100%; margin:12px auto; }
-.two-factor-qr svg { max-width:100%; height:auto; }
-.two-factor-recovery-codes { grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr)); }
-.two-factor-recovery-codes code { font-size:12px; }
-@media(max-width:420px){.two-factor-setup{padding:12px;} .two-factor-result ol{padding-left:20px;}}
+.two-factor-setup {
+  width: 100%;
+  min-width: 0;
+  margin: 1rem auto;
+}
+.two-factor-setup h2 {
+  margin-bottom: 1rem;
+}
+.two-factor-form button,
+.two-factor-result button {
+  border: 1px solid #444;
+  background: #444;
+  color: #fff;
+  border-radius: 6px;
+  padding: 10px;
+}
+.two-factor-qr {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 12px auto;
+}
+.two-factor-qr svg {
+  max-width: 100%;
+  height: auto;
+}
+.two-factor-recovery-codes {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr));
+}
+.two-factor-recovery-codes code {
+  font-size: 12px;
+}
+@media (max-width: 420px) {
+  .two-factor-setup {
+    padding: 12px;
+  }
+  .two-factor-result ol {
+    padding-left: 20px;
+  }
+}

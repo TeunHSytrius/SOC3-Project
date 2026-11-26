@@ -1,4 +1,4 @@
-﻿namespace Soc.Data.Entities.Enums;
+namespace Soc.Data.Entities.Enums;
 
 public enum SlaStatus
 {
