@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Soc.Data.Context;
-using Domain = Soc.Data.Domain.Entities;
+using DomainEntities = global::Soc.Data.Domain.Entities;
 
 namespace Soc.Tests;
 
@@ -30,9 +30,9 @@ public class DomainDatabaseTests
             Assert.Contains($"CREATE TABLE [domain].[{table}]", createScript);
         }
 
-        var ticket = database.Model.FindEntityType(typeof(Domain.Ticket));
+        var ticket = database.Model.FindEntityType(typeof(DomainEntities.Ticket));
         Assert.NotNull(ticket);
         Assert.Contains(ticket.GetForeignKeys(), foreignKey =>
-            foreignKey.PrincipalEntityType.ClrType == typeof(Domain.Alert) && foreignKey.IsUnique);
+            foreignKey.PrincipalEntityType.ClrType == typeof(DomainEntities.Alert) && foreignKey.IsUnique);
     }
 }
