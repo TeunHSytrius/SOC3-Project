@@ -288,7 +288,7 @@ tests/smoke.mjs       API-integratietest
 README.md             Functionele en technische handleiding
 ```
 
-De multi-stage Dockerfile bouwt de React-app en ASP.NET Core-applicatie; de statische frontend wordt gepubliceerd in wwwroot. Styling is gebaseerd op develop (zonder paarse focusaccenten) en de horizontale navigatiebranch, met aanvullende CSS voor nieuwe schermen.
+De multi-stage Dockerfile bouwt de React-app en ASP.NET Core-applicatie; de statische frontend wordt gepubliceerd in wwwroot. Styling gebruikt de index.css van main in de groepsrepository, met uitsluitend een flexibele rootbreedte in plaats van 1126px, en de aangepaste horizontale navigatiebranch. De globale accentvariabelen zijn behouden.
 
 ## 6. Database
 
@@ -560,3 +560,18 @@ Open cases gaan via de toewijzing naar In onderzoek. Vanuit In onderzoek kan de 
 ### Wireframes en huisstijl
 
 De oorspronkelijke kaartweergave uit FO v1.1 (figuren 1–4) is hersteld: drie kaarten naast elkaar, maximaal twaalf alerts per pagina, zoek- en filterbalk, driepuntjesmenu, apart triagepaneel, casebanner, observables en tijdlijn, en kaarten voor klantonderzoeken. De basis-index.css is overgenomen van de aangeleverde groepscode. De precieze ernstkleuren zijn in het FO nog niet definitief vastgelegd; deze versie gebruikt grijs voor laag/gemiddeld, oranje voor hoog, rood voor urgent en magenta voor kritiek, steeds met tekstlabels. Het latere FO v2.0 bevat ook een tabelvariant; de oorspronkelijke v1.1-kaarten zijn hier gekozen omdat die als visuele basis zijn aangewezen. De beheerder heeft geen automatische analisttoegang (TO 6.2/8.2). Browser- en buildcontrole van deze nieuwe UI zijn nog nodig.
+
+### Hergebruik van originele groepsbranches (25 november 2026)
+
+| Branch | Oorspronkelijke commit | Integratie in deze versie |
+| --- | --- | --- |
+| main | 057a4dd | index.css, met responsieve rootbreedte |
+| develop | 9b03c4c | LoginPage, LoginPage.css, authErrors; mock vervangen door echte login |
+| feature/database | 4550bc7 | PriorityLevel en AlertStatus zijn inhoudelijk gelijk, TicketStatus uitgebreid met WaitingForCustomer; SlaStatus letterlijk overgenomen, deadline-checkconstraint aangepast van Ticket naar Alert, statusberekening in de API; EF Core restrict/unique-relaties aangepast aan klantschema's |
+| feature/tg-20-customer-management | 9c74841 | Organization DTO's en routes aangepast naar SQL Server, activeren/bewerken en SLA-instelling toegevoegd |
+| feature/tg-39-two-factor-auth | 5f82ebd | Oorspronkelijke TwoFactorSetup.tsx, TwoFactorSetup.css en DTO-types met QR, handmatige sleutel, codecontrole en herstelcode-scherm; client aangepast aan bestaande beveiligde API |
+| feature/tg-us-31-frontend-navigatie | bb81c5a | AppShell, AppMenu, PageHeader, PageStates en responsieve CSS aangepast; klantbeheer gebruikt echte data, geen lokale mock |
+
+De databasebranch heeft integer-ID's, CustomerId in Alert en één-op-één Alert/Ticket/Research-relaties. Het TO vereist GUID's, afzonderlijke klantschema's en meerdere alerts per case. Daarom blijven Tenant, Scope, AppUser, ResearchCase, CaseEvent en Observable leidend. De oorspronkelijke Note en Evidence worden functioneel vertegenwoordigd door de tijdlijn (notitie/bewijsreferentie), niet door de originele afzonderlijke tabellen; Contract, CustomerOrganization, Employee en ClearanceLevel zijn niet letterlijk geïntegreerd. Het oorspronkelijke SlaStatus-enum wordt gebruikt voor de eerste-behandel-SLA; de deadlineconstraint wordt ook additief op bestaande klantschema's aangebracht. Geen tabellen of gegevens worden verwijderd.
+
+Ga naar Account → QR-code maken om de originele authenticatorinterface te gebruiken. De oorspronkelijke backend gebruikt een tijdelijke integer-user-ID en een in-memory repository zonder echte sessie-integratie. Die is bewust niet aangesloten: bestaande ASP.NET Core Identity, SQL Server, Data Protection en CSRF blijven verantwoordelijk voor verificatie. De frontend stuurt geen user-ID of e-mail naar setup/enable, het serveraccount bepaalt de identiteit. De branch bevat daarnaast eigen pending-setup-expiratie en TOTP-replaypreventie; deze zijn niet letterlijk overgenomen in de Identity-implementatie. Demoaccounts kunnen optioneel 2FA activeren; daarna is een code vereist bij opnieuw inloggen. Bewaar herstelcodes en activeer geen 2FA op de generieke smoketestaccounts. De oorspronkelijke backend-unit-tests voor in-memory diensten zijn niet uitgevoerd. De aangepaste SQL-constraint en 2FA-flow moeten nog runtime worden gevalideerd.
