@@ -1,10 +1,10 @@
 .AppShell {
-  --shell-text: #4a4a4a;
-  --shell-muted: #666;
+  --shell-text: var(--text);
+  --shell-muted: var(--muted);
   --shell-border: #b8b8b8;
-  --shell-surface: #fff;
-  --shell-page: #f1f1f1;
-  --shell-accent: #444;
+  --shell-surface: var(--bg);
+  --shell-page: var(--page-bg);
+  --shell-accent: var(--accent);
 
   min-height: 100vh;
   color: var(--shell-text);

@@ -614,18 +614,6 @@ legend {
   }
 }
 
-/* Root layout comes directly from index.css. */
-/* The original navigation branch uses a light workspace independently of the login theme. */
-.AppShell {
-  color-scheme: light;
-  --text: #4a4a4a;
-  --text-h: #454545;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #444;
-  --accent-border: rgba(68, 68, 68, 0.5);
-}
 
 /* FO v1.1, figures 1–4: light workspace, rectangular cards and explicit severity labels.
    Severity colors are separate from the global accent variable. */
