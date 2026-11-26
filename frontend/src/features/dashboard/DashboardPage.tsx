@@ -48,7 +48,7 @@ export default function DashboardPage({
   const workCases = admin ? activeCases : myCases;
   const summary: [string, number, string, string, string][] = admin
     ? [
-        ['Nog op te pakken', unassigned.length, 'Onbeheerde alerts', 'alerts', 'blue'],
+        ['Wachtrij', unassigned.length, 'Onbeheerde alerts', 'alerts', 'blue'],
         [
           'Actieve tickets',
           activeCases.length,
@@ -60,9 +60,9 @@ export default function DashboardPage({
         ['SLA te laat', overdue.length, 'Open alerts buiten SLA', 'alerts', 'danger'],
       ]
     : [
-        ['Nog op te pakken', unassigned.length, 'Beschikbaar in de wachtrij', 'alerts', 'blue'],
+        ['Wachtrij', unassigned.length, 'Beschikbaar in de wachtrij', 'alerts', 'blue'],
         [
-          senior ? 'Te prioriteren' : 'Mijn actieve tickets',
+          senior ? 'Te prioriteren' : 'Mijn tickets',
           senior ? newCases.length : myCases.length,
           senior ? 'Nieuwe onderzoeken' : 'Aan mij toegewezen',
           'cases',
@@ -74,7 +74,7 @@ export default function DashboardPage({
   return (
     <div className="fragment soc-dashboard">
       <PageHeader
-        title={admin ? 'Beheerdersdashboard' : 'SOC dashboard'}
+        title={admin ? 'Beheerdersdashboard' : 'Werkoverzicht'}
         sub={
           admin
             ? 'Platformbeheer en toezicht op de beveiligingsmeldingen.'
@@ -88,8 +88,9 @@ export default function DashboardPage({
           )
         }
       />
+      {admin && <PlatformManagement state={state} navigate={navigate} />}
       <section aria-label="Werkvoorraad">
-        <h2 className="dashboard-section-title">{admin ? 'SOC-overzicht' : 'Werkvoorraad'}</h2>
+        {admin && <h2 className="dashboard-section-title">SOC-overzicht</h2>}
         <DashboardStats items={summary} />
         <div className="dashboard-queues">
           <Panel
@@ -117,28 +118,19 @@ export default function DashboardPage({
               customerName={customerName}
               navigate={navigate}
             />
+            <div className="dashboard-ticket-links" aria-label="Ticketfasen">
+              <Button onClick={() => showQueue('cases', 'new')}>Nieuw ({newCases.length})</Button>
+              <Button onClick={() => showQueue('cases', 'waiting')}>
+                Wacht op klant ({cases.filter((ticket) => caseMatchesView(ticket, 'waiting')).length})
+              </Button>
+              <Button onClick={() => showQueue('cases', 'resolved')}>
+                Af te sluiten ({reviewCases.length})
+              </Button>
+              <Button onClick={() => showQueue('cases', 'closed')}>Archief ({cases.filter(isClosed).length})</Button>
+            </div>
           </Panel>
         </div>
       </section>
-      <section aria-label="Ticketwerkvoorraad">
-        <h2 className="dashboard-section-title">Tickets</h2>
-        <div className="dashboard-ticket-links">
-          <Button onClick={() => showQueue('cases', 'new')}>Nieuw ({newCases.length})</Button>
-          <Button onClick={() => showQueue('cases', 'open', !admin)}>
-            {admin ? 'Actieve tickets' : 'Mijn actieve tickets'} ({workCases.length})
-          </Button>
-          <Button onClick={() => showQueue('cases', 'waiting')}>
-            Wacht op klant ({cases.filter((ticket) => caseMatchesView(ticket, 'waiting')).length})
-          </Button>
-          <Button onClick={() => showQueue('cases', 'resolved')}>
-            Af te sluiten ({reviewCases.length})
-          </Button>
-          <Button onClick={() => showQueue('cases', 'closed')}>
-            Archief ({cases.filter(isClosed).length})
-          </Button>
-        </div>
-      </section>
-      {admin && <PlatformManagement state={state} navigate={navigate} />}
       <section aria-label="Recente meldingen">
         <Panel
             title="Recent ontvangen meldingen"
@@ -155,15 +147,12 @@ export default function DashboardPage({
             }
           >
             <DashboardAlerts
-              alerts={sortRecords(alerts, 'newest', false).slice(0, 3)}
+              alerts={sortRecords(alerts, 'newest', false).slice(0, 2)}
               customerName={(id) => customerName(id)}
               open={(id) => navigate('alerts', id)}
             />
         </Panel>
       </section>
-      <div className="dashboard-report-link">
-        <Button onClick={() => navigate('reports')}>Rapportages bekijken <Icon name="arrow" size={16} /></Button>
-      </div>
     </div>
   );
 }

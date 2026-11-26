@@ -71,7 +71,7 @@ export default function CaseDetailPage({
         </div>
         <div>
           <Badge value={ticket.status} />
-          <p>Eigenaar: {ticket.owner}</p>
+          <p>Eigenaar: {ticket.owner || 'Niet toegewezen'}</p>
         </div>
       </div>
       {canReadInternal && <CaseWorkflow research={ticket} />}
@@ -125,7 +125,7 @@ export default function CaseDetailPage({
               )}
             </dl>
             {state.user.role === 'Senior analist' && isClosed(ticket) && (
-              <Button onClick={() => update({ modal: 'caseReopen' })}>Case heropenen</Button>
+              <Button onClick={() => update({ modal: 'caseReopen' })}>Ticket heropenen</Button>
             )}
             {canEdit && !isClosed(ticket) && (
               <div className="actions">

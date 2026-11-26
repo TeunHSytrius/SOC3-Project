@@ -40,6 +40,7 @@ textarea:focus-visible {
 .fragment {
   min-width: 0;
 }
+dl > .fragment { display: contents; }
 .workspace-actions {
   display: flex;
   gap: 8px;
@@ -265,7 +266,7 @@ textarea:focus-visible {
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 14px;
 }
 th {
   text-align: left;
@@ -297,6 +298,7 @@ tr:hover td {
   background: var(--surface-hover);
 }
 .rowlink {
+  appearance: none;
   border: 0;
   border-radius: 4px;
   display: block;
@@ -311,7 +313,8 @@ tr:hover td {
   text-decoration: underline;
 }
 .arrowbtn {
-  border: 1px solid var(--border);
+  appearance: none;
+  border: 0;
   border-radius: 6px;
   min-width: 32px;
   min-height: 32px;
@@ -400,7 +403,7 @@ textarea::placeholder {
   font-weight: 400;
 }
 .bodypad {
-  padding: 20px;
+  padding: 16px;
 }
 .bodypad > p {
   margin-bottom: 15px;
@@ -418,8 +421,8 @@ textarea::placeholder {
 dl {
   display: grid;
   grid-template-columns: minmax(100px, 1fr) 1.5fr;
-  gap: 12px 15px;
-  margin: 0 0 22px;
+  gap: 8px 14px;
+  margin: 0 0 16px;
 }
 dt {
   color: var(--muted);

@@ -25,14 +25,10 @@ export function AlertCards({ alerts, customerName, open, busy }: AlertCardsProps
         {alerts.slice(current * 12, (current + 1) * 12).map((alert) => (
           <article key={alert.id} className={'wire-alert-card ' + priorityColor(alert.priority)}>
             <div className="wire-card-meta">
-              <span>{customerName(alert.organizationId)}</span>
-              <span>{fmt(alert.createdAt)}</span>
+              <span>{customerName(alert.organizationId)} · {alert.number}</span>
+              <Badge value={alert.priority} />
             </div>
-            <div className="wire-card-meta">
-              <Badge value={alert.status} />
-              <Badge value={sla(alert).text} kind={sla(alert).kind} />
-            </div>
-            <button className="wire-card-main" onClick={() => open(alert.id)} disabled={busy}>
+            <button type="button" className="wire-card-main" onClick={() => open(alert.id)} disabled={busy}>
               <strong>{alert.title}</strong>
               <span>{alert.description}</span>
             </button>
@@ -48,9 +44,13 @@ export function AlertCards({ alerts, customerName, open, busy }: AlertCardsProps
                 </button>
               </details>
             </div>
-            <span className="wire-card-priority">
-              <Badge value={alert.priority} /> {alert.number}
-            </span>
+            <div className="wire-card-meta">
+              <span>{fmt(alert.createdAt)}</span>
+              <div className="wire-card-priority">
+                <Badge value={alert.status} />
+                <Badge value={sla(alert).text} kind={sla(alert).kind} />
+              </div>
+            </div>
           </article>
         ))}
       </div>

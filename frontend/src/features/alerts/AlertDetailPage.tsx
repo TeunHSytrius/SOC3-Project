@@ -151,12 +151,12 @@ export default function AlertDetailPage({
                   alert.triage,
                 ) && (
                   <Button onClick={() => update({ modal: 'caseFromAlert' })}>
-                    Case maken / koppelen
+                    Ticket maken / koppelen
                   </Button>
                 )}
               {alert.caseId && (
                 <Button onClick={() => navigate('cases', alert.caseId)}>
-                  Open gekoppelde case
+                  Open gekoppeld ticket
                 </Button>
               )}
               {senior && ['Dismissed', 'Resolved'].includes(alert.status) && !alert.caseId && (
