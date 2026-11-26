@@ -14,7 +14,9 @@ export function getAdminDialog({ state: currentState, run }: DialogProps): Dialo
     case 'customerEdit': {
       const editing = currentState.modal === 'customerEdit';
       const org = currentState.orgs.find((organization) => organization.id === currentState.selected);
-      if (editing && !org) return null;
+      if (editing && !org) {
+        return null;
+      }
       title = editing ? 'Klant bewerken' : 'Klant toevoegen';
       fields = (
         <div className="fragment">
@@ -32,7 +34,9 @@ export function getAdminDialog({ state: currentState, run }: DialogProps): Dialo
     case 'user':
     case 'userAccess': {
       const editing = currentState.modal === 'userAccess';
-      if (editing && !account) return null;
+      if (editing && !account) {
+        return null;
+      }
       title = editing ? 'Gebruiker bewerken' : 'Gebruiker toevoegen';
       fields = (
         <div className="fragment">
@@ -102,7 +106,9 @@ export function getAdminDialog({ state: currentState, run }: DialogProps): Dialo
         Object.keys(payload)
           .filter((fieldName) => fieldName.startsWith('org_'))
           .forEach((fieldName) => delete payload[fieldName]);
-        if (editing) payload.isActive = values.isActive === 'true';
+        if (editing) {
+          payload.isActive = values.isActive === 'true';
+        }
         run(editing ? `users/${account.id}` : 'users', payload, 'Gebruikersgegevens opgeslagen.');
       };
       break;

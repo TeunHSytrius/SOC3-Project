@@ -5,7 +5,9 @@ const account: NavigationItem = { label: 'Account', href: '/account' };
 const dashboard: NavigationItem = { label: 'Dashboard', href: '/' };
 
 export function getNavigation(user: User): NavigationItem[] {
-  if (user.requiresTwoFactorSetup) return [account];
+  if (user.requiresTwoFactorSetup) {
+    return [account];
+  }
 
   if (user.role === 'Beheerder') {
     return [

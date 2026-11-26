@@ -47,7 +47,9 @@ function WorkspacePage({ state, actions, refresh, onTwoFactorEnabled, onError }:
 export default function Workspace(props: WorkspaceProps) {
   const { state, actions, refresh, logout } = props;
   const { user, orgs, org } = state;
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
 
   const customerOptions = [
     { id: '', name: 'Alle klanten' },
