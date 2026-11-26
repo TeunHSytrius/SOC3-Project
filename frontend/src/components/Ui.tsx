@@ -108,14 +108,14 @@ export function Select({
   return (
     <select name={name} value={value} onChange={onChange} required={required}>
       {placeholder && <option value="">{placeholder}</option>}
-      {options.map((x) =>
-        typeof x === 'string' ? (
-          <option key={x} value={x}>
-            {labels[x] || x}
+      {options.map((option) =>
+        typeof option === 'string' ? (
+          <option key={option} value={option}>
+            {labels[option] || option}
           </option>
         ) : (
-          <option key={x.id} value={x.id}>
-            {x.name}
+          <option key={option.id} value={option.id}>
+            {option.name}
           </option>
         ),
       )}
@@ -136,8 +136,8 @@ export function Table({
       <table>
         <thead>
           <tr>
-            {head.map((h) => (
-              <th key={h}>{h}</th>
+            {head.map((heading) => (
+              <th key={heading}>{heading}</th>
             ))}
           </tr>
         </thead>

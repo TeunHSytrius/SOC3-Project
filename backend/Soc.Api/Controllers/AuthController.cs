@@ -82,21 +82,21 @@ public sealed class AuthController(UserManager<AppUser> users, SignInManager<App
     [Authorize, EnableRateLimiting("login"), HttpPost("2fa/setup")]
     public async Task<IActionResult> Setup()
     {
-        var u = await service.UserAsync(User, true);
-        SocService.Require(!u.TwoFactorEnabled, "2FA is al actief.", 409);
-        var key = await users.GetAuthenticatorKeyAsync(u);
+        var currentUser = await service.UserAsync(User, true);
+        SocService.Require(!currentUser.TwoFactorEnabled, "2FA is al actief.", 409);
+        var key = await users.GetAuthenticatorKeyAsync(currentUser);
         if (string.IsNullOrEmpty(key))
         {
-            await users.ResetAuthenticatorKeyAsync(u);
-            key = await users.GetAuthenticatorKeyAsync(u);
+            await users.ResetAuthenticatorKeyAsync(currentUser);
+            key = await users.GetAuthenticatorKeyAsync(currentUser);
         }
-        var uri = $"otpauth://totp/SOC3:{Uri.EscapeDataString(u.Email!)}?secret={key}&issuer=SOC3&algorithm=SHA1&digits=6&period=30";
+        var uri = $"otpauth://totp/SOC3:{Uri.EscapeDataString(currentUser.Email!)}?secret={key}&issuer=SOC3&algorithm=SHA1&digits=6&period=30";
         var manualEntryKey = string.Join(' ', key!.Chunk(4).Select(chunk => new string(chunk)));
         return Ok(new
         {
             secret = key,
             manualEntryKey,
-            account = u.Email,
+            account = currentUser.Email,
             authenticatorUri = uri,
             otpAuthUri = uri
         });
@@ -104,24 +104,19 @@ public sealed class AuthController(UserManager<AppUser> users, SignInManager<App
     [Authorize, EnableRateLimiting("login"), HttpPost("2fa/enable")]
     public async Task<IActionResult> Enable(TwoFactorRequest input)
     {
-        var u = await service.UserAsync(User, true);
-        SocService.Require(!u.TwoFactorEnabled, "2FA is al actief.", 409);
-        SocService.Require(!string.IsNullOrEmpty(await users.GetAuthenticatorKeyAsync(u)), "Start eerst de setup.", 400);
-        var valid = await users.VerifyTwoFactorTokenAsync(u, users.Options.Tokens.AuthenticatorTokenProvider, SocService.Required(input.Code, 12));
+        var currentUser = await service.UserAsync(User, true);
+        SocService.Require(!currentUser.TwoFactorEnabled, "2FA is al actief.", 409);
+        SocService.Require(!string.IsNullOrEmpty(await users.GetAuthenticatorKeyAsync(currentUser)), "Start eerst de setup.", 400);
+        var valid = await users.VerifyTwoFactorTokenAsync(currentUser, users.Options.Tokens.AuthenticatorTokenProvider, SocService.Required(input.Code, 12));
         SocService.Require(valid, "Ongeldige code.", 400);
-        var result = await users.SetTwoFactorEnabledAsync(u, true);
+        var result = await users.SetTwoFactorEnabledAsync(currentUser, true);
         SocService.Require(result.Succeeded, "2FA activeren mislukt.", 500);
-        var codes = await users.GenerateNewTwoFactorRecoveryCodesAsync(u, 8);
-        await signIn.RefreshSignInAsync(u);
-        await service.Log(u, "2FA geactiveerd");
+        var codes = await users.GenerateNewTwoFactorRecoveryCodesAsync(currentUser, 8);
+        await signIn.RefreshSignInAsync(currentUser);
+        await service.Log(currentUser, "2FA geactiveerd");
         return Ok(new
         {
             recoveryCodes = codes
         });
     }
-}
-[Authorize, ApiController, Route("api/v1/me")]
-public sealed class MeController(SocService service) : ControllerBase
-{
-    [HttpGet("access")] public async Task<IActionResult> Access() => Ok(await service.Access(await service.UserAsync(User)));
 }

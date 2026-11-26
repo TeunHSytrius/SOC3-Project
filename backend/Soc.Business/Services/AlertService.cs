@@ -1,15 +1,11 @@
-using Microsoft.Extensions.Configuration;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Soc.Data.Context;
 using Soc.Data.Entities;
 using static Soc.Business.Services.SocService;
 namespace Soc.Business.Services;
 
-public sealed class AlertService(SocDbContext db, TenantDbFactory factory, SocService platform)
+public sealed class AlertService(TenantDbFactory factory, SocService platform)
 {
     // The SLA statuses are taken from the database branch. Compute from the actual timestamps.
     static Soc.Data.Entities.Enums.SlaStatus GetSlaStatus(Alert alert)
@@ -18,7 +14,7 @@ public sealed class AlertService(SocDbContext db, TenantDbFactory factory, SocSe
             return Soc.Data.Entities.Enums.SlaStatus.Breached;
         return alert.FirstHandledAt.HasValue ? Soc.Data.Entities.Enums.SlaStatus.Met : Soc.Data.Entities.Enums.SlaStatus.Pending;
     }
-    private static object AlertDto(Alert alert, Guid organizationId)
+    internal static object AlertDto(Alert alert, Guid organizationId)
     {
         return new
         {
@@ -102,98 +98,35 @@ public sealed class AlertService(SocDbContext db, TenantDbFactory factory, SocSe
         return alert;
     }
 
-    public async Task<(int Status, object Data)> Ingest(string? key, byte[] body)
-    {
-        Require(!string.IsNullOrWhiteSpace(key), "Ongeldige API-sleutel.", 401);
-        var hash = Hash(key!);
-        var source = await db.Sources.SingleOrDefaultAsync(x => x.Hash == hash && x.IsActive);
-        Require(source != null, "Ongeldige API-sleutel.", 401);
-        var t = await platform.Tenant(source!.TenantId);
-        Require(t.IsActive, "Klant is inactief.");
-        JsonDocument document;
-        try
-        {
-            document = JsonDocument.Parse(body);
-        }
-        catch (JsonException) { throw new SocException(400, "Ongeldig JSON-bericht."); }
-        using (document)
-        {
-            var root = document.RootElement;
-            Require(root.ValueKind == JsonValueKind.Object, "JSON-object vereist.", 400);
-            var allowed = new[] { "externalEventId", "title", "occurredAt", "severity", "payload" };
-            Require(root.EnumerateObject().All(p => allowed.Contains(p.Name)) && root.EnumerateObject().Select(p => p.Name).Distinct().Count() == root.EnumerateObject().Count(), "Onbekend of dubbel veld in aanleverbericht.", 400);
-            string? Read(string name) => root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
-            var eventId = Required(Read("externalEventId"), 200);
-            var title = Required(Read("title"), 120);
-            Require(DateTimeOffset.TryParse(Read("occurredAt"), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var occurredAt), "Ongeldig gebeurtenistijdstip.", 400);
-            Require(root.TryGetProperty("payload", out var payload) && payload.ValueKind == JsonValueKind.Object, "Payload-object vereist.", 400);
-            var severity = Priority(Read("severity"));
-            var payloadHash = Convert.ToHexString(SHA256.HashData(body));
-            await using var tenantDb = factory.Open(t);
-            var existing = await tenantDb.Alerts.Include(x => x.History).SingleOrDefaultAsync(x => x.SourceIntegrationId == source.Id && x.ExternalEventId == eventId);
-            if (existing != null)
-            {
-                Require(existing.PayloadHash == payloadHash, "Event-ID bestaat met andere inhoud.", 409);
-                return (200, AlertDto(existing, t.Id));
-            }
-            var details = SecurityAlertDetails.Read(payload);
-            var description = details.Description ?? title;
-            if (description.Length > 2000)
-                description = description[..2000];
-            var a = NewAlert(source.ScopeId, new CreateAlertRequest { Title = title, Description = description, Priority = severity.ToString() }, source.Name, responseMinutes: t.ResponseMinutes);
-            a.SourceIntegrationId = source.Id;
-            a.ExternalEventId = eventId;
-            a.OccurredAt = occurredAt.ToUniversalTime();
-            a.PayloadHash = payloadHash;
-            a.RawPayload = Encoding.UTF8.GetString(body);
-            a.NormalizedPayload = SecurityAlertDetails.Normalize(a, details);
-            tenantDb.Alerts.Add(a);
-            LogTenant(tenantDb, a.ScopeId, source.Name, "Alert ontvangen", a.Number);
-            try
-            {
-                await tenantDb.SaveChangesAsync();
-            }
-            catch (DbUpdateException ex) when (ex.InnerException is Microsoft.Data.SqlClient.SqlException sql && sql.Number is 2601 or 2627)
-            {
-                tenantDb.ChangeTracker.Clear();
-                var duplicate = await tenantDb.Alerts.Include(x => x.History).SingleOrDefaultAsync(x => x.SourceIntegrationId == source.Id && x.ExternalEventId == eventId);
-                if (duplicate == null)
-                    throw;
-                Require(duplicate.PayloadHash == payloadHash, "Event-ID bestaat met andere inhoud.", 409);
-                return (200, AlertDto(duplicate, t.Id));
-            }
-            return (201, AlertDto(a, t.Id));
-        }
-    }
     public async Task<object> AddAlert(AppUser currentUser, CreateAlertRequest request)
     {
         Require(Analyst(currentUser));
-        var t = await platform.Tenant(request.OrganizationId);
-        Require(t.IsActive, "Klant is inactief.", 400);
-        var grants = await platform.Scopes(currentUser, t.Id);
+        var tenant = await platform.Tenant(request.OrganizationId);
+        Require(tenant.IsActive, "Klant is inactief.", 400);
+        var grants = await platform.Scopes(currentUser, tenant.Id);
         var scope = request.ScopeId ?? grants.FirstOrDefault();
         Require(grants.Contains(scope));
-        await using var tenantDb = factory.Open(t);
-        var a = NewAlert(scope, request, Required(request.Source, 80), responseMinutes: t.ResponseMinutes);
-        tenantDb.Alerts.Add(a);
-        LogTenant(tenantDb, scope, currentUser.Name, "Alert handmatig ontvangen", a.Number);
+        await using var tenantDb = factory.Open(tenant);
+        var alert = NewAlert(scope, request, Required(request.Source, 80), responseMinutes: tenant.ResponseMinutes);
+        tenantDb.Alerts.Add(alert);
+        LogTenant(tenantDb, scope, currentUser.Name, "Alert handmatig ontvangen", alert.Number);
         await tenantDb.SaveChangesAsync();
-        return AlertDto(a, t.Id);
+        return AlertDto(alert, tenant.Id);
     }
     public async Task<object> Alerts(AppUser currentUser, Guid? workspace, Guid? scope)
     {
         Require(CanReadInternal(currentUser));
         var result = new List<(DateTimeOffset Time, object Dto)>();
-        foreach (var (t, scopes) in await platform.ReadWorkspaces(currentUser, workspace, scope))
+        foreach (var (tenant, scopes) in await platform.ReadWorkspaces(currentUser, workspace, scope))
         {
-            await using var tenantDb = factory.Open(t);
-            foreach (var a in await tenantDb.Alerts.Include(x => x.History).Where(x => scopes.Contains(x.ScopeId)).ToListAsync())
-                result.Add((a.CreatedAt, AlertDto(a, t.Id)));
-            foreach (var sid in scopes)
-                LogTenant(tenantDb, sid, currentUser.Name, "Alertoverzicht bekeken", "Alerts");
+            await using var tenantDb = factory.Open(tenant);
+            foreach (var alert in await tenantDb.Alerts.Include(record => record.History).Where(record => scopes.Contains(record.ScopeId)).ToListAsync())
+                result.Add((alert.CreatedAt, AlertDto(alert, tenant.Id)));
+            foreach (var scopeId in scopes)
+                LogTenant(tenantDb, scopeId, currentUser.Name, "Alertoverzicht bekeken", "Alerts");
             await tenantDb.SaveChangesAsync();
         }
-        return result.OrderBy(x => x.Time).Select(x => x.Dto);
+        return result.OrderBy(record => record.Time).Select(record => record.Dto);
     }
     public async Task<object> AlertAction(AppUser currentUser, Guid id, string action, AlertActionRequest input, Guid? workspace, Guid? scope)
     {
@@ -202,7 +135,7 @@ public sealed class AlertService(SocDbContext db, TenantDbFactory factory, SocSe
         {
             await using var tenantDb = factory.Open(tenant);
             await using var transaction = await tenantDb.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
-            var alert = await tenantDb.Alerts.Include(x => x.History).FirstOrDefaultAsync(x => x.Id == id && scopes.Contains(x.ScopeId));
+            var alert = await tenantDb.Alerts.Include(record => record.History).FirstOrDefaultAsync(record => record.Id == id && scopes.Contains(record.ScopeId));
             if (alert == null)
                 continue;
             if (action == "get")
@@ -272,10 +205,10 @@ public sealed class AlertService(SocDbContext db, TenantDbFactory factory, SocSe
         ResearchCase researchCase;
         if (input.CaseId.HasValue)
         {
-            researchCase = await tenantDb.Cases.SingleOrDefaultAsync(x => x.Id == input.CaseId && x.ScopeId == alert.ScopeId) ?? throw new SocException(400, "Case niet gevonden in dezelfde scope.");
+            researchCase = await tenantDb.Cases.SingleOrDefaultAsync(record => record.Id == input.CaseId && record.ScopeId == alert.ScopeId) ?? throw new SocException(400, "Case niet gevonden in dezelfde scope.");
             Require(!Closed(researchCase), "Case is afgesloten.", 409);
             Require(researchCase.OwnerId == currentUser.Id || currentUser.Role == "Senior analist", "Case heeft een andere eigenaar.", 403);
-            tenantDb.Entry(researchCase).Property(x => x.Title).IsModified = true;
+            tenantDb.Entry(researchCase).Property(record => record.Title).IsModified = true;
         }
         else
         {

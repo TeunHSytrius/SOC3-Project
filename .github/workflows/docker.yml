@@ -1,7 +1,7 @@
 name: Docker build and smoke test
 on:
   push:
-    branches: [main, refactor/readable-code]
+    branches: [main, refactor/readable-code, refactor/app-structure]
   pull_request:
   workflow_dispatch:
 permissions:

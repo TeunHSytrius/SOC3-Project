@@ -19,28 +19,28 @@ public sealed class SocDbContext(DbContextOptions<SocDbContext> options) : Ident
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.HasDefaultSchema("platform");
-        modelBuilder.Entity<Tenant>().HasIndex(x => x.Name).IsUnique();
-        modelBuilder.Entity<Tenant>().HasIndex(x => x.SchemaName).IsUnique();
+        modelBuilder.Entity<Tenant>().HasIndex(entity => entity.Name).IsUnique();
+        modelBuilder.Entity<Tenant>().HasIndex(entity => entity.SchemaName).IsUnique();
         modelBuilder.Entity<Scope>()
             .HasOne<Tenant>()
             .WithMany()
-            .HasForeignKey(x => x.TenantId)
+            .HasForeignKey(entity => entity.TenantId)
             .OnDelete(DeleteBehavior.Restrict);
-        modelBuilder.Entity<RoleAssignment>().HasIndex(x => new { x.UserId, x.ScopeId }).IsUnique();
+        modelBuilder.Entity<RoleAssignment>().HasIndex(entity => new { entity.UserId, entity.ScopeId }).IsUnique();
         modelBuilder.Entity<RoleAssignment>()
             .HasOne<AppUser>()
             .WithMany()
-            .HasForeignKey(x => x.UserId);
+            .HasForeignKey(entity => entity.UserId);
         modelBuilder.Entity<RoleAssignment>()
             .HasOne<Scope>()
             .WithMany()
-            .HasForeignKey(x => x.ScopeId)
+            .HasForeignKey(entity => entity.ScopeId)
             .OnDelete(DeleteBehavior.Restrict);
-        modelBuilder.Entity<ApiSource>().HasIndex(x => x.Hash).IsUnique();
+        modelBuilder.Entity<ApiSource>().HasIndex(entity => entity.Hash).IsUnique();
         modelBuilder.Entity<ApiSource>()
             .HasOne<Scope>()
             .WithMany()
-            .HasForeignKey(x => x.ScopeId)
+            .HasForeignKey(entity => entity.ScopeId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

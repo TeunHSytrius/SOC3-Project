@@ -1,4 +1,4 @@
-import { Icon, Badge, Button, Field, Select, Table, Panel, PageHeader } from '../../components/Ui';
+import { Icon } from '../../components/Ui';
 
 export default function DashboardStats({
   items,
@@ -7,7 +7,7 @@ export default function DashboardStats({
 }) {
   return (
     <div className="stats">
-      {items.map(([label, value, desc, icon, tone]) => (
+      {items.map(([label, value, description, icon, tone]) => (
         <div className="stat" key={label}>
           <div className="statline">
             <span>{label}</span>
@@ -16,7 +16,7 @@ export default function DashboardStats({
             </span>
           </div>
           <strong>{value}</strong>
-          <small>{desc}</small>
+          <small>{description}</small>
         </div>
       ))}
     </div>

@@ -1,10 +1,10 @@
 .AppShell {
-  --shell-text: #4a4a4a;
-  --shell-muted: #666;
-  --shell-border: #b8b8b8;
-  --shell-surface: #fff;
-  --shell-page: #f1f1f1;
-  --shell-accent: #444;
+  --shell-text: var(--text);
+  --shell-muted: var(--muted);
+  --shell-border: var(--border);
+  --shell-surface: var(--bg);
+  --shell-page: var(--page-bg);
+  --shell-accent: var(--accent);
 
   min-height: 100vh;
   color: var(--shell-text);
@@ -19,10 +19,10 @@
   gap: 0.65rem 1rem;
   min-height: 4.5rem;
   padding: 0.75rem clamp(1rem, 3vw, 2.5rem);
-  border-bottom: 1px solid #dedede;
+  border-bottom: 1px solid var(--border);
   box-shadow: 0 2px 6px rgb(0 0 0 / 4%);
   color: var(--shell-text);
-  background: #fff;
+  background: var(--bg);
 }
 
 .AppShell__topbar {
@@ -66,7 +66,7 @@
   min-height: 2.4rem;
   border-radius: 999px;
   padding: 0 0.8rem;
-  color: #555;
+  color: var(--muted);
   font-size: 0.9rem;
   font-weight: 500;
   text-decoration: none;
@@ -75,19 +75,19 @@
 }
 
 .AppMenu__link:hover {
-  background: #f1f1f1;
+  background: var(--surface-hover);
 }
 
 .AppMenu__link[aria-current='page'] {
-  color: #fff;
-  background: #444;
+  color: var(--accent-text);
+  background: var(--accent);
 }
 
 .AppShell__customer {
   min-width: 0;
   max-width: clamp(10rem, 19vw, 15rem);
   gap: 0.3rem;
-  border-left: 1px solid #e1e1e1;
+  border-left: 1px solid var(--border);
   padding: 0.2rem 0 0.2rem 0.75rem;
 }
 
@@ -132,14 +132,14 @@
   border: 0;
   border-radius: 999px;
   padding: 0.55rem 0.9rem;
-  color: #fff;
-  background: #444;
+  color: var(--accent-text);
+  background: var(--accent);
   font-weight: 500;
 }
 
 .AppShell__customer label {
   flex: 0 0 auto;
-  color: #777;
+  color: var(--muted);
   font-size: 0.72rem;
 }
 
@@ -190,7 +190,7 @@
 .PageHeader__breadcrumb:not(:last-child)::after {
   content: '/';
   margin-left: 0.5rem;
-  color: #888;
+  color: var(--muted);
 }
 
 .PageHeader__row {
@@ -222,7 +222,7 @@
 
 .AppShell :focus-visible,
 .PageState :focus-visible {
-  outline: 3px solid #777;
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
 
@@ -258,11 +258,11 @@
     align-items: center;
     justify-content: center;
     min-height: 2.4rem;
-    border: 1px solid #999;
+    border: 1px solid var(--border);
     border-radius: 0.35rem;
     padding: 0.35rem 0.65rem;
     color: var(--shell-text);
-    background: #fff;
+    background: var(--bg);
     font: inherit;
     font-size: 0.85rem;
     cursor: pointer;
@@ -289,7 +289,7 @@
   .AppShell__customer {
     border-left: 0;
     padding: 0.25rem 0.5rem;
-    background: #f3f3f3;
+    background: var(--surface-raised);
     border-radius: 0.35rem;
   }
   .AppShell__customer select {
@@ -306,7 +306,7 @@
     align-items: stretch;
     gap: 0.15rem;
     padding-top: 0.5rem;
-    border-top: 1px solid #ededed;
+    border-top: 1px solid var(--border);
   }
   .AppMenu--open {
     display: flex;

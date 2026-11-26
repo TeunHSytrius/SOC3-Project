@@ -18,14 +18,7 @@ import DashboardStats from './DashboardStats';
 import DashboardAlerts from '../alerts/DashboardAlerts';
 import AlertTrend from '../alerts/AlertTrend';
 import TicketTable from '../cases/TicketTable';
-type Navigate = (page: string, selected?: string | null) => void;
-type UpdateState = (update: Partial<State>) => void;
-type RunAction = (
-  path: string,
-  data: Record<string, unknown>,
-  message: string,
-  after?: (result: any) => void,
-) => Promise<void>;
+import type { Navigate, UpdateState, RunAction } from '../../types/workspace';
 interface DashboardPageProps {
   state: Pick<State, 'org' | 'user' | 'orgs' | 'users' | 'keys' | 'errors' | 'alerts' | 'cases'>;
   isAdmin: boolean;
@@ -246,7 +239,7 @@ export default function DashboardPage({
           <div className="slaoverview">
             <div
               className="donut"
-              style={{ background: `conic-gradient(#14836c ${percentage || 0}%, #e6edf1 0)` }}
+              style={{ background: `conic-gradient(#14836c ${percentage || 0}%, var(--surface-hover) 0)` }}
             >
               <div>
                 <strong>{percentage === null ? '—' : percentage + '%'}</strong>

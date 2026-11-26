@@ -1,0 +1,23 @@
+.case-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.error {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.login-error,
+.two-factor-error {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .case-entry-actions {
+    padding: 12px;
+  }
+  .case-entry-actions button {
+    flex: 1 1 130px;
+  }
+}

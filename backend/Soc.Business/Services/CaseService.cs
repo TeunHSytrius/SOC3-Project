@@ -103,13 +103,13 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
     {
         Require(CanReadInternal(currentUser) || currentUser.Role is "Klant" or "Accountmanager");
         var result = new List<object>();
-        foreach (var (t, scopes) in await platform.ReadWorkspaces(currentUser, workspace, scope))
+        foreach (var (tenant, scopes) in await platform.ReadWorkspaces(currentUser, workspace, scope))
         {
-            await using var tenantDb = factory.Open(t);
-            foreach (var c in await CaseQuery(tenantDb).Where(x => scopes.Contains(x.ScopeId) && (CanReadInternal(currentUser) || x.CustomerVisible)).ToListAsync())
-                result.Add(CaseDto(c, t.Id, CanReadInternal(currentUser)));
-            foreach (var sid in scopes)
-                LogTenant(tenantDb, sid, currentUser.Name, "Caseoverzicht bekeken", "Cases");
+            await using var tenantDb = factory.Open(tenant);
+            foreach (var researchCase in await CaseQuery(tenantDb).Where(record => scopes.Contains(record.ScopeId) && (CanReadInternal(currentUser) || record.CustomerVisible)).ToListAsync())
+                result.Add(CaseDto(researchCase, tenant.Id, CanReadInternal(currentUser)));
+            foreach (var scopeId in scopes)
+                LogTenant(tenantDb, scopeId, currentUser.Name, "Caseoverzicht bekeken", "Cases");
             await tenantDb.SaveChangesAsync();
         }
         return result;
@@ -121,7 +121,7 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
         {
             await using var tenantDb = factory.Open(tenant);
             await using var transaction = await tenantDb.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
-            var researchCase = await CaseQuery(tenantDb).FirstOrDefaultAsync(x => x.Id == id && scopes.Contains(x.ScopeId) && (CanReadInternal(currentUser) || x.CustomerVisible));
+            var researchCase = await CaseQuery(tenantDb).FirstOrDefaultAsync(record => record.Id == id && scopes.Contains(record.ScopeId) && (CanReadInternal(currentUser) || record.CustomerVisible));
             if (researchCase == null)
                 continue;
             if (action == "get")
@@ -157,7 +157,7 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
                 default:
                     throw new SocException(404, "Onbekende actie.");
             }
-            tenantDb.Entry(researchCase).Property(x => x.Title).IsModified = true;
+            tenantDb.Entry(researchCase).Property(record => record.Title).IsModified = true;
             LogTenant(tenantDb, researchCase.ScopeId, currentUser.Name, "Case " + action, researchCase.Number);
             await tenantDb.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -289,7 +289,7 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
     private static async Task LinkAlertAsync(TenantDbContext tenantDb, ResearchCase researchCase, AppUser currentUser, CaseActionRequest input)
     {
         Require(input.AlertId.HasValue, "Alert vereist.", 400);
-        var link = await tenantDb.Alerts.Include(x => x.History).SingleOrDefaultAsync(x => x.Id == input.AlertId && x.ScopeId == researchCase.ScopeId);
+        var link = await tenantDb.Alerts.Include(record => record.History).SingleOrDefaultAsync(record => record.Id == input.AlertId && record.ScopeId == researchCase.ScopeId);
         Require(link != null && link.CaseId == null && AlertService.NeedsCase(link.Triage) && link.Status == AlertStatus.UnderReview, "Alert niet geschikt voor koppeling.", 409);
         link!.CaseId = researchCase.Id;
         link.Status = AlertStatus.Escalated;
