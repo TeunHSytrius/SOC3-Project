@@ -74,7 +74,7 @@ public sealed class AuthController(
         var code = SocService.Required(input.Code, 50).Replace(" ", "");
         // Accounts enrolled before this integration retain their Identity authenticator and recovery codes.
         // New enrollments use the original service through Identity's second-factor provider.
-        SignInResult result;
+        Microsoft.AspNetCore.Identity.SignInResult result;
         if (await twoFactor.IsEnabledAsync(user.Id))
         {
             result = await signIn.TwoFactorSignInAsync(
