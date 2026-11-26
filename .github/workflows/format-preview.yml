@@ -1,0 +1,52 @@
+name: Temporary formatting preview
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  format:
+    if: github.head_ref == 'style/format-sprint-one'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Format backend
+        run: |
+          dotnet restore SOC3.slnx
+          dotnet format whitespace SOC3.slnx --no-restore
+          dotnet format style SOC3.slnx --no-restore --diagnostics IDE0011 --severity warn
+          dotnet format whitespace SOC3.slnx --no-restore
+      - name: Format frontend
+        working-directory: frontend
+        run: |
+          npm install --no-audit --no-fund
+          npm run format
+          npm run format:check
+          npm run build
+      - name: Export formatting changes for review
+        run: |
+          python3 - <<'PY'
+          import base64
+          import pathlib
+          import subprocess
+          paths = subprocess.check_output(['git', 'diff', '--name-only', '-z']).decode().split('\x00')
+          for name in paths:
+              if not name or not name.startswith(('frontend/src/', 'backend/')):
+                  continue
+              path = pathlib.Path(name)
+              if path.suffix not in ('.cs', '.ts', '.tsx', '.css'):
+                  continue
+              encoded = base64.b64encode(path.read_bytes()).decode()
+              for index in range(0, len(encoded), 8000):
+                  print('FORMAT_FILE ' + name + ' ' + str(index) + ' ' + encoded[index:index+8000])
+          PY
