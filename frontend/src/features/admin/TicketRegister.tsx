@@ -28,7 +28,7 @@ export default function TicketRegister({
           .toLowerCase()
           .includes(query.toLowerCase()),
     )
-    .sort((a, b) => Date.parse(b.closedAt || b.createdAt) - Date.parse(a.closedAt || a.createdAt));
+    .sort((first, second) => Date.parse(second.closedAt || second.createdAt) - Date.parse(first.closedAt || first.createdAt));
   return (
     <>
       <PageHeader

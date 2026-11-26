@@ -12,13 +12,13 @@ public sealed class AdministrationService(SocDbContext db, TenantDbFactory facto
     public async Task<object> Audit(AppUser user)
     {
         Admin(user);
-        var result = (await db.Audit.ToListAsync()).Select(x => new AuditRow(x.Id, x.CreatedAt, x.Actor, x.Action, x.TenantId, x.Target)).ToList();
+        var result = (await db.Audit.ToListAsync()).Select(entry => new AuditRow(entry.Id, entry.CreatedAt, entry.Actor, entry.Action, entry.TenantId, entry.Target)).ToList();
         foreach (var organization in await db.Tenants.ToListAsync())
         {
             await using var tenantDb = factory.Open(organization);
-            result.AddRange((await tenantDb.Audit.ToListAsync()).Select(x => new AuditRow(x.Id, x.CreatedAt, x.Actor, x.Action, organization.Id, x.Target)));
+            result.AddRange((await tenantDb.Audit.ToListAsync()).Select(entry => new AuditRow(entry.Id, entry.CreatedAt, entry.Actor, entry.Action, organization.Id, entry.Target)));
         }
-        return result.OrderByDescending(x => x.CreatedAt);
+        return result.OrderByDescending(entry => entry.CreatedAt);
     }
     public record AuditRow(Guid Id, DateTimeOffset CreatedAt, string Actor, string Action, Guid? OrganizationId, string? Target);
     // Administrative register: identifiers and lifecycle metadata only.
@@ -27,12 +27,12 @@ public sealed class AdministrationService(SocDbContext db, TenantDbFactory facto
     {
         Admin(user);
         var rows = new List<object>();
-        foreach (var tenant in await db.Tenants.OrderBy(t => t.Name).ToListAsync())
+        foreach (var tenant in await db.Tenants.OrderBy(organization => organization.Name).ToListAsync())
         {
             await using var tenantDb = factory.Open(tenant);
             var cases = await tenantDb.Cases.AsNoTracking()
-                .Select(x => new { x.Id, x.Number, x.Status, x.CreatedAt, x.ClosedAt })
-                .OrderByDescending(x => x.CreatedAt).ToListAsync();
+                .Select(ticket => new { ticket.Id, ticket.Number, ticket.Status, ticket.CreatedAt, ticket.ClosedAt })
+                .OrderByDescending(ticket => ticket.CreatedAt).ToListAsync();
             foreach (var item in cases)
                 rows.Add(new
                 {

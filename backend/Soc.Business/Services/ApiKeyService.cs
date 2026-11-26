@@ -32,7 +32,7 @@ public sealed class ApiKeyService(SocDbContext db, SocService platform)
         Admin(user);
         var organization = await platform.Tenant(input.OrganizationId);
         Require(organization.IsActive, "Klant is inactief.", 400);
-        var scope = await db.Scopes.FirstOrDefaultAsync(x => x.TenantId == organization.Id && (!input.ScopeId.HasValue || x.Id == input.ScopeId)) ?? throw new SocException(400, "Scope ontbreekt.");
+        var scope = await db.Scopes.FirstOrDefaultAsync(availableScope => availableScope.TenantId == organization.Id && (!input.ScopeId.HasValue || availableScope.Id == input.ScopeId)) ?? throw new SocException(400, "Scope ontbreekt.");
         var secret = "soc_demo_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
         var apiSource = new ApiSource { TenantId = organization.Id, ScopeId = scope.Id, Name = Required(input.Name, 80), Hash = Hash(secret), Prefix = secret[..16] };
         db.Sources.Add(apiSource);

@@ -19,16 +19,16 @@ public sealed partial class SocService
         const string marker = "Projectgroep-demoaccounts ingericht v1";
         // Deactivate the former group member on existing demo databases, without deleting history.
         const string rosterMarker = "Projectgroep-demoaccounts bijgewerkt v2";
-        if (!await db.Audit.AnyAsync(x => x.Action == rosterMarker))
+        if (!await db.Audit.AnyAsync(entry => entry.Action == rosterMarker))
         {
             await using var rosterTransaction = await db.Database.BeginTransactionAsync();
             var former = await users.FindByNameAsync("riza@soc.demo");
             if (former != null)
             {
                 former.IsActive = false;
-                db.Assignments.RemoveRange(db.Assignments.Where(x => x.UserId == former.Id));
+                db.Assignments.RemoveRange(db.Assignments.Where(assignment => assignment.UserId == former.Id));
                 var result = await users.UpdateSecurityStampAsync(former);
-                Require(result.Succeeded, string.Join(" ", result.Errors.Select(x => x.Description)), 500);
+                Require(result.Succeeded, string.Join(" ", result.Errors.Select(error => error.Description)), 500);
             }
             db.Audit.Add(new()
             {
@@ -38,10 +38,10 @@ public sealed partial class SocService
             await db.SaveChangesAsync();
             await rosterTransaction.CommitAsync();
         }
-        if (await db.Audit.AnyAsync(x => x.Action == marker))
+        if (await db.Audit.AnyAsync(entry => entry.Action == marker))
             return;
         await using var transaction = await db.Database.BeginTransactionAsync();
-        var tenants = await db.Tenants.OrderBy(t => t.Name == "Northstar Finance" ? 0 : t.Name == "Delta Logistics" ? 1 : 2).ThenBy(t => t.Name).Select(t => t.Id).ToArrayAsync();
+        var tenants = await db.Tenants.OrderBy(organization => organization.Name == "Northstar Finance" ? 0 : organization.Name == "Delta Logistics" ? 1 : 2).ThenBy(organization => organization.Name).Select(organization => organization.Id).ToArrayAsync();
         Require(tenants.Length > 0, "Geen demoklanten beschikbaar.", 500);
         var members = new (string Name, string Login, string Role)[]
         {
@@ -67,7 +67,7 @@ public sealed partial class SocService
                 LockoutEnabled = true
             };
             var result = await users.CreateAsync(user, "Demo2026!");
-            Require(result.Succeeded, string.Join(" ", result.Errors.Select(x => x.Description)), 500);
+            Require(result.Succeeded, string.Join(" ", result.Errors.Select(error => error.Description)), 500);
             await SetGrants(user, member.Role, member.Role switch
             {
                 "Beheerder" => [],
@@ -86,10 +86,10 @@ public sealed partial class SocService
     }
     async Task EnrichOriginalDemoAlertsAsync()
     {
-        foreach (var tenant in await db.Tenants.Where(t => t.Name == "Northstar Finance" || t.Name == "Delta Logistics" || t.Name == "Atlas Health").ToListAsync())
+        foreach (var tenant in await db.Tenants.Where(organization => organization.Name == "Northstar Finance" || organization.Name == "Delta Logistics" || organization.Name == "Atlas Health").ToListAsync())
         {
             await using var tenantDb = factory.Open(tenant);
-            var candidates = await tenantDb.Alerts.Where(a => a.SourceIntegrationId == null && a.ExternalEventId == null && a.PayloadHash == null).ToListAsync();
+            var candidates = await tenantDb.Alerts.Where(alert => alert.SourceIntegrationId == null && alert.ExternalEventId == null && alert.PayloadHash == null).ToListAsync();
             foreach (var alert in candidates)
             {
                 if (DemoAlertContext.Enrich(alert))
@@ -105,7 +105,7 @@ public sealed partial class SocService
         await db.Database.ExecuteSqlRawAsync("IF COL_LENGTH('platform.Tenants','ResponseMinutes') IS NULL ALTER TABLE [platform].[Tenants] ADD ResponseMinutes int NOT NULL CONSTRAINT DF_Tenants_ResponseMinutes DEFAULT(60);");
         if (await db.Tenants.AnyAsync())
         {
-            Require(await db.Audit.AnyAsync(x => x.Action == "Demonstratiegegevens aangemaakt"), "Onvolledige demodatabase: reset uitsluitend de demo-volumes en start opnieuw.", 500);
+            Require(await db.Audit.AnyAsync(entry => entry.Action == "Demonstratiegegevens aangemaakt"), "Onvolledige demodatabase: reset uitsluitend de demo-volumes en start opnieuw.", 500);
             foreach (var tenant in await db.Tenants.ToListAsync())
                 await factory.UpgradeDemoAsync(tenant);
             await InitializeTeamAccountsAsync();
@@ -115,7 +115,7 @@ public sealed partial class SocService
         var demoTenants = new List<Tenant>();
         foreach (var name in new[] { "Northstar Finance", "Delta Logistics", "Atlas Health" })
             demoTenants.Add(await CreateTenant(name));
-        var organizationIds = demoTenants.Select(x => x.Id).ToArray();
+        var organizationIds = demoTenants.Select(organization => organization.Id).ToArray();
         var demoAnalyst = new AppUser
             {
                 Id = Guid.NewGuid(),
@@ -173,7 +173,7 @@ public sealed partial class SocService
         foreach (var account in accounts)
         {
             var creationResult = await users.CreateAsync(account, "Demo2026!");
-            Require(creationResult.Succeeded, string.Join(" ", creationResult.Errors.Select(x => x.Description)), 500);
+            Require(creationResult.Succeeded, string.Join(" ", creationResult.Errors.Select(error => error.Description)), 500);
             await SetGrants(account, account.Role, account.Role switch
             {
                 "Klant" => organizationIds[..1],
@@ -197,7 +197,7 @@ public sealed partial class SocService
         {
             var sample = samples[sampleIndex];
             var tenant = demoTenants[sample.Tenant];
-            var scope = await db.Scopes.FirstAsync(x => x.TenantId == tenant.Id);
+            var scope = await db.Scopes.FirstAsync(availableScope => availableScope.TenantId == tenant.Id);
             await using var tenantDb = factory.Open(tenant);
             var alert = AlertService.NewAlert(scope.Id, new CreateAlertRequest { Title = sample.Title, Description = sample.Description, Priority = sample.Priority }, sample.Source, DateTimeOffset.UtcNow.AddHours(sample.Hours));
             alert.Number = $"ALT-{1001 + sampleIndex}";

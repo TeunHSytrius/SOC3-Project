@@ -135,7 +135,7 @@ public sealed class AlertService(TenantDbFactory factory, SocService platform)
         {
             await using var tenantDb = factory.Open(tenant);
             await using var transaction = await tenantDb.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
-            var alert = await tenantDb.Alerts.Include(x => x.History).FirstOrDefaultAsync(x => x.Id == id && scopes.Contains(x.ScopeId));
+            var alert = await tenantDb.Alerts.Include(record => record.History).FirstOrDefaultAsync(record => record.Id == id && scopes.Contains(record.ScopeId));
             if (alert == null)
                 continue;
             if (action == "get")
@@ -205,10 +205,10 @@ public sealed class AlertService(TenantDbFactory factory, SocService platform)
         ResearchCase researchCase;
         if (input.CaseId.HasValue)
         {
-            researchCase = await tenantDb.Cases.SingleOrDefaultAsync(x => x.Id == input.CaseId && x.ScopeId == alert.ScopeId) ?? throw new SocException(400, "Case niet gevonden in dezelfde scope.");
+            researchCase = await tenantDb.Cases.SingleOrDefaultAsync(record => record.Id == input.CaseId && record.ScopeId == alert.ScopeId) ?? throw new SocException(400, "Case niet gevonden in dezelfde scope.");
             Require(!Closed(researchCase), "Case is afgesloten.", 409);
             Require(researchCase.OwnerId == currentUser.Id || currentUser.Role == "Senior analist", "Case heeft een andere eigenaar.", 403);
-            tenantDb.Entry(researchCase).Property(x => x.Title).IsModified = true;
+            tenantDb.Entry(researchCase).Property(record => record.Title).IsModified = true;
         }
         else
         {

@@ -12,8 +12,8 @@ public sealed class OrganizationService(SocDbContext db, SocService platform)
     public async Task<List<Tenant>> Organizations(AppUser user)
     {
         if (user.Role == "Beheerder")
-            return await db.Tenants.OrderBy(x => x.Name).ToListAsync();
-        return (await platform.Workspaces(user)).Select(x => x.Tenant).OrderBy(x => x.Name).ToList();
+            return await db.Tenants.OrderBy(organization => organization.Name).ToListAsync();
+        return (await platform.Workspaces(user)).Select(workspace => workspace.Tenant).OrderBy(organization => organization.Name).ToList();
     }
     public async Task<Tenant> Organization(AppUser user, Guid id)
     {
@@ -33,7 +33,7 @@ public sealed class OrganizationService(SocDbContext db, SocService platform)
         Admin(user);
         var value = Required(name, 120);
         var organization = await platform.Tenant(id);
-        Require(!await db.Tenants.AnyAsync(x => x.Id != id && x.Name == value), "Naam bestaat al.", 409);
+        Require(!await db.Tenants.AnyAsync(organization => organization.Id != id && organization.Name == value), "Naam bestaat al.", 409);
         organization.Name = value;
         if (responseMinutes.HasValue)
             organization.ResponseMinutes = SlaMinutes(responseMinutes);

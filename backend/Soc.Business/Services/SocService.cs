@@ -133,7 +133,7 @@ public sealed partial class SocService
             Target = target
         });
     }
-    internal async Task<Tenant> Tenant(Guid? id) => await db.Tenants.SingleOrDefaultAsync(x => x.Id == id) ?? throw new SocException(404, "Klant niet gevonden.");
+    internal async Task<Tenant> Tenant(Guid? id) => await db.Tenants.SingleOrDefaultAsync(organization => organization.Id == id) ?? throw new SocException(404, "Klant niet gevonden.");
     internal async Task<List<Guid>> Scopes(AppUser user, Guid tenant)
     {
         return await db.Assignments
@@ -143,16 +143,16 @@ public sealed partial class SocService
     }
     internal async Task<List<(Tenant Tenant, List<Guid> Scopes)>> Workspaces(AppUser user, Guid? tenant = null, Guid? scope = null)
     {
-        var organizationIds = await db.Assignments.Where(x => x.UserId == user.Id).Select(x => x.TenantId).Distinct().ToListAsync();
+        var organizationIds = await db.Assignments.Where(assignment => assignment.UserId == user.Id).Select(assignment => assignment.TenantId).Distinct().ToListAsync();
         if (tenant.HasValue)
             Require(organizationIds.Contains(tenant.Value) && await db.Tenants.AnyAsync(organization => organization.Id == tenant.Value && organization.IsActive));
-        var activeTenants = await db.Tenants.Where(x => x.IsActive && organizationIds.Contains(x.Id) && (!tenant.HasValue || x.Id == tenant.Value)).ToListAsync();
+        var activeTenants = await db.Tenants.Where(organization => organization.IsActive && organizationIds.Contains(organization.Id) && (!tenant.HasValue || organization.Id == tenant.Value)).ToListAsync();
         var result = new List<(Tenant, List<Guid>)>();
         foreach (var organization in activeTenants)
         {
             var scopes = await Scopes(user, organization.Id);
             if (scope.HasValue)
-                scopes = scopes.Where(x => x == scope.Value).ToList();
+                scopes = scopes.Where(scopeId => scopeId == scope.Value).ToList();
             if (scopes.Count > 0)
                 result.Add((organization, scopes));
         }
@@ -169,7 +169,7 @@ public sealed partial class SocService
         var result = new List<(Tenant, List<Guid>)>();
         foreach (var organization in await db.Tenants.Where(organization => !tenant.HasValue || organization.Id == tenant.Value).ToListAsync())
         {
-            var scopes = await db.Scopes.Where(x => x.TenantId == organization.Id && (!scope.HasValue || x.Id == scope.Value)).Select(x => x.Id).ToListAsync();
+            var scopes = await db.Scopes.Where(availableScope => availableScope.TenantId == organization.Id && (!scope.HasValue || availableScope.Id == scope.Value)).Select(availableScope => availableScope.Id).ToListAsync();
             if (scopes.Count > 0)
                 result.Add((organization, scopes));
         }
@@ -177,7 +177,7 @@ public sealed partial class SocService
     }
     internal async Task<Tenant> CreateTenant(string name, int responseMinutes = DefaultResponseMinutes)
     {
-        Require(!await db.Tenants.AnyAsync(x => x.Name == name), "Naam bestaat al.", 409);
+        Require(!await db.Tenants.AnyAsync(organization => organization.Name == name), "Naam bestaat al.", 409);
         var organization = new Tenant { Name = name, ResponseMinutes = responseMinutes };
         organization.SchemaName = "tenant_" + organization.Id.ToString("N");
         await factory.ProvisionAsync(organization);
