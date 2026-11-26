@@ -36,3 +36,79 @@ jobs:
       - name: Stop containers
         if: always()
         run: docker compose down
+
+  native:
+    name: Native application startup and smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Start SQL Server only
+        run: docker compose up -d --wait --wait-timeout 360 sqlserver
+      - name: Configure local development database
+        run: |
+          dotnet user-secrets set "ConnectionStrings:Soc" 'Server=127.0.0.1,14333;Database=Soc3NativeCi;User Id=sa;Password=SocDemo!2026Local;Encrypt=True;TrustServerCertificate=True' --project backend/Soc.Api/Soc.Api.csproj
+          dotnet restore SOC3.slnx
+          dotnet build SOC3.slnx --no-restore
+      - name: Install and build native frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+      - name: Start native backend and frontend and verify integration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          api_log="$RUNNER_TEMP/soc-native-api.log"
+          frontend_log="$RUNNER_TEMP/soc-native-frontend.log"
+
+          dotnet run --project backend/Soc.Api/Soc.Api.csproj --launch-profile "Local Development" --no-build > "$api_log" 2>&1 &
+          api_pid=$!
+          npm --prefix frontend run dev > "$frontend_log" 2>&1 &
+          frontend_pid=$!
+
+          cleanup() {
+            kill "$frontend_pid" "$api_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          wait_for_http() {
+            local url="$1"
+            local attempt
+            for attempt in $(seq 1 90); do
+              if curl --fail --silent --max-time 5 "$url" >/dev/null; then
+                return 0
+              fi
+              sleep 2
+            done
+            echo "Service not ready: $url" >&2
+            return 1
+          }
+
+          wait_for_http http://localhost:8081/api/v1/health
+          wait_for_http http://localhost:5173/
+          wait_for_http http://localhost:5173/api/v1/health
+
+          curl --fail --silent http://localhost:5173/ | grep -q '<div id="root"'
+          SOC_URL=http://localhost:5173 node tests/smoke.mjs
+      - name: Print native diagnostics on failure
+        if: failure()
+        run: |
+          for log in "$RUNNER_TEMP/soc-native-api.log" "$RUNNER_TEMP/soc-native-frontend.log"; do
+            if [ -f "$log" ]; then
+              echo "=== $log ==="
+              tail -n 150 "$log"
+            fi
+          done
+          docker compose ps -a
+          docker compose logs --no-color --tail=100 sqlserver
+      - name: Stop SQL Server
+        if: always()
+        run: docker compose down
