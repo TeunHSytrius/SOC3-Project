@@ -36,7 +36,13 @@ public sealed class UserManagementService(SocDbContext db, UserManager<AppUser> 
             "Ongeldig e-mailadres.", 400);
         var role = Required(input.Role, 30);
         var organizationIds = input.OrganizationIds ?? [];
-        Require(Roles.Contains(role) && (role != "Klant" || organizationIds.Distinct().Count() == 1) && await db.Tenants.CountAsync(organization => organizationIds.Contains(organization.Id)) == organizationIds.Distinct().Count(), "Ongeldige rol of klant.", 400);
+        Require(
+            Roles.Contains(role) &&
+            (role != "Klant" || organizationIds.Distinct().Count() == 1) &&
+            await db.Tenants.CountAsync(organization => organizationIds.Contains(organization.Id)) ==
+                organizationIds.Distinct().Count(),
+            "Ongeldige rol of klant.",
+            400);
         var account = new AppUser
         {
             Id = Guid.NewGuid(),
@@ -104,7 +110,13 @@ public sealed class UserManagementService(SocDbContext db, UserManager<AppUser> 
         var role = Required(input.Role, 30);
         Require(input.OrganizationIds != null && input.IsActive.HasValue, "Klanttoegang en accountstatus zijn verplicht.", 400);
         var organizationIds = input.OrganizationIds!.Distinct().ToArray();
-        Require(Roles.Contains(role) && (role != "Klant" || organizationIds.Length == 1) && await db.Tenants.CountAsync(organization => organizationIds.Contains(organization.Id)) == organizationIds.Length, "Ongeldige rol of klant.", 400);
+        Require(
+            Roles.Contains(role) &&
+            (role != "Klant" || organizationIds.Length == 1) &&
+            await db.Tenants.CountAsync(organization => organizationIds.Contains(organization.Id)) ==
+                organizationIds.Length,
+            "Ongeldige rol of klant.",
+            400);
         Require(input.Password == null || input.Password.Length <= 200, "Ongeldig wachtwoord.", 400);
         await using var transaction = await db.Database.BeginTransactionAsync();
         var user = await users.FindByIdAsync(id.ToString()) ?? throw new SocException(404, "Gebruiker niet gevonden.");
@@ -115,7 +127,9 @@ public sealed class UserManagementService(SocDbContext db, UserManager<AppUser> 
         Require(duplicateName == null || duplicateName.Id == id, "Gebruikersnaam is al in gebruik.", 409);
         user.Name = name;
         if (!string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase))
+        {
             user.EmailConfirmed = false;
+        }
         user.Email = email;
         user.UserName = email;
         user.IsActive = input.IsActive!.Value;
@@ -134,7 +148,9 @@ public sealed class UserManagementService(SocDbContext db, UserManager<AppUser> 
         Require(stamp.Succeeded, string.Join(" ", stamp.Errors.Select(error => error.Description)), 500);
         await platform.Log(actor, "Gebruikersaccount gewijzigd", target: user.Id.ToString());
         if (!string.IsNullOrEmpty(input.Password))
+        {
             await platform.Log(actor, "Gebruikerswachtwoord gereset", target: user.Id.ToString());
+        }
         await transaction.CommitAsync();
         return await platform.PublicUser(user);
     }

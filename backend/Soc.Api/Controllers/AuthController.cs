@@ -38,26 +38,32 @@ public sealed class AuthController(
         var password = SocService.RequiredPassword(input.Password);
         var user = await users.FindByNameAsync(email);
         if (user is not { IsActive: true })
+        {
             return Unauthorized(new
             {
                 message = "Onjuiste inloggegevens."
             });
+        }
         var result = await signIn.PasswordSignInAsync(user, password, false, true);
         if (result.RequiresTwoFactor)
         {
             if (string.IsNullOrWhiteSpace(input.Code))
+            {
                 return Unauthorized(new
                 {
                     message = "Tweestapsverificatie vereist. Vul je code in.",
                     requiresTwoFactor = true
                 });
+            }
             return await Complete(new TwoFactorRequest { Code = input.Code });
         }
         if (!result.Succeeded)
+        {
             return Unauthorized(new
             {
                 message = "Onjuiste inloggegevens of tijdelijk geblokkeerd."
             });
+        }
         await service.Log(user, "Ingelogd");
         return Ok(await service.PublicUser(user));
     }
@@ -67,10 +73,12 @@ public sealed class AuthController(
     {
         var user = await signIn.GetTwoFactorAuthenticationUserAsync();
         if (user is not { IsActive: true })
+        {
             return Unauthorized(new
             {
                 message = "Start opnieuw met inloggen."
             });
+        }
         var code = SocService.Required(input.Code, 50).Replace(" ", "");
         // Accounts enrolled before this integration retain their Identity authenticator and recovery codes.
         // New enrollments use the original service through Identity's second-factor provider.
@@ -87,10 +95,12 @@ public sealed class AuthController(
                 : await signIn.TwoFactorRecoveryCodeSignInAsync(code);
         }
         if (!result.Succeeded)
+        {
             return Unauthorized(new
             {
                 message = "Ongeldige verificatiecode."
             });
+        }
         await service.Log(user, "Ingelogd met 2FA");
         return Ok(await service.PublicUser(user));
     }

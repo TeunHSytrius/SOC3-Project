@@ -69,13 +69,17 @@ async function getCsrfToken(): Promise<string> {
     credentials: 'same-origin',
     cache: 'no-store',
   });
-  if (!response.ok) throwResponseError(response, await response.json().catch(() => null));
+  if (!response.ok) {
+    throwResponseError(response, await response.json().catch(() => null));
+  }
   return (await response.json()).token;
 }
 
 function resolveRoute(path: string, body?: Record<string, unknown>) {
   let method = body === undefined ? 'GET' : 'POST';
-  if (body !== undefined && /^(users|organizations)\/[^/]+$/.test(path)) method = 'PATCH';
+  if (body !== undefined && /^(users|organizations)\/[^/]+$/.test(path)) {
+    method = 'PATCH';
+  }
 
   return { path, method };
 }
@@ -90,14 +94,19 @@ export async function api<T = unknown>(
 
   // The cookie contains the authentication secret; the tab stores only the user ID.
   const activeUser = sessionStorage.getItem(sessionKey);
-  if (activeUser && route.path !== 'auth/login' && route.path !== 'auth/2fa')
+  if (activeUser && route.path !== 'auth/login' && route.path !== 'auth/2fa') {
     headers['X-SOC-User'] = activeUser;
+  }
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
     headers['X-CSRF-TOKEN'] = await getCsrfToken();
   }
-  if (context?.workspaceId) headers['X-Workspace-Id'] = context.workspaceId;
-  if (context?.scopeId) headers['X-Scope-Id'] = context.scopeId;
+  if (context?.workspaceId) {
+    headers['X-Workspace-Id'] = context.workspaceId;
+  }
+  if (context?.scopeId) {
+    headers['X-Scope-Id'] = context.scopeId;
+  }
 
   const payload = body
     ? Object.fromEntries(Object.entries(body).filter(([, value]) => value !== ''))
@@ -109,12 +118,15 @@ export async function api<T = unknown>(
     body: payload === undefined ? undefined : JSON.stringify(payload),
   });
   const data = await response.json().catch(() => null);
-  if (!response.ok) throwResponseError(response, data);
-  if (data === null)
+  if (!response.ok) {
+    throwResponseError(response, data);
+  }
+  if (data === null) {
     throw new ApiError(
       'De server gaf geen geldig JSON-antwoord.',
       response.status,
       response.headers.get('X-Trace-Id') || undefined,
     );
+  }
   return data as T;
 }

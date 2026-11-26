@@ -1,6 +1,8 @@
 import type { State } from '../../types/soc';
 import type { WorkspaceActions } from '../../types/workspace';
 import { Badge, Button, PageHeader, Panel, Table } from '../../components/Ui';
+import DemoAlertDashboard from '../demo/DemoAlertDashboard';
+import { canViewDemoAlerts } from '../demo/demoAlerts';
 
 interface DashboardProps extends WorkspaceActions {
   state: State;
@@ -8,7 +10,9 @@ interface DashboardProps extends WorkspaceActions {
 
 export default function DashboardPage({ state, navigate, isAdmin }: DashboardProps) {
   const { user, orgs, users } = state;
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="fragment">
@@ -38,6 +42,7 @@ export default function DashboardPage({ state, navigate, isAdmin }: DashboardPro
           </Table>
         </Panel>
       )}
+      {canViewDemoAlerts(user) && <DemoAlertDashboard state={state} navigate={navigate} />}
       <Panel title="Mijn account">
         <div className="bodypad">
           <p>Rol: {user.role}</p>

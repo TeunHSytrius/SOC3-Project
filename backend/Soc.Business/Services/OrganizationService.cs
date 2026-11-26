@@ -12,8 +12,14 @@ public sealed class OrganizationService(SocDbContext db, SocService platform)
     public async Task<List<Tenant>> Organizations(AppUser user)
     {
         if (user.Role == "Beheerder")
+        {
             return await db.Tenants.OrderBy(organization => organization.Name).ToListAsync();
-        return (await platform.Workspaces(user)).Select(workspace => workspace.Tenant).OrderBy(organization => organization.Name).ToList();
+        }
+        var workspaces = await platform.Workspaces(user);
+        return workspaces
+            .Select(workspace => workspace.Tenant)
+            .OrderBy(organization => organization.Name)
+            .ToList();
     }
     public async Task<Tenant> Organization(AppUser user, Guid id)
     {

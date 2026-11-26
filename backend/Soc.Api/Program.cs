@@ -11,11 +11,16 @@ using Soc.Data.Entities;
 using Soc.Business.Services;
 using Soc.Business.Repositories;
 using Soc.Business.Security;
+
 var builder = WebApplication.CreateBuilder(args);
 var connection = builder.Configuration.GetConnectionString("Soc") ?? throw new InvalidOperationException("ConnectionStrings:Soc ontbreekt.");
 var demo = builder.Configuration.GetValue<bool>("Demo:Enabled");
 builder.Services.AddDataProtection().SetApplicationName("SOC3");
-if (builder.Configuration["DataProtection:KeyPath"] is string keyPath) builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keyPath));
+if (builder.Configuration["DataProtection:KeyPath"] is string keyPath)
+{
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(keyPath));
+}
 builder.Services.AddAntiforgery(options =>
 {
     options.HeaderName = "X-CSRF-TOKEN";
@@ -35,7 +40,6 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));
-
 });
 builder.Services.AddDbContext<SocDbContext>(options => options.UseSqlServer(connection));
 builder.Services.AddSingleton(new TenantDbFactory(connection));
@@ -67,7 +71,12 @@ builder.Services.ConfigureApplicationCookie(options =>
         return Task.CompletedTask;
     };
 });
-builder.Services.AddControllers().AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(
+            new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 builder.Services.AddOpenApi();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddScoped<ITwoFactorRepository, SqlTwoFactorRepository>();
@@ -82,13 +91,15 @@ var app = builder.Build();
 app.UseMiddleware<ApiErrorMiddleware>();
 app.UseStatusCodePages(async statusContext =>
 {
-    var ctx = statusContext.HttpContext;
-    if (!ctx.Request.Path.StartsWithSegments("/api"))
-        return;
-    await ctx.Response.WriteAsJsonAsync(new
+    var context = statusContext.HttpContext;
+    if (!context.Request.Path.StartsWithSegments("/api"))
     {
-        message = ApiErrorMiddleware.Reason(ctx.Response.StatusCode),
-        traceId = ctx.TraceIdentifier
+        return;
+    }
+    await context.Response.WriteAsJsonAsync(new
+    {
+        message = ApiErrorMiddleware.Reason(context.Response.StatusCode),
+        traceId = context.TraceIdentifier
     });
 });
 app.UseDefaultFiles();
@@ -96,18 +107,20 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 // A browser tab that was signed in as a different user must not use a newly shared cookie.
-app.Use(async (ctx, next) =>
+app.Use(async (context, next) =>
 {
-    if (ctx.Request.Path.StartsWithSegments("/api/v1") && ctx.Request.Headers.TryGetValue("X-SOC-User", out var expected) && ctx.User.Identity?.IsAuthenticated == true)
+    if (context.Request.Path.StartsWithSegments("/api/v1") &&
+        context.Request.Headers.TryGetValue("X-SOC-User", out var expectedUserId) &&
+        context.User.Identity?.IsAuthenticated == true)
     {
-        var actual = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        if (!string.Equals(expected.ToString(), actual, StringComparison.OrdinalIgnoreCase))
+        var actualUserId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!string.Equals(expectedUserId.ToString(), actualUserId, StringComparison.OrdinalIgnoreCase))
         {
-            ctx.Response.StatusCode = 401;
-            await ctx.Response.WriteAsJsonAsync(new
+            context.Response.StatusCode = 401;
+            await context.Response.WriteAsJsonAsync(new
             {
                 message = "De sessie is gewijzigd. Log opnieuw in.",
-                traceId = ctx.TraceIdentifier
+                traceId = context.TraceIdentifier
             });
             return;
         }
@@ -146,8 +159,22 @@ app.Use(async (context, next) =>
 app.UseAuthorization();
 app.MapControllers();
 app.MapOpenApi();
-app.MapGet("/api/v1/health", async (SocDbContext db) => await db.Database.CanConnectAsync() ? Results.Ok(new { status = "ok" }) : Results.Json(new { status = "unavailable", message = "SQL Server niet bereikbaar." }, statusCode: 503));
-app.MapFallback("/api/{**path}", (HttpContext ctx) => { ctx.Response.StatusCode = 404; return Task.CompletedTask; });
+app.MapGet("/api/v1/health", async (SocDbContext database) =>
+{
+    if (await database.Database.CanConnectAsync())
+    {
+        return Results.Ok(new { status = "ok" });
+    }
+
+    return Results.Json(
+        new { status = "unavailable", message = "SQL Server niet bereikbaar." },
+        statusCode: 503);
+});
+app.MapFallback("/api/{**path}", (HttpContext context) =>
+{
+    context.Response.StatusCode = 404;
+    return Task.CompletedTask;
+});
 app.MapFallbackToFile("index.html");
 if (demo)
 {
