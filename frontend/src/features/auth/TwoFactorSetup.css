@@ -56,12 +56,12 @@
 }
 
 .two-factor-success {
-  color: #2e7d32;
+  color: var(--success-text);
   font-weight: 600;
 }
 
 .two-factor-error {
-  color: #d32f2f;
+  color: var(--danger-text);
 }
 
 /* Keep the original component usable on narrow screens. */
@@ -75,9 +75,9 @@
 }
 .two-factor-form button,
 .two-factor-result button {
-  border: 1px solid #444;
-  background: #444;
-  color: #fff;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
   border-radius: 6px;
   padding: 10px;
 }

@@ -246,7 +246,7 @@ export default function DashboardPage({
           <div className="slaoverview">
             <div
               className="donut"
-              style={{ background: `conic-gradient(#14836c ${percentage || 0}%, #e6edf1 0)` }}
+              style={{ background: `conic-gradient(#14836c ${percentage || 0}%, var(--surface-hover) 0)` }}
             >
               <div>
                 <strong>{percentage === null ? '—' : percentage + '%'}</strong>
