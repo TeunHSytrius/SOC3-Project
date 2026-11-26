@@ -14,14 +14,7 @@ import {
   nextCaseStates,
   roles,
 } from '../../types/domain';
-type Navigate = (page: string, selected?: string | null) => void;
-type UpdateState = (update: Partial<State>) => void;
-type RunAction = (
-  path: string,
-  data: Record<string, unknown>,
-  message: string,
-  after?: (result: any) => void,
-) => Promise<void>;
+import type { Navigate, UpdateState, RunAction } from '../../types/workspace';
 interface QueueFiltersProps {
   type: 'alerts' | 'cases';
   state: State;
@@ -37,36 +30,36 @@ export default function QueueFilters({
   isAnalyst,
   update,
 }: QueueFiltersProps) {
-  const s = state;
+  const filters = state;
   const isAlerts = type === 'alerts';
-  const items = (isAlerts ? s.alerts : s.cases).filter(
-    (item) => !s.org || item.organizationId === s.org,
+  const items = (isAlerts ? filters.alerts : filters.cases).filter(
+    (item) => !filters.org || item.organizationId === filters.org,
   );
   const visibleStatuses = isAlerts
     ? states.filter(
         (status) =>
-          s.archiveFilter === 'all' ||
-          (s.archiveFilter === 'open'
+          filters.archiveFilter === 'all' ||
+          (filters.archiveFilter === 'open'
             ? ['New', 'PendingReview', 'UnderReview'].includes(status)
-            : s.archiveFilter === 'linked'
+            : filters.archiveFilter === 'linked'
               ? status === 'Escalated'
               : ['Dismissed', 'Resolved'].includes(status)),
       )
-    : caseStates.filter((status) => caseMatchesView({ status } as ResearchCase, s.archiveFilter));
-  const alerts = s.alerts.filter((alert) => !s.org || alert.organizationId === s.org);
+    : caseStates.filter((status) => caseMatchesView({ status } as ResearchCase, filters.archiveFilter));
+  const alerts = filters.alerts.filter((alert) => !filters.org || alert.organizationId === filters.org);
   const categories = [
     ...new Set(alerts.map((alert) => alert.security?.category || 'Niet geclassificeerd')),
   ].sort();
   const sources = [...new Set(alerts.map((alert) => alert.source))].sort();
   const owners = [...new Set(items.map((item) => item.owner).filter(Boolean))].sort();
   const advancedActive = !!(
-    s.filter ||
-    s.ownerFilter ||
-    s.slaFilter ||
-    s.category ||
-    s.sourceFilter ||
-    s.fromDate ||
-    s.toDate
+    filters.filter ||
+    filters.ownerFilter ||
+    filters.slaFilter ||
+    filters.category ||
+    filters.sourceFilter ||
+    filters.fromDate ||
+    filters.toDate
   );
   return (
     <div className="queue-filters compact-filters">
@@ -78,16 +71,16 @@ export default function QueueFilters({
                 ? 'Alertnummer, titel, IP of hostname'
                 : 'Ticketnummer, titel, notitie of observable'
             }
-            value={s.search}
-            onChange={(e) => update({ search: e.target.value })}
+            value={filters.search}
+            onChange={(event) => update({ search: event.target.value })}
           />
         </Field>
         <Field label="Prioriteit">
           <Select
             options={priorities}
-            value={s.priority}
+            value={filters.priority}
             placeholder="Alle prioriteiten"
-            onChange={(e) => update({ priority: e.target.value })}
+            onChange={(event) => update({ priority: event.target.value })}
           />
         </Field>
         <Field label="Sorteren">
@@ -96,9 +89,9 @@ export default function QueueFilters({
               {
                 id: 'default',
                 name:
-                  isAlerts && s.archiveFilter === 'open'
+                  isAlerts && filters.archiveFilter === 'open'
                     ? 'Oudste eerst (FIFO)'
-                    : s.archiveFilter === 'closed' && !isAlerts
+                    : filters.archiveFilter === 'closed' && !isAlerts
                       ? 'Laatst afgesloten eerst'
                       : 'Nieuwste eerst',
               },
@@ -106,8 +99,8 @@ export default function QueueFilters({
               { id: 'newest', name: 'Nieuwste aangemaakt eerst' },
               { id: 'priority', name: 'Hoogste prioriteit eerst' },
             ]}
-            value={s.listSort}
-            onChange={(e) => update({ listSort: e.target.value as State['listSort'] })}
+            value={filters.listSort}
+            onChange={(event) => update({ listSort: event.target.value as State['listSort'] })}
           />
         </Field>
         <Button
@@ -134,8 +127,8 @@ export default function QueueFilters({
         <label className="check">
           <input
             type="checkbox"
-            checked={s.mine}
-            onChange={(e) => update({ mine: e.target.checked })}
+            checked={filters.mine}
+            onChange={(event) => update({ mine: event.target.checked })}
           />{' '}
           Alleen mijn {isAlerts ? 'alerts' : 'tickets'}
         </label>
@@ -145,23 +138,23 @@ export default function QueueFilters({
         <div className="queue-filter-grid">
           <Field label="Klantorganisatie">
             <Select
-              options={s.orgs.map((o) => ({
-                id: o.id,
-                name: o.name + (o.isActive ? '' : ' (inactief)'),
+              options={filters.orgs.map((organization) => ({
+                id: organization.id,
+                name: organization.name + (organization.isActive ? '' : ' (inactief)'),
               }))}
-              value={s.org}
+              value={filters.org}
               placeholder="Alle klanten"
-              onChange={(e) =>
-                update({ org: e.target.value, ownerFilter: '', sourceFilter: '', category: '' })
+              onChange={(event) =>
+                update({ org: event.target.value, ownerFilter: '', sourceFilter: '', category: '' })
               }
             />
           </Field>
           <Field label="Status">
             <Select
               options={visibleStatuses}
-              value={s.filter}
+              value={filters.filter}
               placeholder="Alle statussen in deze selectie"
-              onChange={(e) => update({ filter: e.target.value })}
+              onChange={(event) => update({ filter: event.target.value })}
             />
           </Field>
           {canReadInternal && (
@@ -171,9 +164,9 @@ export default function QueueFilters({
                   { id: 'unassigned', name: 'Niet toegewezen' },
                   ...owners.map((owner) => ({ id: owner, name: owner })),
                 ]}
-                value={s.ownerFilter}
+                value={filters.ownerFilter}
                 placeholder="Alle eigenaren"
-                onChange={(e) => update({ ownerFilter: e.target.value })}
+                onChange={(event) => update({ ownerFilter: event.target.value })}
               />
             </Field>
           )}
@@ -187,25 +180,25 @@ export default function QueueFilters({
                     { id: 'danger', name: 'Overschreden' },
                     { id: 'good', name: 'Binnen SLA' },
                   ]}
-                  value={s.slaFilter}
+                  value={filters.slaFilter}
                   placeholder="Alle SLA-statussen"
-                  onChange={(e) => update({ slaFilter: e.target.value })}
+                  onChange={(event) => update({ slaFilter: event.target.value })}
                 />
               </Field>
               <Field label="Categorie">
                 <Select
                   options={categories}
-                  value={s.category}
+                  value={filters.category}
                   placeholder="Alle categorieën"
-                  onChange={(e) => update({ category: e.target.value })}
+                  onChange={(event) => update({ category: event.target.value })}
                 />
               </Field>
               <Field label="Securitytool">
                 <Select
                   options={sources}
-                  value={s.sourceFilter}
+                  value={filters.sourceFilter}
                   placeholder="Alle bronnen"
-                  onChange={(e) => update({ sourceFilter: e.target.value })}
+                  onChange={(event) => update({ sourceFilter: event.target.value })}
                 />
               </Field>
             </>
@@ -213,15 +206,15 @@ export default function QueueFilters({
           <Field label="Aangemaakt vanaf">
             <input
               type="date"
-              value={s.fromDate}
-              onChange={(e) => update({ fromDate: e.target.value })}
+              value={filters.fromDate}
+              onChange={(event) => update({ fromDate: event.target.value })}
             />
           </Field>
           <Field label="Aangemaakt t/m">
             <input
               type="date"
-              value={s.toDate}
-              onChange={(e) => update({ toDate: e.target.value })}
+              value={filters.toDate}
+              onChange={(event) => update({ toDate: event.target.value })}
             />
           </Field>
         </div>

@@ -18,14 +18,7 @@ import DashboardStats from './DashboardStats';
 import DashboardAlerts from '../alerts/DashboardAlerts';
 import AlertTrend from '../alerts/AlertTrend';
 import TicketTable from '../cases/TicketTable';
-type Navigate = (page: string, selected?: string | null) => void;
-type UpdateState = (update: Partial<State>) => void;
-type RunAction = (
-  path: string,
-  data: Record<string, unknown>,
-  message: string,
-  after?: (result: any) => void,
-) => Promise<void>;
+import type { Navigate, UpdateState, RunAction } from '../../types/workspace';
 interface DashboardPageProps {
   state: Pick<State, 'org' | 'user' | 'orgs' | 'users' | 'keys' | 'errors' | 'alerts' | 'cases'>;
   isAdmin: boolean;

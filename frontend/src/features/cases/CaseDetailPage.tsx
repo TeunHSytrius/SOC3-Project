@@ -16,14 +16,7 @@ import {
 } from '../../types/domain';
 import { priorityColor } from '../alerts/AlertCards';
 import CaseWorkflow from './CaseWorkflow';
-type Navigate = (page: string, selected?: string | null) => void;
-type UpdateState = (update: Partial<State>) => void;
-type RunAction = (
-  path: string,
-  data: Record<string, unknown>,
-  message: string,
-  after?: (result: any) => void,
-) => Promise<void>;
+import type { Navigate, UpdateState, RunAction } from '../../types/workspace';
 interface CaseDetailProps {
   ticket: ResearchCase;
   state: Pick<State, 'user' | 'alerts'>;
@@ -96,11 +89,11 @@ export default function CaseDetailPage({
                   <dt>Gekoppelde alerts</dt>
                   <dd>
                     {ticket.alertIds.map((id) => {
-                      const a = state.alerts.find((x) => x.id === id);
+                      const linkedAlert = state.alerts.find((alert) => alert.id === id);
                       return (
                         <div key={id}>
                           <button className="rowlink" onClick={() => navigate('alerts', id)}>
-                            {a?.number} · {a?.title}
+                            {linkedAlert?.number} · {linkedAlert?.title}
                           </button>
                         </div>
                       );
@@ -109,13 +102,13 @@ export default function CaseDetailPage({
                   <dt>Observables</dt>
                   <dd>
                     {ticket.entries
-                      .filter((e) => e.kind === 'Observable')
-                      .map((e) => (
-                        <div className="wire-observable" key={e.id}>
-                          {e.text}
+                      .filter((entry) => entry.kind === 'Observable')
+                      .map((entry) => (
+                        <div className="wire-observable" key={entry.id}>
+                          {entry.text}
                         </div>
                       ))}
-                    {!ticket.entries.some((e) => e.kind === 'Observable') && '—'}
+                    {!ticket.entries.some((entry) => entry.kind === 'Observable') && '—'}
                   </dd>
                   <dt>Samenvatting</dt>
                   <dd>{ticket.summary || '—'}</dd>
@@ -188,21 +181,21 @@ export default function CaseDetailPage({
             {ticket.entries
               .slice()
               .reverse()
-              .map((e) => (
-                <div key={e.id}>
+              .map((entry) => (
+                <div key={entry.id}>
                   <span className="timeline-dot" />
                   <strong>
-                    {e.kind}{' '}
+                    {entry.kind}{' '}
                     {canReadInternal && (
                       <Badge
-                        value={e.visible ? 'Klantzichtbaar' : 'Intern'}
-                        kind={e.visible ? 'good' : 'neutral'}
+                        value={entry.visible ? 'Klantzichtbaar' : 'Intern'}
+                        kind={entry.visible ? 'good' : 'neutral'}
                       />
                     )}
                   </strong>
-                  <p>{e.text}</p>
+                  <p>{entry.text}</p>
                   <small>
-                    {e.actor} · {fmt(e.at)}
+                    {entry.actor} · {fmt(entry.at)}
                   </small>
                 </div>
               ))}

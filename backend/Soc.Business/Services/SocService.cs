@@ -23,7 +23,7 @@ public sealed partial class SocService
         this.config = config;
     }
 
-    static readonly string[] Roles = ["Analist", "Senior analist", "Beheerder", "Klant", "Accountmanager"];
+    internal static readonly string[] Roles = ["Analist", "Senior analist", "Beheerder", "Klant", "Accountmanager"];
     public static void Require(bool condition, string message = "Toegang geweigerd.", int status = 403)
     {
         if (!condition)
@@ -37,16 +37,16 @@ public sealed partial class SocService
     public static bool Analyst(AppUser user) => user.Role is "Analist" or "Senior analist";
     internal static bool CanReadInternal(AppUser user) => Analyst(user) || user.Role == "Beheerder";
     public static void Admin(AppUser user) => Require(user.Role == "Beheerder");
-    internal static bool Closed(ResearchCase c) => c.Status == TicketStatus.Closed;
+    internal static bool Closed(ResearchCase researchCase) => researchCase.Status == TicketStatus.Closed;
 
-    internal static PriorityLevel Priority(string? p)
+    internal static PriorityLevel Priority(string? value)
     {
-        Require(Enum.TryParse<PriorityLevel>(p, out var v) && Enum.IsDefined(v), "Ongeldige prioriteit.", 400);
-        return v;
+        Require(Enum.TryParse<PriorityLevel>(value, out var priority) && Enum.IsDefined(priority), "Ongeldige prioriteit.", 400);
+        return priority;
     }
     internal static string Hash(string key) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)));
     internal const int DefaultResponseMinutes = 60;
-    static int SlaMinutes(int? minutes)
+    internal static int SlaMinutes(int? minutes)
     {
         var value = minutes ?? DefaultResponseMinutes;
         Require(value >= 1 && value <= 10080, "SLA moet tussen 1 en 10080 minuten liggen.", 400);
@@ -133,7 +133,7 @@ public sealed partial class SocService
             Target = target
         });
     }
-    internal async Task<Tenant> Tenant(Guid? id) => await db.Tenants.SingleOrDefaultAsync(x => x.Id == id) ?? throw new SocException(404, "Klant niet gevonden.");
+    internal async Task<Tenant> Tenant(Guid? id) => await db.Tenants.SingleOrDefaultAsync(organization => organization.Id == id) ?? throw new SocException(404, "Klant niet gevonden.");
     internal async Task<List<Guid>> Scopes(AppUser user, Guid tenant)
     {
         return await db.Assignments
@@ -143,18 +143,18 @@ public sealed partial class SocService
     }
     internal async Task<List<(Tenant Tenant, List<Guid> Scopes)>> Workspaces(AppUser user, Guid? tenant = null, Guid? scope = null)
     {
-        var ids = await db.Assignments.Where(x => x.UserId == user.Id).Select(x => x.TenantId).Distinct().ToListAsync();
+        var organizationIds = await db.Assignments.Where(assignment => assignment.UserId == user.Id).Select(assignment => assignment.TenantId).Distinct().ToListAsync();
         if (tenant.HasValue)
-            Require(ids.Contains(tenant.Value) && await db.Tenants.AnyAsync(t => t.Id == tenant.Value && t.IsActive));
-        var ts = await db.Tenants.Where(x => x.IsActive && ids.Contains(x.Id) && (!tenant.HasValue || x.Id == tenant.Value)).ToListAsync();
+            Require(organizationIds.Contains(tenant.Value) && await db.Tenants.AnyAsync(organization => organization.Id == tenant.Value && organization.IsActive));
+        var activeTenants = await db.Tenants.Where(organization => organization.IsActive && organizationIds.Contains(organization.Id) && (!tenant.HasValue || organization.Id == tenant.Value)).ToListAsync();
         var result = new List<(Tenant, List<Guid>)>();
-        foreach (var t in ts)
+        foreach (var organization in activeTenants)
         {
-            var scopes = await Scopes(user, t.Id);
+            var scopes = await Scopes(user, organization.Id);
             if (scope.HasValue)
-                scopes = scopes.Where(x => x == scope.Value).ToList();
+                scopes = scopes.Where(scopeId => scopeId == scope.Value).ToList();
             if (scopes.Count > 0)
-                result.Add((t, scopes));
+                result.Add((organization, scopes));
         }
         if (scope.HasValue)
             Require(result.Count > 0);
@@ -167,157 +167,28 @@ public sealed partial class SocService
         if (user.Role != "Beheerder")
             return await Workspaces(user, tenant, scope);
         var result = new List<(Tenant, List<Guid>)>();
-        foreach (var t in await db.Tenants.Where(t => !tenant.HasValue || t.Id == tenant.Value).ToListAsync())
+        foreach (var organization in await db.Tenants.Where(organization => !tenant.HasValue || organization.Id == tenant.Value).ToListAsync())
         {
-            var scopes = await db.Scopes.Where(x => x.TenantId == t.Id && (!scope.HasValue || x.Id == scope.Value)).Select(x => x.Id).ToListAsync();
+            var scopes = await db.Scopes.Where(availableScope => availableScope.TenantId == organization.Id && (!scope.HasValue || availableScope.Id == scope.Value)).Select(availableScope => availableScope.Id).ToListAsync();
             if (scopes.Count > 0)
-                result.Add((t, scopes));
+                result.Add((organization, scopes));
         }
         return result;
     }
-    public async Task<List<Tenant>> Organizations(AppUser user)
+    internal async Task<Tenant> CreateTenant(string name, int responseMinutes = DefaultResponseMinutes)
     {
-        if (user.Role == "Beheerder")
-            return await db.Tenants.OrderBy(x => x.Name).ToListAsync();
-        return (await Workspaces(user)).Select(x => x.Tenant).OrderBy(x => x.Name).ToList();
-    }
-    public async Task<Tenant> Organization(AppUser user, Guid id)
-    {
-        var tenant = await Tenant(id);
-        Require(user.Role == "Beheerder" || tenant.IsActive && (await Scopes(user, id)).Count > 0);
-        return tenant;
-    }
-    async Task<Tenant> CreateTenant(string name, int responseMinutes = DefaultResponseMinutes)
-    {
-        Require(!await db.Tenants.AnyAsync(x => x.Name == name), "Naam bestaat al.", 409);
-        var t = new Tenant { Name = name, ResponseMinutes = responseMinutes };
-        t.SchemaName = "tenant_" + t.Id.ToString("N");
-        await factory.ProvisionAsync(t);
-        db.Tenants.Add(t);
+        Require(!await db.Tenants.AnyAsync(organization => organization.Name == name), "Naam bestaat al.", 409);
+        var organization = new Tenant { Name = name, ResponseMinutes = responseMinutes };
+        organization.SchemaName = "tenant_" + organization.Id.ToString("N");
+        await factory.ProvisionAsync(organization);
+        db.Tenants.Add(organization);
         db.Scopes.Add(new()
         {
-            TenantId = t.Id,
+            TenantId = organization.Id,
             Name = "Algemeen"
         });
         await db.SaveChangesAsync();
-        return t;
-    }
-    public async Task<Tenant> CreateOrganization(AppUser user, CreateOrganizationRequest input)
-    {
-        Admin(user);
-        var t = await CreateTenant(Required(input.Name, 120), SlaMinutes(input.ResponseMinutes));
-        await Log(user, "Klant aangemaakt", t.Id);
-        return t;
-    }
-    public async Task<Tenant> RenameOrganization(AppUser user, Guid id, string? name, int? responseMinutes = null)
-    {
-        Admin(user);
-        var value = Required(name, 120);
-        var t = await Tenant(id);
-        Require(!await db.Tenants.AnyAsync(x => x.Id != id && x.Name == value), "Naam bestaat al.", 409);
-        t.Name = value;
-        if (responseMinutes.HasValue)
-            t.ResponseMinutes = SlaMinutes(responseMinutes);
-        await Log(user, "Klantinstellingen gewijzigd", t.Id, t.Id.ToString());
-        return t;
-    }
-    public async Task<Tenant> SetOrganization(AppUser user, Guid id, bool active)
-    {
-        Admin(user);
-        var t = await Tenant(id);
-        t.IsActive = active;
-        t.DeactivatedAt = active ? null : DateTimeOffset.UtcNow;
-        await Log(user, "Klantstatus gewijzigd", id);
-        return t;
-    }
-    private static object KeyDto(ApiSource apiKey)
-    {
-        return new
-        {
-            id = apiKey.Id,
-            apiKey.Name,
-            organizationId = apiKey.TenantId,
-            apiKey.ScopeId,
-            apiKey.CreatedAt,
-            apiKey.IsActive,
-            apiKey.Prefix
-        };
-    }
-    public async Task<object> Keys(AppUser user)
-    {
-        Admin(user);
-        return (await db.Sources.ToListAsync()).Select(KeyDto);
-    }
-    public async Task<object> CreateKey(AppUser user, CreateApiKeyRequest input)
-    {
-        Admin(user);
-        var t = await Tenant(input.OrganizationId);
-        Require(t.IsActive, "Klant is inactief.", 400);
-        var scope = await db.Scopes.FirstOrDefaultAsync(x => x.TenantId == t.Id && (!input.ScopeId.HasValue || x.Id == input.ScopeId)) ?? throw new SocException(400, "Scope ontbreekt.");
-        var secret = "soc_demo_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-        var k = new ApiSource { TenantId = t.Id, ScopeId = scope.Id, Name = Required(input.Name, 80), Hash = Hash(secret), Prefix = secret[..16] };
-        db.Sources.Add(k);
-        await Log(user, "API-sleutel aangemaakt", t.Id);
-        return new
-        {
-            id = k.Id,
-            k.Name,
-            organizationId = k.TenantId,
-            k.ScopeId,
-            k.CreatedAt,
-            k.IsActive,
-            k.Prefix,
-            secret
-        };
-    }
-    public async Task<object> Revoke(AppUser user, Guid id)
-    {
-        Admin(user);
-        var k = await db.Sources.FindAsync(id) ?? throw new SocException(404, "Sleutel niet gevonden.");
-        k.IsActive = false;
-        await Log(user, "API-sleutel ingetrokken", k.TenantId);
-        return new
-        {
-            ok = true
-        };
-    }
-    public async Task<object> Audit(AppUser user)
-    {
-        Admin(user);
-        var result = (await db.Audit.ToListAsync()).Select(x => new AuditRow(x.Id, x.CreatedAt, x.Actor, x.Action, x.TenantId, x.Target)).ToList();
-        foreach (var t in await db.Tenants.ToListAsync())
-        {
-            await using var td = factory.Open(t);
-            result.AddRange((await td.Audit.ToListAsync()).Select(x => new AuditRow(x.Id, x.CreatedAt, x.Actor, x.Action, t.Id, x.Target)));
-        }
-        return result.OrderByDescending(x => x.CreatedAt);
-    }
-    public record AuditRow(Guid Id, DateTimeOffset CreatedAt, string Actor, string Action, Guid? OrganizationId, string? Target);
-    // Administrative register: identifiers and lifecycle metadata only.
-    // Do not include titles, owners, scope IDs, observables, payloads or investigation entries.
-    public async Task<object> TicketRegister(AppUser user)
-    {
-        Admin(user);
-        var rows = new List<object>();
-        foreach (var tenant in await db.Tenants.OrderBy(t => t.Name).ToListAsync())
-        {
-            await using var td = factory.Open(tenant);
-            var cases = await td.Cases.AsNoTracking()
-                .Select(x => new { x.Id, x.Number, x.Status, x.CreatedAt, x.ClosedAt })
-                .OrderByDescending(x => x.CreatedAt).ToListAsync();
-            foreach (var item in cases)
-                rows.Add(new
-                {
-                    item.Id,
-                    item.Number,
-                    item.Status,
-                    item.CreatedAt,
-                    item.ClosedAt,
-                    organizationId = tenant.Id
-                });
-        }
-        await Log(user, "Ticketregister bekeken");
-        return rows;
+        return organization;
     }
     internal static void CheckVersion(byte[] actual, string? supplied)
     {

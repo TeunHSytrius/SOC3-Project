@@ -1,0 +1,156 @@
+/* Shared responsive behavior for every role and page. */
+.AppShell {
+  width: 100%;
+  min-width: 0;
+}
+.AppShell__content > *,
+.panelhead > *,
+.statline > *,
+.wire-card-meta > * {
+  min-width: 0;
+}
+.AppShell__content h1,
+.AppShell__content h2,
+.AppShell__content p,
+.AppShell__content small,
+.wire-card-meta,
+.wire-card-main strong {
+  overflow-wrap: anywhere;
+}
+.AppShell__content img,
+.AppShell__content svg,
+.dialog img,
+.dialog svg {
+  max-width: 100%;
+}
+.AppShell__content pre,
+.dialog pre {
+  max-width: 100%;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.AppShell__content code,
+.dialog code {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.AppShell__content input,
+.AppShell__content select,
+.AppShell__content textarea,
+.dialog input,
+.dialog select,
+.dialog textarea {
+  max-width: 100%;
+}
+.AppShell__content .primary,
+.AppShell__content .secondary,
+.dialog .primary,
+.dialog .secondary {
+  white-space: normal;
+  max-width: 100%;
+  text-align: center;
+}
+.AppShell__content .statline {
+  flex-wrap: wrap;
+}
+.AppShell__content .barrow {
+  grid-template-columns: minmax(0, 110px) minmax(0, 1fr) auto;
+  overflow-wrap: anywhere;
+}
+.wire-card-meta > span {
+  overflow-wrap: anywhere;
+}
+.AppShell__content .filters label {
+  max-width: 100%;
+  min-width: 0;
+}
+.AppShell__content .notice,
+.AppShell__content .error {
+  overflow-wrap: anywhere;
+}
+.dialog {
+  min-width: 0;
+  max-height: calc(100dvh - 30px);
+}
+.dialoghead {
+  gap: 12px;
+}
+.dialoghead h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dialoghead button {
+  flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .AppShell__content {
+    padding-inline: 12px;
+  }
+  .AppShell__content .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .AppShell__content .stat {
+    min-width: 0;
+  }
+  .AppShell__content .statline {
+    font-size: 12px;
+  }
+  .AppShell__content .panelhead {
+    padding: 12px;
+  }
+  .AppShell__content .bodypad,
+  .AppShell__content .timeline,
+  .AppShell__content .bars {
+    padding: 12px;
+  }
+  .AppShell__content .filters {
+    padding: 10px;
+    align-items: stretch;
+  }
+  .AppShell__content .filters > .search {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .AppShell__content .filters > select,
+  .AppShell__content .filters > input {
+    flex: 1 1 100%;
+    min-width: 0;
+    width: 100%;
+  }
+  .AppShell__content .filters label {
+    flex: 1 1 100%;
+  }
+  .AppShell__content .filters label input[type='date'] {
+    display: block;
+    width: 100%;
+  }
+  .AppShell__content .workspace-actions {
+    justify-content: stretch;
+  }
+  .workspace-actions > button {
+    flex: 1 1 0;
+  }
+  .AppShell__content .PageHeader__title {
+    font-size: clamp(1.6rem, 7vw, 2rem);
+  }
+  .wire-card-grid {
+    gap: 10px;
+  }
+  .wire-pagination {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .dialog {
+    padding: 16px;
+  }
+  .AppShell__content dl {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  }
+}
+@media (max-width: 360px) {
+  .AppShell__content .stats {
+    grid-template-columns: 1fr;
+  }
+}

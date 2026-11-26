@@ -18,17 +18,17 @@ export default function TicketRegister({
 }) {
   const [mode, setMode] = useState<'all' | 'open' | 'closed'>('all');
   const [query, setQuery] = useState('');
-  const scoped = tickets.filter((t) => !organizationId || t.organizationId === organizationId);
-  const closed = scoped.filter((t) => t.status === 'Closed');
+  const scoped = tickets.filter((ticket) => !organizationId || ticket.organizationId === organizationId);
+  const closed = scoped.filter((ticket) => ticket.status === 'Closed');
   const filtered = scoped
     .filter(
-      (t) =>
-        (mode === 'all' || (mode === 'closed') === (t.status === 'Closed')) &&
-        (t.number + ' ' + (organizations.find((o) => o.id === t.organizationId)?.name || ''))
+      (ticket) =>
+        (mode === 'all' || (mode === 'closed') === (ticket.status === 'Closed')) &&
+        (ticket.number + ' ' + (organizations.find((organization) => organization.id === ticket.organizationId)?.name || ''))
           .toLowerCase()
           .includes(query.toLowerCase()),
     )
-    .sort((a, b) => Date.parse(b.closedAt || b.createdAt) - Date.parse(a.closedAt || a.createdAt));
+    .sort((first, second) => Date.parse(second.closedAt || second.createdAt) - Date.parse(first.closedAt || first.createdAt));
   return (
     <>
       <PageHeader
@@ -55,13 +55,13 @@ export default function TicketRegister({
           <select
             aria-label="Klantorganisatie"
             value={organizationId}
-            onChange={(e) => onOrganizationChange(e.target.value)}
+            onChange={(event) => onOrganizationChange(event.target.value)}
           >
             <option value="">Alle klanten</option>
-            {organizations.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-                {!o.isActive ? ' (inactief)' : ''}
+            {organizations.map((organization) => (
+              <option key={organization.id} value={organization.id}>
+                {organization.name}
+                {!organization.isActive ? ' (inactief)' : ''}
               </option>
             ))}
           </select>
@@ -69,24 +69,24 @@ export default function TicketRegister({
             aria-label="Zoek ticket"
             placeholder="Zoek ticketnummer of klant"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(event) => setQuery(event.target.value)}
           />
         </div>
         <Table
           head={['Ticketnummer', 'Klant', 'Status', 'Aangemaakt', 'Afgesloten']}
           empty={!filtered.length}
         >
-          {filtered.map((t) => (
-            <tr key={t.id}>
+          {filtered.map((ticket) => (
+            <tr key={ticket.id}>
               <td>
-                <b>{t.number}</b>
+                <b>{ticket.number}</b>
               </td>
-              <td>{organizations.find((o) => o.id === t.organizationId)?.name || '—'}</td>
+              <td>{organizations.find((organization) => organization.id === ticket.organizationId)?.name || '—'}</td>
               <td>
-                <Badge value={t.status} />
+                <Badge value={ticket.status} />
               </td>
-              <td>{fmt(t.createdAt)}</td>
-              <td>{fmt(t.closedAt)}</td>
+              <td>{fmt(ticket.createdAt)}</td>
+              <td>{fmt(ticket.closedAt)}</td>
             </tr>
           ))}
         </Table>

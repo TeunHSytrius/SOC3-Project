@@ -1,19 +1,6 @@
-import type { State, Alert, ResearchCase } from '../../types/soc';
-import { Icon, Badge, Button, Field, Select, Table, Panel, PageHeader } from '../../components/Ui';
-import {
-  labels,
-  priorities,
-  states,
-  caseStates,
-  active,
-  isClosed,
-  fmt,
-  sla,
-  caseMatchesView,
-  sortRecords,
-  nextCaseStates,
-  roles,
-} from '../../types/domain';
+import type { ResearchCase } from '../../types/soc';
+import { Badge, Table } from '../../components/Ui';
+import { fmt } from '../../types/domain';
 interface TicketTableProps {
   tickets: ResearchCase[];
   customerName: (id: string) => string;

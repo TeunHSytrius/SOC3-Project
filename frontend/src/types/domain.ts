@@ -76,14 +76,14 @@ export function nextCaseStates(status: ResearchCase['status']): string[] {
   }
 }
 
-export function alertGroup(a: Alert) {
-  if (a.status === 'Escalated') return 'linked';
-  if (a.status === 'Dismissed' || a.status === 'Resolved') return 'closed';
+export function alertGroup(alert: Alert) {
+  if (alert.status === 'Escalated') return 'linked';
+  if (alert.status === 'Dismissed' || alert.status === 'Resolved') return 'closed';
   return 'open';
 }
-export function caseGroup(c: ResearchCase) {
-  if (c.status === 'Closed') return 'closed';
-  if (c.status === 'Resolved') return 'resolved';
+export function caseGroup(ticket: ResearchCase) {
+  if (ticket.status === 'Closed') return 'closed';
+  if (ticket.status === 'Resolved') return 'resolved';
   return 'open';
 }
 // Ticket tabs represent workflow stages, not the age of a ticket.
@@ -114,12 +114,12 @@ export function sortRecords<T extends Alert | ResearchCase>(
   sort: string,
   oldestFirst: boolean,
 ): T[] {
-  return records.slice().sort((a, b) => {
+  return records.slice().sort((first, second) => {
     if (sort === 'priority') {
-      const difference = priorities.indexOf(b.priority) - priorities.indexOf(a.priority);
+      const difference = priorities.indexOf(second.priority) - priorities.indexOf(first.priority);
       if (difference) return difference;
     }
-    const difference = Date.parse(a.createdAt) - Date.parse(b.createdAt);
+    const difference = Date.parse(first.createdAt) - Date.parse(second.createdAt);
     return sort === 'oldest' || sort === 'priority' || (sort === 'default' && oldestFirst)
       ? difference
       : -difference;

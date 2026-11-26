@@ -22,51 +22,51 @@ public sealed class TenantDbContext(DbContextOptions<TenantDbContext> options, s
         // All tenant IDs are assigned by the application (Guid.NewGuid()).
         // EF must recognize new children of tracked alerts/cases as INSERTs,
         // not UPDATEs against non-existent rows. RowVersion remains database-generated.
-        modelBuilder.Entity<Alert>().Property(x => x.Id).ValueGeneratedNever();
-        modelBuilder.Entity<AlertEvent>().Property(x => x.Id).ValueGeneratedNever();
-        modelBuilder.Entity<ResearchCase>().Property(x => x.Id).ValueGeneratedNever();
-        modelBuilder.Entity<CaseEvent>().Property(x => x.Id).ValueGeneratedNever();
-        modelBuilder.Entity<Observable>().Property(x => x.Id).ValueGeneratedNever();
-        modelBuilder.Entity<TenantAudit>().Property(x => x.Id).ValueGeneratedNever();
+        modelBuilder.Entity<Alert>().Property(entity => entity.Id).ValueGeneratedNever();
+        modelBuilder.Entity<AlertEvent>().Property(entity => entity.Id).ValueGeneratedNever();
+        modelBuilder.Entity<ResearchCase>().Property(entity => entity.Id).ValueGeneratedNever();
+        modelBuilder.Entity<CaseEvent>().Property(entity => entity.Id).ValueGeneratedNever();
+        modelBuilder.Entity<Observable>().Property(entity => entity.Id).ValueGeneratedNever();
+        modelBuilder.Entity<TenantAudit>().Property(entity => entity.Id).ValueGeneratedNever();
         // Adapted from feature/database CK_Ticket_Deadline: alerts carry the first-response deadline.
-        modelBuilder.Entity<Alert>().ToTable(t => t.HasCheckConstraint("CK_Alert_Deadline", "[Deadline] >= [CreatedAt]"));
-        modelBuilder.Entity<Alert>().Property(x => x.RowVersion).IsRowVersion();
-        modelBuilder.Entity<ResearchCase>().Property(x => x.RowVersion).IsRowVersion();
-        modelBuilder.Entity<Alert>().Property(x => x.ExternalEventId).HasMaxLength(200);
-        modelBuilder.Entity<Alert>().Property(x => x.PayloadHash).HasMaxLength(64);
-        modelBuilder.Entity<Alert>().HasIndex(x => new { x.SourceIntegrationId, x.ExternalEventId })
+        modelBuilder.Entity<Alert>().ToTable(table => table.HasCheckConstraint("CK_Alert_Deadline", "[Deadline] >= [CreatedAt]"));
+        modelBuilder.Entity<Alert>().Property(entity => entity.RowVersion).IsRowVersion();
+        modelBuilder.Entity<ResearchCase>().Property(entity => entity.RowVersion).IsRowVersion();
+        modelBuilder.Entity<Alert>().Property(entity => entity.ExternalEventId).HasMaxLength(200);
+        modelBuilder.Entity<Alert>().Property(entity => entity.PayloadHash).HasMaxLength(64);
+        modelBuilder.Entity<Alert>().HasIndex(entity => new { entity.SourceIntegrationId, entity.ExternalEventId })
             .IsUnique()
             .HasFilter("[SourceIntegrationId] IS NOT NULL AND [ExternalEventId] IS NOT NULL");
-        modelBuilder.Entity<Alert>().Property(x => x.Status).HasConversion<string>();
-        modelBuilder.Entity<Alert>().Property(x => x.Priority).HasConversion<string>();
-        modelBuilder.Entity<ResearchCase>().Property(x => x.Status).HasConversion<string>();
-        modelBuilder.Entity<ResearchCase>().Property(x => x.Priority).HasConversion<string>();
-        modelBuilder.Entity<Alert>().HasIndex(x => new { x.ScopeId, x.CreatedAt });
-        modelBuilder.Entity<ResearchCase>().HasIndex(x => x.ScopeId);
-        modelBuilder.Entity<ResearchCase>().HasAlternateKey(x => new { x.ScopeId, x.Id })
+        modelBuilder.Entity<Alert>().Property(entity => entity.Status).HasConversion<string>();
+        modelBuilder.Entity<Alert>().Property(entity => entity.Priority).HasConversion<string>();
+        modelBuilder.Entity<ResearchCase>().Property(entity => entity.Status).HasConversion<string>();
+        modelBuilder.Entity<ResearchCase>().Property(entity => entity.Priority).HasConversion<string>();
+        modelBuilder.Entity<Alert>().HasIndex(entity => new { entity.ScopeId, entity.CreatedAt });
+        modelBuilder.Entity<ResearchCase>().HasIndex(entity => entity.ScopeId);
+        modelBuilder.Entity<ResearchCase>().HasAlternateKey(entity => new { entity.ScopeId, entity.Id })
             .HasName("AK_Cases_ScopeId_Id");
         modelBuilder.Entity<Alert>()
-            .HasOne(x => x.Case)
-            .WithMany(x => x.Alerts)
-            .HasForeignKey(x => new { x.ScopeId, x.CaseId })
-            .HasPrincipalKey(x => new { x.ScopeId, x.Id })
+            .HasOne(entity => entity.Case)
+            .WithMany(entity => entity.Alerts)
+            .HasForeignKey(entity => new { entity.ScopeId, entity.CaseId })
+            .HasPrincipalKey(entity => new { entity.ScopeId, entity.Id })
             .HasConstraintName("FK_Alerts_Cases_ScopeId_CaseId")
             .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<Alert>()
-            .HasMany(x => x.History)
+            .HasMany(entity => entity.History)
             .WithOne()
-            .HasForeignKey(x => x.AlertId);
+            .HasForeignKey(entity => entity.AlertId);
         modelBuilder.Entity<ResearchCase>()
-            .HasMany(x => x.Entries)
+            .HasMany(entity => entity.Entries)
             .WithOne()
-            .HasForeignKey(x => new { x.ScopeId, x.CaseId })
-            .HasPrincipalKey(x => new { x.ScopeId, x.Id })
+            .HasForeignKey(entity => new { entity.ScopeId, entity.CaseId })
+            .HasPrincipalKey(entity => new { entity.ScopeId, entity.Id })
             .HasConstraintName("FK_CaseEvents_Cases_ScopeId_CaseId");
         modelBuilder.Entity<ResearchCase>()
-            .HasMany(x => x.Observables)
+            .HasMany(entity => entity.Observables)
             .WithOne()
-            .HasForeignKey(x => new { x.ScopeId, x.CaseId })
-            .HasPrincipalKey(x => new { x.ScopeId, x.Id })
+            .HasForeignKey(entity => new { entity.ScopeId, entity.CaseId })
+            .HasPrincipalKey(entity => new { entity.ScopeId, entity.Id })
             .HasConstraintName("FK_Observables_Cases_ScopeId_CaseId");
     }
 }

@@ -11,8 +11,8 @@ class Client {
       ["POST", "PATCH"].includes(method) &&
       !path.startsWith("ingest/")
     ) {
-      const t = await this.request("auth/csrf");
-      headers = { ...headers, "X-CSRF-TOKEN": t.data.token };
+      const csrfResponse = await this.request("auth/csrf");
+      headers = { ...headers, "X-CSRF-TOKEN": csrfResponse.data.token };
     }
     // Use the last fetched version in explicit concurrency tests; otherwise fetch the current version.
     const match = path.match(/^(alerts|cases)\/([^/]+)/);

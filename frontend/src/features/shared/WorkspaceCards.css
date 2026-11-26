@@ -1,0 +1,272 @@
+/* FO v1.1 layout retained; the demo uses a consistent dark workspace. */
+.AppShell {
+  background: var(--page-bg);
+  text-align: left;
+  font-family: var(--sans);
+}
+.AppShell__content {
+  max-width: 1440px;
+  min-width: 0;
+}
+.AppShell__content .stat,
+.AppShell__content .panel {
+  border-color: var(--border);
+  box-shadow: none;
+}
+.AppShell__content .stat-icon {
+  background: var(--surface-raised);
+  color: var(--text-h);
+}
+.AppShell__content .stat-icon.warn {
+  background: var(--severity-high);
+  color: #292929;
+}
+.AppShell__content .stat-icon.danger {
+  background: var(--severity-urgent);
+  color: #292929;
+}
+.AppShell__content .bar.Low,
+.AppShell__content .bar.Moderate {
+  background: #b8b8b8;
+}
+.AppShell__content .bar.High {
+  background: var(--severity-high);
+}
+.AppShell__content .bar.Urgent {
+  background: var(--severity-urgent);
+}
+.AppShell__content .bar.Immediate {
+  background: var(--severity-immediate);
+}
+.AppShell__content .badge.blue {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.AppShell__content .badge.warn {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+.AppShell__content .badge.danger {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+.wire-screen {
+  margin: 0 auto;
+  width: 100%;
+}
+.wire-tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.wire-screen .filters {
+  padding: 8px 0;
+}
+.wire-count {
+  text-align: left;
+  margin: 10px 0 14px;
+  font-size: 12px;
+}
+.wire-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  min-width: 0;
+}
+.wire-alert-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 225px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px;
+  color: var(--text);
+  text-align: left;
+}
+.severity-low {
+  background: var(--surface-raised);
+  color: var(--text);
+  border-left: 4px solid var(--severity-low);
+}
+.severity-moderate {
+  background: var(--surface-raised);
+  color: var(--text);
+  border-left: 4px solid var(--severity-moderate);
+}
+.severity-high {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+  border-left: 4px solid var(--severity-high);
+}
+.severity-urgent {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-left: 4px solid var(--severity-urgent);
+}
+.severity-immediate {
+  background: var(--purple-bg);
+  color: var(--purple-text);
+  border-left: 4px solid var(--severity-immediate);
+}
+.wire-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 11px;
+}
+.wire-card-main {
+  border: 0;
+  text-align: left;
+  color: inherit;
+  background: transparent;
+  padding: 14px 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+}
+.wire-card-main strong {
+  font-size: 16px;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+.wire-card-main span {
+  font-size: 12px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.wire-card-menu {
+  position: relative;
+}
+.wire-card-menu summary {
+  list-style: none;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface-raised);
+  color: var(--text);
+  padding: 1px 8px;
+  font-weight: bold;
+}
+.wire-card-menu summary::-webkit-details-marker {
+  display: none;
+}
+.wire-card-menu button {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  top: 100%;
+  min-width: 145px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  padding: 8px;
+}
+.wire-card-priority {
+  font-size: 11px;
+  font-weight: 600;
+}
+.wire-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin: 18px 0;
+}
+.wire-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.wire-banner {
+  padding: 13px 16px;
+  border-top: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 18px;
+}
+.wire-banner h2,
+.wire-banner p,
+.wire-banner small {
+  color: inherit;
+}
+.wire-banner h2 {
+  margin-top: 4px;
+  font-weight: 700;
+}
+.wire-data {
+  gap: 0 12px;
+}
+.wire-data dt,
+.wire-data dd {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.wire-next {
+  margin-top: 16px;
+}
+.case-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.wire-observable {
+  background: var(--surface-raised);
+  padding: 8px;
+  border-radius: 5px;
+  margin-bottom: 5px;
+  overflow-wrap: anywhere;
+}
+.admin-stat {
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+}
+.admin-stat:hover {
+  border-color: var(--focus);
+}
+.admin-access-note {
+  font-size: 12px;
+  margin: 15px 0;
+}
+.AppShell .notice {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  max-width: calc(100% - 40px);
+  z-index: 12;
+  box-shadow: 0 2px 8px #0002;
+}
+@media (max-width: 850px) {
+  .wire-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wire-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 520px) {
+  .wire-card-grid {
+    grid-template-columns: 1fr;
+  }
+  .case-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
