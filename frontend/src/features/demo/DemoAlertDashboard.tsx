@@ -16,10 +16,15 @@ export default function DemoAlertDashboard({ state, navigate }: DemoAlertDashboa
   const metrics = [
     { label: 'Voorbeeldmeldingen', value: alerts.length },
     { label: 'Nieuw', value: alerts.filter((alert) => alert.status === 'Nieuw').length },
-    { label: 'In beoordeling', value: alerts.filter((alert) => alert.status === 'In beoordeling').length },
-    { label: 'Kritiek / hoog', value: alerts.filter((alert) =>
-      alert.priority === 'Kritiek' || alert.priority === 'Hoog',
-    ).length },
+    {
+      label: 'In beoordeling',
+      value: alerts.filter((alert) => alert.status === 'In beoordeling').length,
+    },
+    {
+      label: 'Kritiek / hoog',
+      value: alerts.filter((alert) => alert.priority === 'Kritiek' || alert.priority === 'Hoog')
+        .length,
+    },
   ];
 
   return (
@@ -33,9 +38,15 @@ export default function DemoAlertDashboard({ state, navigate }: DemoAlertDashboa
           </div>
         ))}
       </div>
-      <Panel title="Alertwachtrij" sub="Voorbeeld van de toekomstige alertverwerking"
-        action={<Button onClick={() => navigate('alerts')}>Alle alerts</Button>}>
-        <DemoAlertTable alerts={alerts.slice(0, 5)} onOpen={(alertId) => navigate('alerts', alertId)} />
+      <Panel
+        title="Alertwachtrij"
+        sub="Voorbeeld van de toekomstige alertverwerking"
+        action={<Button onClick={() => navigate('alerts')}>Alle alerts</Button>}
+      >
+        <DemoAlertTable
+          alerts={alerts.slice(0, 5)}
+          onOpen={(alertId) => navigate('alerts', alertId)}
+        />
       </Panel>
     </section>
   );

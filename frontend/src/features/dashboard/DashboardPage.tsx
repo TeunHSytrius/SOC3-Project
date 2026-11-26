@@ -36,7 +36,9 @@ export default function DashboardPage({ state, navigate, isAdmin }: DashboardPro
             {orgs.map((organization) => (
               <tr key={organization.id}>
                 <td>{organization.name}</td>
-                <td><Badge value="Actief" kind="good" /></td>
+                <td>
+                  <Badge value="Actief" kind="good" />
+                </td>
               </tr>
             ))}
           </Table>

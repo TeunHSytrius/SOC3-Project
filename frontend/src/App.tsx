@@ -4,7 +4,15 @@ import { emptyWorkspaceData, initialState, roleAccess, startPage } from './app/w
 import LoginPage from './features/auth/LoginPage';
 import { LoadingState } from './components/PageStates';
 import { formData } from './features/shared/formData';
-import { clearSession, currentUser, isCurrentSession, isUnauthorized, loginUser, logoutUser, restoreUser } from './services/sessionService';
+import {
+  clearSession,
+  currentUser,
+  isCurrentSession,
+  isUnauthorized,
+  loginUser,
+  logoutUser,
+  restoreUser,
+} from './services/sessionService';
 import { loadWorkspace, submitWorkspaceAction } from './services/workspaceService';
 import type { State, User } from './types/soc';
 import type { ActionResult, WorkspaceActions } from './types/workspace';
@@ -94,7 +102,15 @@ export default class App extends React.Component<Record<string, never>, State> {
     try {
       await logoutUser();
     } finally {
-      this.setState({ ...emptyWorkspaceData(), user: null, selected: null, modal: null, error: '', notice: '', busy: false });
+      this.setState({
+        ...emptyWorkspaceData(),
+        user: null,
+        selected: null,
+        modal: null,
+        error: '',
+        notice: '',
+        busy: false,
+      });
     }
   };
 
@@ -103,7 +119,14 @@ export default class App extends React.Component<Record<string, never>, State> {
     if (isUnauthorized(error) && this.state.user) {
       clearSession();
       this.invalidateRefresh();
-      this.setState({ ...emptyWorkspaceData(), user: null, selected: null, modal: null, error: message, busy: false });
+      this.setState({
+        ...emptyWorkspaceData(),
+        user: null,
+        selected: null,
+        modal: null,
+        error: message,
+        busy: false,
+      });
       return;
     }
     this.setState({ error: message, notice: '' });
@@ -158,7 +181,9 @@ export default class App extends React.Component<Record<string, never>, State> {
       }
 
       this.setState({
-        notice: refreshed ? message : message + ' Gegevens vernieuwen is mislukt; klik op Vernieuwen.',
+        notice: refreshed
+          ? message
+          : message + ' Gegevens vernieuwen is mislukt; klik op Vernieuwen.',
         modal: null,
       });
       after?.(result);

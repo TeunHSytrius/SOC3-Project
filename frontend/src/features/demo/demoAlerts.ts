@@ -3,6 +3,7 @@ import type { Organization, User } from '../../types/soc';
 export interface DemoAlert {
   id: string;
   number: string;
+  organizationId: string;
   organizationName: string;
   title: string;
   description: string;
@@ -13,7 +14,7 @@ export interface DemoAlert {
   sourceIp: string;
 }
 
-const examples = [
+const alertExamples = [
   {
     title: 'Verdachte VPN-aanmelding',
     description: 'Een fictieve aanmelding vanaf een onbekende locatie.',
@@ -78,18 +79,18 @@ export function getDemoAlerts(
   selectedOrganizationId: string,
 ): DemoAlert[] {
   const activeOrganizations = organizations.filter((organization) => organization.isActive);
-  const alerts = activeOrganizations.flatMap((organization, organizationIndex) =>
-    examples.map((example, exampleIndex) => ({
+  const alerts: DemoAlert[] = activeOrganizations.flatMap((organization, organizationIndex) =>
+    alertExamples.map((example, exampleIndex) => ({
       ...example,
       id: 'demo-' + organization.id + '-' + exampleIndex,
-      number: 'DEMO-' + (1001 + organizationIndex * examples.length + exampleIndex),
+      number: 'DEMO-' + (1001 + organizationIndex * alertExamples.length + exampleIndex),
       organizationName: organization.name,
       organizationId: organization.id,
       receivedAt: new Date(Date.UTC(2026, 10, 25, 9, exampleIndex * 8)).toISOString(),
     })),
   );
 
-  return alerts.filter((alert) =>
-    !selectedOrganizationId || alert.organizationId === selectedOrganizationId,
+  return alerts.filter(
+    (alert) => !selectedOrganizationId || alert.organizationId === selectedOrganizationId,
   );
 }

@@ -16,14 +16,18 @@ interface DemoAlertsPageProps {
 }
 
 export default function DemoAlertsPage({ state, navigate }: DemoAlertsPageProps) {
-  const [search, setSearch] = useState('');
-  const [priority, setPriority] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPriority, setSelectedPriority] = useState('');
   const alerts = getDemoAlerts(state.orgs, state.org);
-  const query = search.trim().toLowerCase();
+  const normalizedQuery = searchQuery.trim().toLowerCase();
   const matchingAlerts = alerts.filter((alert) => {
-    const matchesQuery = [alert.number, alert.title, alert.organizationName, alert.source]
-      .some((value) => value.toLowerCase().includes(query));
-    return matchesQuery && (!priority || alert.priority === priority);
+    const searchableValues = [alert.number, alert.title, alert.organizationName, alert.source];
+    const matchesQuery = searchableValues.some((value) =>
+      value.toLowerCase().includes(normalizedQuery),
+    );
+    const matchesPriority = !selectedPriority || alert.priority === selectedPriority;
+
+    return matchesQuery && matchesPriority;
   });
   const pagination = usePagination(matchingAlerts, 12);
   const selectedAlert = alerts.find((alert) => alert.id === state.selected);
@@ -38,16 +42,23 @@ export default function DemoAlertsPage({ state, navigate }: DemoAlertsPageProps)
       <DemoBanner />
       <Panel title="Meldingen" sub={matchingAlerts.length + ' voorbeeldmeldingen'}>
         <div className="filters">
-          <input aria-label="Zoek meldingen" placeholder="Zoek titel, klant of bron" value={search}
+          <input
+            aria-label="Zoek meldingen"
+            placeholder="Zoek titel, klant of bron"
+            value={searchQuery}
             onChange={(event) => {
-              setSearch(event.target.value);
+              setSearchQuery(event.target.value);
               pagination.setPage(1);
-            }} />
-          <select aria-label="Prioriteit" value={priority}
+            }}
+          />
+          <select
+            aria-label="Prioriteit"
+            value={selectedPriority}
             onChange={(event) => {
-              setPriority(event.target.value);
+              setSelectedPriority(event.target.value);
               pagination.setPage(1);
-            }}>
+            }}
+          >
             <option value="">Alle prioriteiten</option>
             <option>Kritiek</option>
             <option>Hoog</option>
@@ -55,8 +66,13 @@ export default function DemoAlertsPage({ state, navigate }: DemoAlertsPageProps)
             <option>Laag</option>
           </select>
         </div>
-        <DemoAlertTable alerts={pagination.visibleRecords} onOpen={(alertId) => navigate('alerts', alertId)} />
-        {pagination.pageCount > 1 && <Pagination {...pagination} label="Voorbeeldmeldingen paginering" />}
+        <DemoAlertTable
+          alerts={pagination.visibleRecords}
+          onOpen={(alertId) => navigate('alerts', alertId)}
+        />
+        {pagination.pageCount > 1 && (
+          <Pagination {...pagination} label="Voorbeeldmeldingen paginering" />
+        )}
       </Panel>
     </div>
   );

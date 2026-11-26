@@ -186,3 +186,20 @@ docker compose --profile test run --rm smoke
 ```
 
 De smoketest controleert het fundament en verifieert dat endpoints voor latere sprints niet beschikbaar zijn. De 2FA-unittests blijven behouden. Voor nieuwe 2FA-accounts moeten setup en aanmelding ook handmatig worden getest. Productie-deployment en EF Core-migraties zijn nog niet afgerond.
+
+## Codeconventies
+
+- C#: vier spaties, PascalCase voor publieke types en methoden, camelCase voor parameters en lokale variabelen. Gebruik accolades bij conditionals en lussen, ook bij één statement.
+- TypeScript/React: twee spaties, betekenisvolle namen, expliciete types aan modulegrenzen, kleine componenten en geen onnodig compacte conditionals. Gebruik Prettier volgens `frontend/.prettierrc.json`.
+- Scheid UI, data, presentatielogica en API-verzoeken. Plaats voorbeelddata uitsluitend in de demomodule. Vermijd onnodige abstracties en schrijf comments voor het waarom, niet voor iedere regel.
+- Controleer een wijziging met de formatter, compiler, relevante tests en review. De huidige CI test de werking; volledige formatteringscontrole is nog niet als verplichte CI-gate ingesteld.
+
+```bash
+cd frontend
+npm install
+npm run format:check
+npm run build
+# Gebruik npm run format om de bestanden volgens Prettier te formatteren.
+```
+
+Voor de backend: `dotnet format SOC3.slnx` vanuit de hoofdmap (met de .NET 10 SDK). Controleer de diff voordat je commit.
