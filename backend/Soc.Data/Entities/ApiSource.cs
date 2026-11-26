@@ -1,14 +1,18 @@
 namespace Soc.Data.Entities;
 
-    public class ApiSource
+public class ApiSource
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
     public Guid TenantId
-    { get; set; }
+    {
+        get; set;
+    }
 
     public Guid ScopeId
-    { get; set; }
+    {
+        get; set;
+    }
 
     public string Name { get; set; } = "";
 

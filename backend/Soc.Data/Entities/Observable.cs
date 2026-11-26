@@ -1,19 +1,25 @@
 namespace Soc.Data.Entities;
 
-    public class Observable
+public class Observable
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
     public Guid ScopeId
-    { get; set; }
+    {
+        get; set;
+    }
 
     public Guid CaseId
-    { get; set; }
+    {
+        get; set;
+    }
 
     public string Value { get; set; } = "";
 
     public string? Assessment
-    { get; set; }
+    {
+        get; set;
+    }
 
     public string Type { get; set; } = "Other";
 

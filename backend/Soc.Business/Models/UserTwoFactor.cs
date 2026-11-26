@@ -6,37 +6,61 @@ namespace Soc.Business.Models;
 /// </summary>
 public sealed class UserTwoFactor
 {
-    public Guid UserId { get; init; }
+    public Guid UserId
+    {
+        get; init;
+    }
 
     /// <summary>
     /// Secret that is being set up, but not yet confirmed with a first valid code (US-25).
     /// </summary>
-    public string? PendingProtectedSecret { get; set; }
+    public string? PendingProtectedSecret
+    {
+        get; set;
+    }
 
     /// <summary>
     /// Moment after which the unconfirmed setup is no longer valid and must be started again.
     /// </summary>
-    public DateTimeOffset? PendingSetupExpiresAt { get; set; }
+    public DateTimeOffset? PendingSetupExpiresAt
+    {
+        get; set;
+    }
 
     /// <summary>
     /// Confirmed secret that is used during login once 2FA is enabled.
     /// </summary>
-    public string? ProtectedSecret { get; set; }
+    public string? ProtectedSecret
+    {
+        get; set;
+    }
 
-    public bool IsEnabled { get; set; }
+    public bool IsEnabled
+    {
+        get; set;
+    }
 
     /// <summary>
     /// TOTP time step of the last accepted code. A code is only accepted once,
     /// so an intercepted code cannot be replayed.
     /// </summary>
-    public long LastUsedTimeStep { get; set; }
+    public long LastUsedTimeStep
+    {
+        get; set;
+    }
 
     /// <summary>
     /// SHA-256 hashes of the recovery codes that have not been used yet.
     /// </summary>
     public List<string> RecoveryCodeHashes { get; set; } = [];
 
-    public int FailedAttempts { get; set; }
+    public int FailedAttempts
+    {
+        get; set;
+    }
 
-    public DateTimeOffset? LockedUntil { get; set; }
+    public DateTimeOffset? LockedUntil
+    {
+        get; set;
+    }
 }

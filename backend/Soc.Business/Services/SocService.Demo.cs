@@ -117,15 +117,15 @@ public sealed partial class SocService
         }
         var organizationIds = demoTenants.Select(organization => organization.Id).ToArray();
         var demoAnalyst = new AppUser
-            {
-                Id = Guid.NewGuid(),
-                Name = "Alex Morgan",
-                Email = "analist@soc.demo",
-                UserName = "analist@soc.demo",
-                EmailConfirmed = true,
-                Role = "Analist",
-                LockoutEnabled = true
-            };
+        {
+            Id = Guid.NewGuid(),
+            Name = "Alex Morgan",
+            Email = "analist@soc.demo",
+            UserName = "analist@soc.demo",
+            EmailConfirmed = true,
+            Role = "Analist",
+            LockoutEnabled = true
+        };
         var accounts = new[]
         {
             demoAnalyst,

@@ -160,16 +160,25 @@ public sealed class AuthController(
         {
             // Failed attempts must be persisted even when the verification is rejected.
             await transaction.CommitAsync();
-            return BadRequest(new { message = "Ongeldige code. Start de setup opnieuw als deze is verlopen." });
+            return BadRequest(new
+            {
+                message = "Ongeldige code. Start de setup opnieuw als deze is verlopen."
+            });
         }
         catch (TwoFactorSetupNotStartedException)
         {
             await transaction.CommitAsync();
-            return BadRequest(new { message = "Start de setup opnieuw; deze is niet gestart of verlopen." });
+            return BadRequest(new
+            {
+                message = "Start de setup opnieuw; deze is niet gestart of verlopen."
+            });
         }
         catch (TwoFactorAlreadyEnabledException)
         {
-            return Conflict(new { message = "2FA is al actief." });
+            return Conflict(new
+            {
+                message = "2FA is al actief."
+            });
         }
 
         var result = await users.SetTwoFactorEnabledAsync(currentUser, true);

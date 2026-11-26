@@ -25,7 +25,9 @@ export default function AuditPage({ state, update, customerName }: AuditPageProp
     ];
 
     return searchableValues.some((value) =>
-      String(value || '').toLowerCase().includes(searchQuery),
+      String(value || '')
+        .toLowerCase()
+        .includes(searchQuery),
     );
   });
 
