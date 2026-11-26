@@ -128,7 +128,7 @@ public sealed partial class SocService
             var t = ts[s.Tenant];
             var scope = await db.Scopes.FirstAsync(x => x.TenantId == t.Id);
             await using var td = factory.Open(t);
-            var alert = AlertService.NewAlert(scope.Id, new(Title: s.Title, Description: s.Description, Priority: s.Priority), s.Source, DateTimeOffset.UtcNow.AddHours(s.Hours));
+            var alert = AlertService.NewAlert(scope.Id, new CreateAlertRequest { Title = s.Title, Description = s.Description, Priority = s.Priority }, s.Source, DateTimeOffset.UtcNow.AddHours(s.Hours));
             alert.Number = $"ALT-{1001 + n}";
             DemoAlertContext.Enrich(alert);
             td.Alerts.Add(alert);

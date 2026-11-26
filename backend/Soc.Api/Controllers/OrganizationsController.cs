@@ -13,7 +13,7 @@ public sealed class OrganizationsController(SocService service) : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(CreateOrganizationRequest input)
     {
-        var t = await service.CreateOrganization(await service.UserAsync(User), new Input(Name: input.Name), input.ResponseMinutes);
+        var t = await service.CreateOrganization(await service.UserAsync(User), input);
         return CreatedAtAction(nameof(GetById), new
         {
             id = t.Id
@@ -27,16 +27,16 @@ public sealed class OrganizationsController(SocService service) : ControllerBase
 public sealed class UsersController(SocService service) : ControllerBase
 {
     [HttpGet] public async Task<IActionResult> List() => Ok(await service.ListUsers(await service.UserAsync(User)));
-    [HttpPost] public async Task<IActionResult> Create(Input i) => StatusCode(201, await service.CreateUser(await service.UserAsync(User), i));
+    [HttpPost] public async Task<IActionResult> Create(CreateUserRequest input) => StatusCode(201, await service.CreateUser(await service.UserAsync(User), input));
     [HttpPatch("{id:guid}")] public async Task<IActionResult> Update(Guid id, UpdateUserRequest input) => Ok(await service.UpdateUser(await service.UserAsync(User), id, input));
     [HttpPost("{id:guid}/remove")] public async Task<IActionResult> Remove(Guid id) => Ok(await service.RemoveUser(await service.UserAsync(User), id));
-    [HttpPost("{id:guid}/access")] public async Task<IActionResult> Access(Guid id, Input i) => Ok(await service.ChangeAccess(await service.UserAsync(User), id, i));
+    [HttpPost("{id:guid}/access")] public async Task<IActionResult> Access(Guid id, ChangeUserAccessRequest input) => Ok(await service.ChangeAccess(await service.UserAsync(User), id, input));
 }
 [Authorize, ApiController, Route("api/v1/keys")]
 public sealed class KeysController(SocService service) : ControllerBase
 {
     [HttpGet] public async Task<IActionResult> List() => Ok(await service.Keys(await service.UserAsync(User)));
-    [HttpPost] public async Task<IActionResult> Create(Input i) => StatusCode(201, await service.CreateKey(await service.UserAsync(User), i));
+    [HttpPost] public async Task<IActionResult> Create(CreateApiKeyRequest input) => StatusCode(201, await service.CreateKey(await service.UserAsync(User), input));
     [HttpPost("{id:guid}/revoke")] public async Task<IActionResult> Revoke(Guid id) => Ok(await service.Revoke(await service.UserAsync(User), id));
 }
 [Authorize, ApiController, Route("api/v1")]

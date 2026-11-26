@@ -39,28 +39,28 @@ public sealed partial class SocService
         user.Role = role;
         await db.SaveChangesAsync();
     }
-    public async Task<object> CreateUser(AppUser u, Input i)
+    public async Task<object> CreateUser(AppUser u, CreateUserRequest input)
     {
         Admin(u);
-        var email = Required(i.Email, 120);
+        var email = Required(input.Email, 120);
         Require(email.Contains('@'), "Ongeldig e-mailadres.", 400);
-        var role = Required(i.Role, 30);
-        var ids = i.OrganizationIds ?? [];
+        var role = Required(input.Role, 30);
+        var ids = input.OrganizationIds ?? [];
         Require(Roles.Contains(role) && (role != "Klant" || ids.Distinct().Count() == 1) && await db.Tenants.CountAsync(t => ids.Contains(t.Id)) == ids.Distinct().Count(), "Ongeldige rol of klant.", 400);
-        var x = new AppUser { Id = Guid.NewGuid(), Name = Required(i.Name, 120), UserName = email, Email = email, EmailConfirmed = true, Role = role, LockoutEnabled = true };
-        var result = await users.CreateAsync(x, Required(i.Password, 200));
+        var x = new AppUser { Id = Guid.NewGuid(), Name = Required(input.Name, 120), UserName = email, Email = email, EmailConfirmed = true, Role = role, LockoutEnabled = true };
+        var result = await users.CreateAsync(x, Required(input.Password, 200));
         Require(result.Succeeded, string.Join(" ", result.Errors.Select(x => x.Description)), 400);
         await SetGrants(x, role, ids);
         await Log(u, "Gebruiker aangemaakt", target: email);
         return await PublicUser(x);
     }
-    public async Task<object> ChangeAccess(AppUser u, Guid id, Input i)
+    public async Task<object> ChangeAccess(AppUser u, Guid id, ChangeUserAccessRequest input)
     {
         Admin(u);
         Require(u.Id != id, "Eigen rechten wijzigen is niet toegestaan.", 400);
         var x = await users.FindByIdAsync(id.ToString()) ?? throw new SocException(404, "Gebruiker niet gevonden.");
         Require(x.DeletedAt == null, "Gebruiker is verwijderd.", 404);
-        await SetGrants(x, Required(i.Role, 30), i.OrganizationIds ?? []);
+        await SetGrants(x, Required(input.Role, 30), input.OrganizationIds ?? []);
         await users.UpdateSecurityStampAsync(x);
         await Log(u, "Gebruikersrechten gewijzigd", target: x.Email);
         return await PublicUser(x);

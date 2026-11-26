@@ -137,10 +137,10 @@ public sealed partial class SocService
         await db.SaveChangesAsync();
         return t;
     }
-    public async Task<Tenant> CreateOrganization(AppUser u, Input input, int? responseMinutes = null)
+    public async Task<Tenant> CreateOrganization(AppUser u, CreateOrganizationRequest input)
     {
         Admin(u);
-        var t = await CreateTenant(Required(input.Name, 120), SlaMinutes(responseMinutes));
+        var t = await CreateTenant(Required(input.Name, 120), SlaMinutes(input.ResponseMinutes));
         await Log(u, "Klant aangemaakt", t.Id);
         return t;
     }
@@ -171,14 +171,14 @@ public sealed partial class SocService
         Admin(u);
         return (await db.Sources.ToListAsync()).Select(KeyDto);
     }
-    public async Task<object> CreateKey(AppUser u, Input i)
+    public async Task<object> CreateKey(AppUser u, CreateApiKeyRequest input)
     {
         Admin(u);
-        var t = await Tenant(i.OrganizationId);
+        var t = await Tenant(input.OrganizationId);
         Require(t.IsActive, "Klant is inactief.", 400);
-        var scope = await db.Scopes.FirstOrDefaultAsync(x => x.TenantId == t.Id && (!i.ScopeId.HasValue || x.Id == i.ScopeId)) ?? throw new SocException(400, "Scope ontbreekt.");
+        var scope = await db.Scopes.FirstOrDefaultAsync(x => x.TenantId == t.Id && (!input.ScopeId.HasValue || x.Id == input.ScopeId)) ?? throw new SocException(400, "Scope ontbreekt.");
         var secret = "soc_demo_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-        var k = new ApiSource { TenantId = t.Id, ScopeId = scope.Id, Name = Required(i.Name, 80), Hash = Hash(secret), Prefix = secret[..16] };
+        var k = new ApiSource { TenantId = t.Id, ScopeId = scope.Id, Name = Required(input.Name, 80), Hash = Hash(secret), Prefix = secret[..16] };
         db.Sources.Add(k);
         await Log(u, "API-sleutel aangemaakt", t.Id);
         return new

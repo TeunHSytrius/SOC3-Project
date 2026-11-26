@@ -21,11 +21,11 @@ public sealed class AlertService(SocDbContext db, TenantDbFactory factory, SocSe
     static object AlertDto(Alert a, Guid tenant) => new { id = a.Id, organizationId = tenant, a.ScopeId, a.Number, a.Title, a.Description, a.Source, a.RawPayload, a.NormalizedPayload, security = SecurityAlertDetails.FromRaw(a.RawPayload), a.SourceIntegrationId, a.ExternalEventId, a.OccurredAt, a.RowVersion, a.Priority, a.Status, slaStatus = GetSlaStatus(a), a.CreatedAt, a.Deadline, a.FirstHandledAt, a.Owner, a.Triage, a.CaseId, history = a.History.OrderBy(x => x.At).Select(x => new { x.At, x.Actor, x.Text }) };
     internal static bool NeedsCase(string? value) => value is "Nader onderzoek" or "Bevestigd incident" or "True positive" or "Onbeslist";
     internal static void Event(Alert a, string actor, string text) => a.History.Add(new() { Actor = actor, Text = text });
-    internal static Alert NewAlert(Guid scope, Input i, string source, DateTimeOffset? received = null, int responseMinutes = DefaultResponseMinutes)
+    internal static Alert NewAlert(Guid scope, CreateAlertRequest request, string source, DateTimeOffset? received = null, int responseMinutes = DefaultResponseMinutes)
     {
-        var p = Priority(i.Priority);
+        var p = Priority(request.Priority);
         var created = received ?? DateTimeOffset.UtcNow;
-        var a = new Alert { ScopeId = scope, Number = "ALT-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(), Title = Required(i.Title, 120), Description = Required(i.Description, 2000), Source = source, Priority = p, CreatedAt = created, Deadline = created.AddMinutes(responseMinutes), RawPayload = JsonSerializer.Serialize(new { i.Title, i.Description, i.Priority }) };
+        var a = new Alert { ScopeId = scope, Number = "ALT-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(), Title = Required(request.Title, 120), Description = Required(request.Description, 2000), Source = source, Priority = p, CreatedAt = created, Deadline = created.AddMinutes(responseMinutes), RawPayload = JsonSerializer.Serialize(new { request.Title, request.Description, request.Priority }) };
         a.History.Add(new()
         {
             At = created,
@@ -72,7 +72,7 @@ public sealed class AlertService(SocDbContext db, TenantDbFactory factory, SocSe
             var description = details.Description ?? title;
             if (description.Length > 2000)
                 description = description[..2000];
-            var a = NewAlert(source.ScopeId, new(Title: title, Description: description, Priority: severity.ToString()), source.Name, responseMinutes: t.ResponseMinutes);
+            var a = NewAlert(source.ScopeId, new CreateAlertRequest { Title = title, Description = description, Priority = severity.ToString() }, source.Name, responseMinutes: t.ResponseMinutes);
             a.SourceIntegrationId = source.Id;
             a.ExternalEventId = eventId;
             a.OccurredAt = occurredAt.ToUniversalTime();
@@ -97,16 +97,16 @@ public sealed class AlertService(SocDbContext db, TenantDbFactory factory, SocSe
             return (201, AlertDto(a, t.Id));
         }
     }
-    public async Task<object> AddAlert(AppUser u, Input i)
+    public async Task<object> AddAlert(AppUser u, CreateAlertRequest request)
     {
         Require(Analyst(u));
-        var t = await platform.Tenant(i.OrganizationId);
+        var t = await platform.Tenant(request.OrganizationId);
         Require(t.IsActive, "Klant is inactief.", 400);
         var grants = await platform.Scopes(u, t.Id);
-        var scope = i.ScopeId ?? grants.FirstOrDefault();
+        var scope = request.ScopeId ?? grants.FirstOrDefault();
         Require(grants.Contains(scope));
         await using var td = factory.Open(t);
-        var a = NewAlert(scope, i, Required(i.Source, 80), responseMinutes: t.ResponseMinutes);
+        var a = NewAlert(scope, request, Required(request.Source, 80), responseMinutes: t.ResponseMinutes);
         td.Alerts.Add(a);
         LogTenant(td, scope, u.Name, "Alert handmatig ontvangen", a.Number);
         await td.SaveChangesAsync();
@@ -127,7 +127,7 @@ public sealed class AlertService(SocDbContext db, TenantDbFactory factory, SocSe
         }
         return result.OrderBy(x => x.Time).Select(x => x.Dto);
     }
-    public async Task<object> AlertAction(AppUser currentUser, Guid id, string action, Input input, Guid? workspace, Guid? scope)
+    public async Task<object> AlertAction(AppUser currentUser, Guid id, string action, AlertActionRequest input, Guid? workspace, Guid? scope)
     {
         Require(action == "get" ? CanReadInternal(currentUser) : Analyst(currentUser));
         foreach (var (tenant, scopes) in await (action == "get" ? platform.ReadWorkspaces(currentUser, workspace, scope) : platform.Workspaces(currentUser, workspace, scope)))

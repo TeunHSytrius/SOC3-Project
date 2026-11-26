@@ -17,13 +17,13 @@ public sealed class AlertsController(SocService service, AlertService alertServi
         throw new SocException(400, "Ongeldige context.");
     }
     [HttpGet] public async Task<IActionResult> GetAll() => Ok(await alertService.Alerts(await service.UserAsync(User), Workspace, Scope));
-    [HttpPost] public async Task<IActionResult> Add(Input input) => Ok(await alertService.AddAlert(await service.UserAsync(User), input));
+    [HttpPost] public async Task<IActionResult> Add(CreateAlertRequest input) => Ok(await alertService.AddAlert(await service.UserAsync(User), input));
     [HttpGet("{id:guid}")] public async Task<IActionResult> Get(Guid id) => Ok(await alertService.AlertAction(await service.UserAsync(User), id, "get", new(), Workspace, Scope));
-    [HttpPost("{id:guid}/claim")] public Task<IActionResult> Claim(Guid id, Input i) => Action(id, "claim", i);
-    [HttpPost("{id:guid}/triage")] public Task<IActionResult> Triage(Guid id, Input i) => Action(id, "triage", i);
-    [HttpPost("{id:guid}/promote")] public Task<IActionResult> Promote(Guid id, Input i) => Action(id, "promote", i);
-    [HttpPost("{id:guid}/reopen")] public Task<IActionResult> Reopen(Guid id, Input i) => Action(id, "reopen", i);
-    private async Task<IActionResult> Action(Guid id, string action, Input input) => Ok(await alertService.AlertAction(await service.UserAsync(User), id, action, input, Workspace, Scope));
+    [HttpPost("{id:guid}/claim")] public Task<IActionResult> Claim(Guid id, AlertActionRequest input) => Action(id, "claim", input);
+    [HttpPost("{id:guid}/triage")] public Task<IActionResult> Triage(Guid id, AlertActionRequest input) => Action(id, "triage", input);
+    [HttpPost("{id:guid}/promote")] public Task<IActionResult> Promote(Guid id, AlertActionRequest input) => Action(id, "promote", input);
+    [HttpPost("{id:guid}/reopen")] public Task<IActionResult> Reopen(Guid id, AlertActionRequest input) => Action(id, "reopen", input);
+    private async Task<IActionResult> Action(Guid id, string action, AlertActionRequest input) => Ok(await alertService.AlertAction(await service.UserAsync(User), id, action, input, Workspace, Scope));
 }
 [ApiController, Route("api/v1/ingest")]
 public sealed class IngestController(AlertService alertService) : ControllerBase

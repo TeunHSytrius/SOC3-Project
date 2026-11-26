@@ -57,7 +57,7 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
         }
         return result;
     }
-    public async Task<object> CaseAction(AppUser currentUser, Guid id, string action, Input input, Guid? workspace, Guid? scope)
+    public async Task<object> CaseAction(AppUser currentUser, Guid id, string action, CaseActionRequest input, Guid? workspace, Guid? scope)
     {
         Require(action == "get" ? (CanReadInternal(currentUser) || currentUser.Role is "Klant" or "Accountmanager") : (Analyst(currentUser) || currentUser.Role == "Klant" && action == "entry"));
         foreach (var (tenant, scopes) in await (action == "get" ? platform.ReadWorkspaces(currentUser, workspace, scope) : platform.Workspaces(currentUser, workspace, scope)))

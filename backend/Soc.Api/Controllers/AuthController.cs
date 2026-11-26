@@ -20,10 +20,10 @@ public sealed class AuthController(UserManager<AppUser> users, SignInManager<App
         });
     }
     [EnableRateLimiting("login"), AllowAnonymous, HttpPost("login")]
-    public async Task<IActionResult> Login(Input i)
+    public async Task<IActionResult> Login(LoginRequest input)
     {
-        var email = SocService.Required(i.Username, 120);
-        var password = SocService.Required(i.Password, 200);
+        var email = SocService.Required(input.Username, 120);
+        var password = SocService.Required(input.Password, 200);
         var user = await users.FindByNameAsync(email);
         if (user is not { IsActive: true })
             return Unauthorized(new
@@ -33,13 +33,13 @@ public sealed class AuthController(UserManager<AppUser> users, SignInManager<App
         var result = await signIn.PasswordSignInAsync(user, password, false, true);
         if (result.RequiresTwoFactor)
         {
-            if (string.IsNullOrWhiteSpace(i.Code))
+            if (string.IsNullOrWhiteSpace(input.Code))
                 return Unauthorized(new
                 {
                     message = "Tweestapsverificatie vereist. Vul je code in.",
                     requiresTwoFactor = true
                 });
-            return await Complete(i);
+            return await Complete(new TwoFactorRequest { Code = input.Code });
         }
         if (!result.Succeeded)
             return Unauthorized(new
@@ -50,7 +50,7 @@ public sealed class AuthController(UserManager<AppUser> users, SignInManager<App
         return Ok(await service.PublicUser(user));
     }
     [EnableRateLimiting("login"), AllowAnonymous, HttpPost("2fa")]
-    public async Task<IActionResult> Complete(Input i)
+    public async Task<IActionResult> Complete(TwoFactorRequest input)
     {
         var user = await signIn.GetTwoFactorAuthenticationUserAsync();
         if (user is not { IsActive: true })
@@ -58,7 +58,7 @@ public sealed class AuthController(UserManager<AppUser> users, SignInManager<App
             {
                 message = "Start opnieuw met inloggen."
             });
-        var code = SocService.Required(i.Code, 50).Replace(" ", "");
+        var code = SocService.Required(input.Code, 50).Replace(" ", "");
         var result = code.Length == 6 && code.All(char.IsDigit) ? await signIn.TwoFactorAuthenticatorSignInAsync(code, false, false) : await signIn.TwoFactorRecoveryCodeSignInAsync(code);
         if (!result.Succeeded)
             return Unauthorized(new
@@ -102,12 +102,12 @@ public sealed class AuthController(UserManager<AppUser> users, SignInManager<App
         });
     }
     [Authorize, EnableRateLimiting("login"), HttpPost("2fa/enable")]
-    public async Task<IActionResult> Enable(Input i)
+    public async Task<IActionResult> Enable(TwoFactorRequest input)
     {
         var u = await service.UserAsync(User, true);
         SocService.Require(!u.TwoFactorEnabled, "2FA is al actief.", 409);
         SocService.Require(!string.IsNullOrEmpty(await users.GetAuthenticatorKeyAsync(u)), "Start eerst de setup.", 400);
-        var valid = await users.VerifyTwoFactorTokenAsync(u, users.Options.Tokens.AuthenticatorTokenProvider, SocService.Required(i.Code, 12));
+        var valid = await users.VerifyTwoFactorTokenAsync(u, users.Options.Tokens.AuthenticatorTokenProvider, SocService.Required(input.Code, 12));
         SocService.Require(valid, "Ongeldige code.", 400);
         var result = await users.SetTwoFactorEnabledAsync(u, true);
         SocService.Require(result.Succeeded, "2FA activeren mislukt.", 500);
