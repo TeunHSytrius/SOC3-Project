@@ -1,219 +1,207 @@
-# SOC3 Management — Sprint 1
+# SOC3 Management
 
-**SE3 · Multilayer Webapplications · Projectgroep 3**
+**SE3 — Multilayer Webapplications | Projectgroep 3 | Sprint 1**
 
-Een incidentcasemanagementplatform voor een MSSP Security Operations Centre (SOC). Deze branch bevat het technische fundament voor Sprint 1: React, ASP.NET Core, Entity Framework Core en SQL Server.
+SOC3 is een webapplicatie voor het registreren, beoordelen en afhandelen van beveiligingsmeldingen binnen een Security Operations Centre (SOC). Deze repository bevat het technische fundament en een klikbaar prototype. Het is geen afgerond incidentmanagementsysteem.
 
-## Snel starten
+[Taiga — sprintbord](https://tree.taiga.io/project/djominique-soc-groep-3/kanban) · [GitHub Actions](https://github.com/TeunHSytrius/SOC3-Project/actions) · [Installatie en problemen oplossen](docs/INSTALLATIE.md)
 
-Open Docker Desktop. Vanuit de hoofdmap van het project:
+## Inhoud
 
-```bash
-git pull --ff-only origin main && docker compose up --build --wait --wait-timeout 360
-```
+- [1. Snel starten](#1-snel-starten)
+- [2. Huidige stand](#2-huidige-stand)
+- [3. Architectuur en database](#3-architectuur-en-database)
+- [4. Bestaande bijdragen en herkomst](#4-bestaande-bijdragen-en-herkomst)
+- [5. Samen verder ontwikkelen](#5-samen-verder-ontwikkelen)
+- [6. Codeconventies en controles](#6-codeconventies-en-controles)
+- [7. Bespreekpunten voor het team](#7-bespreekpunten-voor-het-team)
 
-**Website:** [http://localhost:8081](http://localhost:8081)  
-**Demowachtwoord voor alle onderstaande accounts:** `Demo2026!`
+## 1. Snel starten
 
-| Groepslid | E-mailadres | Rol |
-| --- | --- | --- |
-| Teun Hanssen | teun@soc.demo | Beheerder |
-| Dominique Roosen | dominique@soc.demo | Senior analist |
-| Sergio Mendez | sergio@soc.demo | Analist |
-| Hamza Ben Ali | hamza@soc.demo | Analist |
-| Ruben Abrahamse | ruben@soc.demo | Accountmanager |
-| Thijs Dronkers | thijs@soc.demo | Klant |
+Installeer [Git](https://git-scm.com/downloads) en [Docker Desktop](https://www.docker.com/products/docker-desktop/). Start Docker Desktop met Linux-containers. Voor de demo zijn Node.js, de .NET SDK en een losse SQL Server-installatie niet nodig.
 
-Dit zijn fictieve lokale demoaccounts en gekozen demonstratierollen, geen officiële taakverdeling. Het wachtwoord is het initiële demowachtwoord: een bestaande database behoudt gewijzigde wachtwoorden, verwijderde accounts en 2FA-instellingen. Gebruik deze gegevens nooit voor productie.
-
-## Afbakening Sprint 1
-
-De geïntegreerde MVP is als referentie bewaard op [archive/full-mvp](https://github.com/TeunHSytrius/SOC3-Project/tree/archive/full-mvp), commit `6fca2626d56179029aa08dd9285639c92d7e62a0`. De MVP is gemaakt met AI-ondersteuning en bevat geïntegreerde bijdragen van de groep. Het archief is geen bewijs dat alle individuele leeruitkomsten zijn behaald.
-
-In de actieve versie blijven database en klantschema's, inloggen, uitloggen, 2FA (oorspronkelijke bijdrage van Thijs, geïntegreerd met Identity), klantenbeheer, gebruikersbeheer, rol- en klanttoegang, navigatie en basis-auditregistratie beschikbaar. De bestaande platform- en klantschema's blijven behouden voor compatibiliteit met de werkende login, 2FA en beheerfunctionaliteit. Daarnaast is Hamza's oorspronkelijke domeinmodel toegevoegd aan dezelfde database. Er worden geen bestaande gegevens verwijderd.
-
-Alert-ingest, API-sleutels, echte alertverwerking, triage, SLA-functionaliteit, cases, notities, observables, klantportaal, rapportages en de simulator zijn nog niet beschikbaar in de actieve versie. Beheerders en analisten zien een expliciet gemarkeerd klikbaar frontendprototype met fictieve meldingen, filters en details. De voorbeelden komen uitsluitend uit `frontend/src/features/demo`, worden niet in SQL opgeslagen en gebruiken geen alert-API. Ze tellen niet als gerealiseerde acceptatiecriteria voor de volgende sprints. De bijbehorende user stories worden later door het team gerealiseerd en getest. De auditpagina is een eenvoudige inspectie van platformactiviteiten, geen volledige US-27-implementatie.
-
-## 1. Installatie — Windows, macOS en Linux
-
-### 1.1 Wat heb je nodig?
-
-- Toegang tot de private GitHub-repository SOC3-Project.
-- [Git](https://git-scm.com/downloads) en [Docker Desktop](https://www.docker.com/products/docker-desktop/) op Windows/macOS. Op Linux kan ook Docker Engine met de Compose v2-plugin.
-- Internet om de images en dependencies op te halen.
-- Bij voorkeur 16 GB RAM, met circa 6–8 GB beschikbaar voor Docker, en voldoende vrije schijfruimte (richtwaarde 15 GB).
-- Voor de gewone demo hoef je geen Node.js, .NET SDK, SQL Server of DataGrip apart te installeren.
-
-| Laptop | Route |
-| --- | --- |
-| Windows Intel/AMD | Docker Desktop met WSL 2 en Linux-containers |
-| Mac Intel | Docker Desktop voor Intel |
-| Mac Apple Silicon (M1 en nieuwer) | Docker Desktop voor Apple Silicon, amd64-emulatie voor SQL Server |
-| Windows ARM/Snapdragon of Linux ARM | Probeer amd64-emulatie; gebruik anders de externe SQL-route hieronder |
-| Linux Intel/AMD | Docker Engine + Compose v2 of Docker Desktop |
-
-Windows: schakel hardwarevirtualisatie in indien nodig, gebruik WSL 2 en start Docker Desktop. Controleer met `wsl --status` in PowerShell. Gebruik Linux-containers, geen Windows-containers. Op Mac: installeer de juiste Docker Desktop-versie; op Apple Silicon kan Rosetta-emulatie helpen als de optie beschikbaar is. Microsoft ondersteunt SQL Server Linux-containers officieel uitsluitend op x86-64; Rosetta/QEMU/Prism-emulatie is niet ondersteund. Zie [Microsoft-documentatie](https://learn.microsoft.com/en-us/sql/linux/containers/deploy?view=sql-server-ver16). Er is daarom geen garantie dat SQL Server lokaal op iedere ARM-laptop draait.
-
-### 1.2 Eerste keer starten
-
-Open Docker Desktop en wacht tot de engine actief is. Open PowerShell, Terminal of een Linux-shell:
+**Eerste keer:** open PowerShell of Terminal.
 
 ```bash
-git --version
-docker version
-docker compose version
 git clone https://github.com/TeunHSytrius/SOC3-Project.git
 cd SOC3-Project
 docker compose up --build --wait --wait-timeout 360
 ```
 
-Gebruik bij een bestaande kopie vanuit de hoofdmap:
+**Al een lokale kopie?** Controleer eerst of je eigen werk veilig is gecommit of gestasht. Wissel alleen van branch als je lokale wijzigingen veilig zijn.
 
 ```bash
+git status
+git switch main
 git pull --ff-only origin main
 docker compose up --build --wait --wait-timeout 360
 ```
 
-Het commando bouwt de frontend en backend, wacht op de SQL Server-healthcheck en controleert daarna de API. Bij een succesvolle start staan app en sqlserver op healthy. Open [http://localhost:8081](http://localhost:8081). Log in met een groepsaccount bovenaan deze README en het initiële wachtwoord `Demo2026!`.
+Open **[http://localhost:8081](http://localhost:8081)**. Met `docker compose ps` controleer je of de services healthy zijn.
 
-```bash
-docker compose ps
+### Lokale demoaccounts
+
+Het initiële wachtwoord voor deze accounts is `Demo2026!`. De rollen zijn gekozen voor demonstratiedoeleinden, niet als taakverdeling van het project.
+
+| Groepslid | E-mailadres | Demorol |
+| --- | --- | --- |
+| Teun | teun@soc.demo | Beheerder |
+| Dominique | dominique@soc.demo | Senior analist |
+| Sergio | sergio@soc.demo | Analist |
+| Hamza | hamza@soc.demo | Analist |
+| Ruben | ruben@soc.demo | Accountmanager |
+| Thijs | thijs@soc.demo | Klant |
+
+Iedereen heeft lokaal zijn eigen SQL Server-container en databasevolume. Gegevens en gewijzigde wachtwoorden worden niet gedeeld via GitHub. Demoaccounts en wachtwoorden zijn uitsluitend bedoeld voor lokale ontwikkeling.
+
+Stoppen: `docker compose down`. Gebruik **geen** `docker compose down -v`: daarmee verwijder je de database en de sleutels voor 2FA.
+
+Werkt Docker niet op jouw laptop? Zie [de installatiehandleiding](docs/INSTALLATIE.md), ook voor Apple Silicon, een externe SQL Server en DataGrip.
+
+## 2. Huidige stand
+
+Onderstaande indeling beschrijft de technische inhoud van deze versie, niet de formele acceptatie van Taiga-tickets.
+
+| Onderdeel | Stand | Toelichting |
+| --- | --- | --- |
+| Login en logout | Geïntegreerd | Werkende backend-authenticatie en sessies |
+| 2FA | Geïntegreerd | Oorspronkelijke service van Thijs, aangesloten op Identity |
+| Gebruikers- en klantenbeheer | Basis beschikbaar | Bestaande beheer-API gebruikt platformmodellen |
+| Rollen en klanttoegang | Basis beschikbaar | Autorisatie in de backend; verdere validatie tegen FO/TO nodig |
+| Database | Gecombineerd model | Hamza's domeinentiteiten toegevoegd aan dezelfde SQL-database; koppeling met beheerdata nog open |
+| Dashboard en alertoverzicht | Prototype | Fictieve meldingen, filters en details; geen alert-API |
+| Auditlog | Basis beschikbaar | Platformactiviteiten en paginering; geen volledige operationele audit |
+| Ingest, triage, tickets, SLA, onderzoeken en rapportages | Nog te realiseren | Geen afgeronde workflows of geaccepteerde user stories |
+
+**Voorbeelddata zijn geen werkende alertverwerking.** De klikbare alerts worden in de frontend gemaakt en niet in SQL opgeslagen. De groep bepaalt aan de hand van het FO, TO en Taiga welke onderdelen aan de acceptatiecriteria voldoen.
+
+## 3. Architectuur en database
+
+React 19 / TypeScript → ASP.NET Core (.NET 10) → businesslaag → EF Core 10 → SQL Server 2022.
+
+```text
+SOC3-Project/
+├── backend/
+│   ├── Soc.Api/        Controllers, authenticatie en API-configuratie
+│   ├── Soc.Business/   Services, DTO's en bedrijfslogica
+│   ├── Soc.Data/       EF Core-contexten en entiteiten
+│   │   └── Domain/     Oorspronkelijk domeinmodel van Hamza
+│   └── Soc.Tests/      2FA- en datamodeltests
+├── frontend/
+│   └── src/
+│       ├── app/        Navigatie en werkruimte
+│       ├── components/ Herbruikbare UI-componenten
+│       ├── features/   Schermen per functionaliteit
+│       ├── hooks/      Herbruikbare React-logica
+│       ├── services/   API- en sessieverzoeken
+│       └── types/      TypeScript-types
+├── tests/              API-smoketest
+├── docs/               Installatiehandleiding
+├── .github/workflows/  CI
+├── SOC3.slnx
+└── compose.yaml
 ```
 
-Healthcheck in de browser: [http://localhost:8081/api/v1/health](http://localhost:8081/api/v1/health). Verwacht `{"status":"ok"}`. In Windows PowerShell kan ook `curl.exe http://localhost:8081/api/v1/health`; in macOS/Linux `curl -fsS http://localhost:8081/api/v1/health`.
+### Eén SQL Server-database
 
-### 1.3 Problemen oplossen
-
-Voer eerst vanuit de hoofdmap uit (op alle platforms):
-
-```bash
-docker compose ps -a
-docker compose logs --tail=100 app sqlserver
-```
-
-Als de build faalt: `docker compose build --progress=plain`. Deel de foutmelding vanaf de eerste echte error, plus je besturingssysteem en processor. Deel geen wachtwoorden of API-sleutels.
-
-| Probleem | Wat te doen |
+| Schema binnen `Soc3Demo` | Doel |
 | --- | --- |
-| git clone geeft 403/404 | Controleer of je toegang tot de private repo hebt en of Git is ingelogd. |
-| Docker daemon niet bereikbaar | Start Docker Desktop en controleer docker version. |
-| compose onbekend | Installeer/actualiseer Compose v2; gebruik docker compose met spatie. |
-| Windows-containerimage fout | Schakel naar Linux-containers. |
-| Exited 137 / out of memory | Geef Docker meer geheugen of sluit zware programma's. |
-| SQL Server unhealthy | Controleer sqlserver-logs, processor, geheugen en wachtwoord van het bestaande volume. |
-| Exec format error / emulatiecrash | Controleer ARM-emulatie; gebruik de externe SQL-route indien nodig. |
-| Port already allocated | Wijzig alleen de conflicterende hostpoort in .env (zie 1.4). |
-| npm- of C#-buildfout | Deel de buildlog; dit is mogelijk een code-/dependencyprobleem en niet je laptop. |
-| Init mislukt / onvolledige demo | Deel de app-logs. Wis geen database om de fout te verbergen. |
-| Website niet bereikbaar | Wacht op healthy, controleer de gekozen poort en gebruik localhost. |
-| Smoketest health: HTTP 400 | De interne Compose-hostnaam app moet in AllowedHosts staan. Dit is ingesteld in compose.yaml; haal de nieuwste versie op en bouw opnieuw. |
+| `platform` | Identity, gebruikers, rollen, scopes, klantenbeheer en platformaudit |
+| `domain` | Hamza's oorspronkelijke Alerts, Tickets, Researches, Customers, Organizations, Employees, Contracts, Notes en Evidences |
+| `tenant_...` | Bestaande klantschema's, behouden voor compatibiliteit |
 
-Normaal stoppen: `docker compose down`. Het databasevolume en de 2FA-sleutels blijven behouden. Gebruik **geen** `docker compose down -v`: daarmee verwijder je de opgeslagen data.
+De oorspronkelijke domeinentiteiten zijn toegevoegd aan `SocDbContext` met behoud van integer-ID's en de oorspronkelijke relaties. De namespaces en schematoewijzing zijn aangepast om conflicten met de bestaande implementatie te voorkomen. Nieuwe demo's krijgen de tabellen bij initialisatie; voor bestaande demo's is een additieve initializer toegevoegd. Er is geen tweede database en geen automatische migratie van bestaande records.
 
-### 1.4 Andere poorten gebruiken (alleen bij conflict)
+**Nog te besluiten:** hoe `AppUser` en `Employee`, `Tenant` en `Customer/Organization` aan elkaar worden gekoppeld; welke alert- en ticketmodellen uiteindelijk leidend zijn; hoe klantisolatie binnen het domeinmodel wordt afgedwongen. De bestaande schermen gebruiken nog de platformmodellen. Er zijn nog geen publieke API's voor de oorspronkelijke domeintabellen. De huidige oplossing is een integratiestap, niet het definitieve datamodel.
 
-Maak in de hoofdmap een bestand .env op basis van .env.example. Bijvoorbeeld:
+## 4. Bestaande bijdragen en herkomst
 
-```dotenv
-SOC_APP_PORT=8082
-SOC_SQL_PORT=14334
-```
+De oorspronkelijke groepsrepository is [soc3Managment](https://github.com/TeunHSytrius/soc3Managment). Deze geïntegreerde repository vervangt die niet automatisch. De oorspronkelijke branches blijven als bron beschikbaar.
 
-Start opnieuw met `docker compose up --build --wait --wait-timeout 360`. Open dan http://localhost:8082 en gebruik DataGrip-poort 14334. Pas ook het Vite API-target en eventuele handmatige API-verzoeken aan als je een andere app-poort gebruikt. De interne containerpoorten blijven 8080 en 1433. Wijzig SOC_SQL_PASSWORD niet bij een bestaand SQL-volume zonder het SQL-wachtwoord zelf te wijzigen.
-
-### 1.5 Alternatief wanneer SQL Server niet lokaal draait
-
-Gebruik bij voorkeur een groepslaptop met Intel/AMD waarop Docker werkt, of een beschikbare x86-64-VM. Er zijn twee mogelijkheden:
-
-**A. Alleen de demo bekijken:** draai de volledige applicatie op die machine en gebruik de browser daar, een schermdeling of een beveiligde SSH-tunnel (alleen als een SSH-server en toegang al zijn geregeld):
-
-```bash
-ssh -N -L 8081:127.0.0.1:8081 gebruiker@adres-van-demo-host
-```
-
-Open op je eigen laptop http://localhost:8081. Deel de demo niet via een publiek geopende HTTP-poort.
-
-**B. Zelf de app lokaal draaien met externe SQL Server:** de repository bevat compose.external.yaml. Regel eerst met de groep een bereikbare SQL Server 2022 op x86-64, een eigen lege demodatabase en een account met rechten om daarin tabellen/schema's aan te maken. Gebruik nooit de productiedatabase of een database die een andere onafhankelijke demo gebruikt. Configureer in je lokale .env de echte connectiestring, bijvoorbeeld (vervang alle voorbeeldwaarden):
-
-```dotenv
-SOC_EXTERNAL_SQL_CONNECTION=Server=sql-demo.example,1433;Database=Soc3DevHamza;User Id=socdev;Password=VUL_EIGEN_WACHTWOORD_IN;Encrypt=True;TrustServerCertificate=False
-```
-
-Gebruik een geldig vertrouwd SQL-certificaat. Bij een beveiligde tunnel naar een lokale poort kan de servernaam host.docker.internal zijn; stem de TLS-configuratie af met de beheerder. Start vervolgens:
-
-```bash
-docker compose stop app
-docker compose -f compose.external.yaml up --build --wait --wait-timeout 360
-```
-
-Hierbij wordt alleen de app lokaal gebouwd (native architectuur); er start geen lokale SQL Server-container. De backend initialiseert de eigen demodatabase. Stop met `docker compose -f compose.external.yaml down`. Er is geen externe host voor jullie ingericht: deze route vereist een beschikbare SQL Server of VM. Geen SQLite-fallback; de SQL Server-architectuur blijft behouden.
-
-### 1.6 DataGrip (optioneel)
-
-| Instelling | Standaardwaarde |
+| Bijdrage | Bron en stand |
 | --- | --- |
-| Type | Microsoft SQL Server |
-| Host | 127.0.0.1 |
-| Port | 14333 (of SOC_SQL_PORT) |
-| User | sa |
-| Password | SocDemo!2026Local (of bestaande SOC_SQL_PASSWORD) |
-| Database | Soc3Demo |
-| Encrypt | true |
-| Trust server certificate | true, uitsluitend voor lokale demo |
+| Teun — login | [Oorspronkelijke login-PR #8](https://github.com/TeunHSytrius/soc3Managment/pull/8); geïntegreerde login is verder aangepast |
+| Thijs — 2FA | [feature/tg-39-two-factor-auth](https://github.com/TeunHSytrius/soc3Managment/tree/feature/tg-39-two-factor-auth); service en tests hergebruikt, opslag en Identity-integratie aangepast |
+| Hamza — database | [Oorspronkelijke databasecommit](https://github.com/TeunHSytrius/soc3Managment/tree/4550bc7a424b3815a2873882fda369f5bd8ce2a5); entiteiten en relaties opgenomen in het gecombineerde model |
+| Sergio — klantenbeheer | [Oorspronkelijke branch](https://github.com/TeunHSytrius/soc3Managment/tree/feature/tg-20-customer-management); huidige SQL-implementatie is niet zijn oorspronkelijke in-memory-implementatie |
+| Ruben en Dominique — navigatie | [Oorspronkelijke branch](https://github.com/TeunHSytrius/soc3Managment/tree/feature/tg-us-31-frontend-navigatie); geïntegreerde navigatie is aangepast |
 
-De backend maakt de database, platform-schema en klantschema's automatisch aan. Download de JDBC-driver en klik Test Connection. Selecteer platform en tenant_... in het schema-overzicht.
+De tabel is een overzicht van bekende oorspronkelijke bijdragen, geen complete individuele beoordeling. Vul tijdens het overleg ontbrekende bijdragen aan en bespreek welke implementaties behouden of opnieuw geïntegreerd moeten worden.
 
-```sql
-SELECT Id, Name, SchemaName, IsActive, ResponseMinutes
-FROM platform.Tenants;
-```
+Het eerdere uitgebreide prototype is met AI-ondersteuning ontwikkeld en bewaard op [archive/full-mvp](https://github.com/TeunHSytrius/SOC3-Project/tree/archive/full-mvp), commit `6fca2626d56179029aa08dd9285639c92d7e62a0`. Dat archief is een referentie, geen bewijs dat alle tickets of individuele leeruitkomsten zijn afgerond. Gebruik de actieve codebase als uitgangspunt voor gezamenlijk werk nadat het team daarover overeenstemming heeft.
 
-### 1.7 Test zonder Node.js op je laptop
+## 5. Samen verder ontwikkelen
+
+**Voorstel voor werkafspraken — gezamenlijk vaststellen tijdens het overleg.** Taiga bepaalt de sprintplanning; GitHub bevat de implementatie en reviews.
+
+1. Kies met het team een ticket en bespreek de acceptatiecriteria.
+2. Maak vanuit de actuele `main` een eigen featurebranch.
+3. Implementeer en test de afgesproken scope. Bespreek wijzigingen in gedeelde interfaces en datamodellen vooraf.
+4. Open een pull request naar `main`, met het Taiga-ticket, de wijziging, testresultaten en eventuele beperkingen.
+5. Laat een ander groepslid reviewen. De auteur verwerkt feedback.
+6. Merge pas wanneer de review, relevante tests en CI akkoord zijn. Sluit het Taiga-ticket volgens de teamafspraken.
 
 ```bash
-docker compose --profile test run --rm smoke
+git switch main
+git pull --ff-only origin main
+git switch -c feature/tg-123-korte-omschrijving
 ```
 
-Deze test gebruikt de Node-container en maakt fictieve testrecords aan. Gebruik de standaard generieke testaccounts; activeer daarop geen 2FA. GitHub Actions bevat daarnaast een automatische Docker-build en smoketest op een schone x86-64-runner. Controleer [Actions](https://github.com/TeunHSytrius/SOC3-Project/actions) voor het werkelijke resultaat; een workflowbestand betekent niet dat de build is geslaagd.
+Vervang het voorbeeldnummer door je eigen ticket. Werk niet rechtstreeks op `main` en voeg geen werk van anderen aan je branch toe zonder afstemming. Vermeld hergebruik en AI-ondersteuning eerlijk; ieder groepslid moet zijn eigen werk kunnen toelichten.
 
-## Gecombineerde database
+### Definition of Done — voorstel
 
-Hamza's databasebijdrage komt uit [feature/database](https://github.com/TeunHSytrius/soc3Managment/tree/4550bc7a424b3815a2873882fda369f5bd8ce2a5), commit `4550bc7a424b3815a2873882fda369f5bd8ce2a5`. De oorspronkelijke entiteiten, enums, integer-ID's, constraints en relaties staan onder `backend/Soc.Data/Domain` en zijn toegevoegd aan de bestaande `SocDbContext`.
+- Acceptatiecriteria aantoonbaar gecontroleerd.
+- Code leesbaar en opgemaakt volgens de conventies.
+- Relevante unit-, integratie- en handmatige tests uitgevoerd.
+- Autorisatie, klantisolatie en foutafhandeling gecontroleerd waar relevant.
+- PR gereviewd, CI groen, documentatie bijgewerkt.
 
-Er is één SQL Server-database (`Soc3Demo`), met de volgende schema's:
+## 6. Codeconventies en controles
 
-- `platform`: bestaande Identity-tabellen, Thijs' 2FA, gebruikers- en klantenbeheer en platformaudit.
-- `domain`: Hamza's oorspronkelijke Alerts, Tickets, Researches, Customers, Organizations, Employees, Contracts, Notes en Evidences.
-- Bestaande `tenant_...`-schema's: behouden voor compatibiliteit met eerder aangemaakte data en de huidige beheerfunctionaliteit.
+Gebruik de bestaande `.editorconfig` en `frontend/.prettierrc.json`. Schrijf code met betekenisvolle Engelse namen, kleine functies, expliciete accolades en duidelijke verantwoordelijkheden. Houd UI, API-verzoeken, businesslogica en opslag gescheiden. C# gebruikt vier spaties; TypeScript, JSX en CSS twee. Gebruik PascalCase voor publieke C#-types en React-componenten, camelCase voor lokale variabelen. Vermijd onnodige abstracties en compacte geneste conditionals.
 
-De domeintabellen worden bij een nieuwe demo automatisch aangemaakt. Bij een bestaande demo maakt een additieve initializer alleen de ontbrekende domeintabellen aan als het domeinschema nog leeg is; een onvolledig schema geeft een fout. Er is geen tweede database en geen dataverwijdering. De initializer gebruikt dezelfde SQL-verbinding en dezelfde EF Core-modelconfiguratie als `SocDbContext`.
-
-De huidige login, 2FA en beheer-API blijven gebruikmaken van de bestaande platformentiteiten. De bestaande schermen zijn nog niet gekoppeld aan Hamza's domeinentiteiten. Voorbeeldalerts blijven fictieve frontenddata. De koppeling tussen GUID-gebruikers/klanttoegang en integer-medewerkers/klanten en de uiteindelijke tenantisolatie moeten nog gezamenlijk worden uitgewerkt. De domeintabellen worden nog niet via API's ontsloten. Er is geen migratie van bestaande records tussen de modellen uitgevoerd.
-
-## Ontwikkelen en testen
-
-Werk per Taiga-ticket op een eigen featurebranch. Open een pull request naar main, laat de code reviewen en controleer de acceptatiecriteria. Vermeld eigen bijdragen, hergebruik en AI-ondersteuning eerlijk.
+Voor lokaal ontwikkelen heb je de .NET 10 SDK en Node.js >=22.12 nodig. Controleer voordat je een PR opent:
 
 ```bash
 dotnet test backend/Soc.Tests/Soc.Tests.csproj
-docker compose --profile test run --rm smoke
+dotnet format SOC3.slnx --verify-no-changes
 ```
-
-De smoketest controleert het fundament en verifieert dat endpoints voor latere sprints niet beschikbaar zijn. De 2FA-unittests blijven behouden. Voor nieuwe 2FA-accounts moeten setup en aanmelding ook handmatig worden getest. Productie-deployment en EF Core-migraties zijn nog niet afgerond.
-
-## Codeconventies
-
-- C#: vier spaties, PascalCase voor publieke types en methoden, camelCase voor parameters en lokale variabelen. Gebruik accolades bij conditionals en lussen, ook bij één statement.
-- TypeScript/React: twee spaties, betekenisvolle namen, expliciete types aan modulegrenzen, kleine componenten en geen onnodig compacte conditionals. Gebruik Prettier volgens `frontend/.prettierrc.json`.
-- Scheid UI, data, presentatielogica en API-verzoeken. Plaats voorbeelddata uitsluitend in de demomodule. Vermijd onnodige abstracties en schrijf comments voor het waarom, niet voor iedere regel.
-- Controleer een wijziging met de formatter, compiler, relevante tests en review. De huidige CI test de werking; volledige formatteringscontrole is nog niet als verplichte CI-gate ingesteld.
 
 ```bash
 cd frontend
 npm install
 npm run format:check
 npm run build
-# Gebruik npm run format om de bestanden volgens Prettier te formatteren.
+cd ..
 ```
 
-Voor de backend: `dotnet format SOC3.slnx` vanuit de hoofdmap (met de .NET 10 SDK). Controleer de diff voordat je commit.
+Gebruik `npm run format` voor de frontend en `dotnet format SOC3.slnx` voor de backend wanneer formattering nodig is. Controleer de diff; meng grootschalige formattering niet met een functionele wijziging. De formatteringscommando's kunnen bestaande afwijkingen signaleren; volledige formatteringscontrole is nog geen verplichte CI-gate. De lockfile-afspraak moet nog worden vastgelegd.
+
+Test de draaiende demo met:
+
+```bash
+docker compose --profile test run --rm smoke
+```
+
+CI controleert de backendtests, Docker-build, HTTP-readiness, SQL-tabellen en API-smoketest. Zie [Actions](https://github.com/TeunHSytrius/SOC3-Project/actions) voor de werkelijke resultaten per commit. Een groene CI-run bewijst niet dat alle acceptatiecriteria zijn behaald. Test 2FA-setup en aanmelding ook handmatig met een eigen testaccount; gebruik daarvoor niet de generieke smoke-testaccounts.
+
+## 7. Bespreekpunten voor het team
+
+Gebruik dit overzicht om samen besluiten te nemen, niet om individueel taken toe te wijzen.
+
+| Onderwerp | Te bespreken besluit |
+| --- | --- |
+| Repository | Welke repository en branch zijn vanaf nu gezamenlijk leidend? |
+| Database | Welke modellen behouden we, hoe koppelen we Identity aan medewerkers en klanten, en hoe borgen we tenantisolatie? |
+| Bestaande bijdragen | Welke oorspronkelijke implementaties moeten worden behouden, hersteld of gezamenlijk aangepast? |
+| Sprint 1 | Welke tickets voldoen daadwerkelijk aan de acceptatiecriteria en welke zijn nog open? |
+| Vervolgplanning | Wie pakt welk ticket op, welke afhankelijkheden zijn er en wat doen we eerst? |
+| Kwaliteit | Welke review-, test- en formatteringsregels spreken we af? |
+| Individueel bewijs | Hoe leggen we eigen werk, feedback, keuzes en AI-ondersteuning vast? |
+
+Leg de gemaakte afspraken vast in Taiga en werk FO/TO en README bij wanneer de gezamenlijke keuzes daarom vragen.
+
+### Bekende beperkingen
+
+De actieve versie is nog geen productieklare SOC-applicatie. Domein-API's, samenvoeging van overlappende modellen, volledige tenantisolatie van de oorspronkelijke domeinentiteiten, EF Core-migraties en productieconfiguratie zijn nog niet afgerond. Het team moet deze punten gezamenlijk valideren voordat de oplossing als definitief wordt gepresenteerd.
