@@ -1,20 +1,7 @@
-import type { State, Alert, ResearchCase } from '../../types/soc';
-import { Icon, Badge, Button, Field, Select, Table, Panel, PageHeader } from '../../components/Ui';
-import {
-  labels,
-  priorities,
-  states,
-  caseStates,
-  active,
-  isClosed,
-  fmt,
-  sla,
-  caseMatchesView,
-  sortRecords,
-  nextCaseStates,
-  roles,
-} from '../../types/domain';
-import { priorityColor } from '../alerts/AlertCards';
+import type { State, ResearchCase } from '../../types/soc';
+import { Badge, Button, Panel, PageHeader } from '../../components/Ui';
+import { fmt, isClosed } from '../../types/domain';
+import { priorityColor } from '../shared/priorityColor';
 import CaseWorkflow from './CaseWorkflow';
 import type { Navigate, UpdateState, RunAction } from '../../types/workspace';
 interface CaseDetailProps {

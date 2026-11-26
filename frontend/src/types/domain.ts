@@ -87,7 +87,7 @@ export function caseGroup(ticket: ResearchCase) {
   return 'open';
 }
 // Ticket tabs represent workflow stages, not the age of a ticket.
-export function caseMatchesView(ticket: ResearchCase, view: string): boolean {
+export function caseMatchesView(ticket: Pick<ResearchCase, 'status'>, view: string): boolean {
   switch (view) {
     case 'all':
       return true;

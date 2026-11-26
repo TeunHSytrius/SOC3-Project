@@ -35,7 +35,7 @@ export default function DashboardPage({
   const cases = state.cases.filter((ticket) => !org || ticket.organizationId === org);
   const openAlerts = alerts.filter(active);
   const unassigned = openAlerts.filter(
-    (alert) => !alert.owner && ['New', 'PendingReview'].includes(alert.status),
+    (alert) => !alert.ownerId && ['New', 'PendingReview'].includes(alert.status),
   );
   const risk = openAlerts.filter((alert) => sla(alert).kind === 'warn');
   const overdue = openAlerts.filter((alert) => sla(alert).kind === 'danger');

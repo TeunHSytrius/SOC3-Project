@@ -1,7 +1,7 @@
-import { useState } from 'react';
 import type { ResearchCase } from '../../types/soc';
-import { Button } from '../../components/Ui';
-import { CaseCards } from '../alerts/AlertCards';
+import Pagination from '../../components/Pagination';
+import { usePagination } from '../../hooks/usePagination';
+import TicketCards from './TicketCards';
 import TicketTable from './TicketTable';
 
 const PAGE_SIZE = 15;
@@ -14,30 +14,18 @@ interface TicketResultsProps {
 }
 
 export default function TicketResults({ tickets, canReadInternal, customerName, onOpen }: TicketResultsProps) {
-  const [page, setPage] = useState(1);
-  const pageCount = Math.max(1, Math.ceil(tickets.length / PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount);
-  const firstIndex = (currentPage - 1) * PAGE_SIZE;
-  const visibleTickets = tickets.slice(firstIndex, firstIndex + PAGE_SIZE);
+  const pagination = usePagination(tickets, PAGE_SIZE);
 
   return (
     <>
       {canReadInternal ? (
-        <TicketTable tickets={visibleTickets} customerName={customerName} onOpen={onOpen} />
+        <TicketTable tickets={pagination.visibleRecords} customerName={customerName} onOpen={onOpen} />
       ) : (
         <div className="bodypad">
-          <CaseCards cases={visibleTickets} customerName={customerName} open={onOpen} />
+          <TicketCards cases={pagination.visibleRecords} customerName={customerName} open={onOpen} />
         </div>
       )}
-      {tickets.length > 0 && (
-        <nav className="wire-pagination" aria-label="Ticketpaginering">
-          <Button disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Vorige</Button>
-          <span aria-live="polite">
-            Pagina {currentPage} van {pageCount} · {firstIndex + 1}–{firstIndex + visibleTickets.length} van {tickets.length}
-          </span>
-          <Button disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>Volgende</Button>
-        </nav>
-      )}
+      <Pagination {...pagination} label="Ticketpaginering" />
     </>
   );
 }

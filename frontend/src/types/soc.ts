@@ -66,6 +66,7 @@ export interface Alert {
   deadline: string;
   firstHandledAt: string | null;
   owner: string | null;
+  ownerId: string | null;
   triage: string | null;
   caseId: string | null;
   history: { at: string; actor: string; text: string }[];
