@@ -9,7 +9,7 @@
   min-height: 100vh;
   color: var(--shell-text);
   background: var(--shell-page);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--sans);
 }
 
 .AppShell__header {

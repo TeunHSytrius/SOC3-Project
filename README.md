@@ -127,7 +127,8 @@ De volgende accounts blijven beschikbaar voor de smoketest en generieke presenta
 
 | Functionaliteit | Analist | Senior | Beheerder | Klant | Accountmanager |
 | --- | --- | --- | --- | --- | --- |
-| SOC-dashboard en alerts | Ja | Ja | Nee | Nee | Nee |
+| SOC-dashboard en interne alerts | Ja | Ja | Nee | Nee | Nee |
+| Beheerdashboard (auditmetadata) | Nee | Nee | Ja | Nee | Nee |
 | Alert oppakken, triage en escalatie | Ja | Ja | Nee | Nee | Nee |
 | Afgewezen/opgeloste alert zonder case heropenen | Nee | Ja | Nee | Nee | Nee |
 | Onderzoeken beheren | Ja | Ja | Nee | Nee | Nee |
@@ -155,12 +156,14 @@ Een beheerder kan klanten aanmaken, hun naam wijzigen, deactiveren en heractiver
 
 ### Dashboard
 
-Het dashboard toont open alerts, actieve cases, SLA-risico's, overschrijdingen, prioriteitsverdeling, SLA-prestaties, FIFO-wachtrij en actieve onderzoeken. De klantfilter beperkt de getoonde resultaten. Vernieuwen haalt actuele gegevens op; er is nog geen realtime push.
+Beheerders starten op een eigen dashboard met actieve klanten, gebruikers, bronnen, aantallen geregistreerde alertontvangsten per klant en recente ontvangsten uit het bestaande auditlog. Het gaat niet om actuele aantallen openstaande alerts; die worden alleen binnen bevoegde analistenscopes getoond. Er wordt geen ruwe payload of interne case-inhoud aan de beheerder beschikbaar gesteld. Voor de analistenweergave log je in als analist of senior analist.
+
+Het dashboard toont open alerts, actieve cases, SLA-risico's, overschrijdingen, prioriteitsverdeling, SLA-prestaties, FIFO-wachtrij en actieve onderzoeken. De klantfilter beperkt de getoonde resultaten. De actieve analistenoverzichten vernieuwen automatisch elke 15 seconden. Details, formulieren en verborgen tabbladen worden niet automatisch vernieuwd. Het dashboard toont ook dreigingscategorieën, betrokken systemen en recent ontvangen meldingen; dit is polling, geen realtime push.
 
 ### Alerts
 
 - Handmatig toevoegen of ontvangen via de ingest-API.
-- Zoeken op onder meer titel, nummer, bron, eigenaar en klant; filteren op klant, status en prioriteit.
+- Zoeken op titel, nummer, bron, eigenaar, klant, IP-adres, hostname en overige aangeleverde securityvelden; filteren op klant, status, prioriteit, categorie en datum.
 - Details bekijken: bron, omschrijving, ontvangst, deadline, eigenaar, triage en geschiedenis.
 - Oppakken, triage vastleggen met motivatie, afwijzen of escaleren.
 - Senior analist: afgewezen of opgeloste alert zonder case heropenen.
@@ -168,7 +171,7 @@ Het dashboard toont open alerts, actieve cases, SLA-risico's, overschrijdingen, 
 ### Cases en klantportaal
 
 - Case aanmaken vanuit een alert met nader onderzoek of bevestigd incident of koppelen aan een bestaande open case in dezelfde klant en scope.
-- Status wijzigen (inclusief Wacht op klant), eigenaar overdragen met toelichting en volgende actie, notities, acties, observables en bewijsreferenties toevoegen.
+- Status wijzigen volgens de workflow (inclusief Wacht op klant), eigenaar overdragen met toelichting en volgende actie, notities, acties, observables en bewijsreferenties toevoegen.
 - Case vrijgeven aan de klant; geschikte tijdlijnitems klantzichtbaar maken.
 - Klant kan reageren op een open vrijgegeven case; accountmanager kan deze lezen.
 - Afsluiten vereist een samenvatting en conclusie en lost gekoppelde alerts op.
@@ -426,7 +429,7 @@ Voor de variant zonder Docker: `SOC_URL=http://localhost:8080 bash scripts/check
 
 De test wacht op de healthcheck en controleert authenticatie, rollen, tenantgrenzen, accountbewerking, wachtwoordreset, deactivering/heractivering, klantnaamwijziging, ingest, CSRF, triage, casepromotie, zichtbaarheid, afsluiten, audit en sleutelintrekking. De test schrijft fictieve records. Gebruik oorspronkelijke demoaccounts met de initiële wachtwoorden en zonder geactiveerde 2FA.
 
-De eerdere Docker-build en healthcheck zijn op een MacBook geslaagd. De nieuwe account- en klantbewerking en volledige smoketest zijn nog niet daadwerkelijk uitgevoerd. Een aanwezige test is geen bewijs dat deze slaagt.
+De Docker-build, database-upgrade en volledige smoketest voor commit e470595 zijn door een groepslid op een MacBook succesvol uitgevoerd. Sindsdien zijn sessiegedrag, simulator, securitymapping en workflow gewijzigd; de uitgebreide smoketest en browsercontroles moeten opnieuw worden uitgevoerd. Een aanwezige test is geen bewijs dat deze slaagt.
 
 ## 10. Opdrachtgever en eisenmatrix
 
@@ -439,12 +442,12 @@ De opdrachtgever beschrijft vijf stappen:
 | Stap | Gewenste procesrol | Huidige MVP / verschil |
 | --- | --- | --- |
 | 1. Ontvangst en registratie | Ticket Intake Officer | API-ingest en handmatige invoer; geen aparte intake-rol |
-| 2. Analyse en classificatie | Security Analyst | Analist kan triageren; geen formele procesfase |
-| 3. Prioritering en toewijzing | Security Coordinator | Prioriteit bij ontvangst, eigenaarschap/overdracht; geen coördinatorrol |
-| 4. Beoordeling en uitvoering | System Owner | Analist legt acties vast; geen afzonderlijke owner-rol of goedkeuringsstap |
-| 5. Validatie en afsluiting | Security Analyst | Analist sluit case met conclusie; onafhankelijke validatie niet afgedwongen |
+| 2. Analyse en classificatie | Security Analyst | Analist claimt en triageert vóór casevorming |
+| 3. Prioritering en toewijzing | Security Coordinator | Senior prioriteert en wijst open case toe; geen aparte coördinatorrol |
+| 4. Beoordeling en uitvoering | System Owner | Toegewezen analist legt acties vast; geen afzonderlijke System Owner-rol |
+| 5. Validatie en afsluiting | Security Analyst | Eerst opgelost, daarna afsluiten met samenvatting en conclusie; onafhankelijke validatie niet afgedwongen |
 
-De huidige FIFO-wachtrij en zelf oppakken zijn een tijdelijke MVP-keuze en wijken af van het gewenste toewijzingsproces. De opdrachtgever geeft aan dat samenwerken beperkt is tot overdracht/escalatie; huidige toegang is scope-gebaseerd en niet beperkt tot één toegewezen onderzoeker. Rollen, toestandsmachine, autorisatie en datamodel moeten daarom gezamenlijk met het FO/TO worden herzien. Er is geen afzonderlijke Ticket-entiteit; ResearchCase vervult in de MVP de onderzoekstaak.
+De FIFO-wachtrij en zelf oppakken blijven voor alertanalyse behouden; nieuwe cases vereisen senior-toewijzing voordat uitvoering kan starten. Casewijzigingen zijn voor de eigenaar of senior (klantreacties uitgezonderd). Leestoegang blijft scope-gebaseerd. De afzonderlijke opdrachtgeverrollen en exacte taakverdeling moeten nog met FO/TO worden afgestemd. ResearchCase vervult in de MVP de onderzoekstaak.
 
 ### Aanvullende eisen
 
@@ -454,7 +457,7 @@ Status: **Aanwezig** = functionaliteit in de broncode; **Deels** = onvolledig; *
 | --- | --- | --- | --- |
 | 01 | Overdracht met toelichting en aandachtspunten | Aanwezig | Verplichte toelichting en volgende actie in tijdlijn |
 | 02 | Overdrager, ontvanger en moment vastleggen | Aanwezig | Tijdlijn met vorige en nieuwe eigenaar, ID's, actor en tijd |
-| 03 | Eigen toegewezen onderzoeken bekijken | Deels | Eigenaar zichtbaar en doorzoekbaar; geen apart Mijn onderzoeken-filter |
+| 03 | Eigen toegewezen onderzoeken bekijken | Aanwezig | Filter Mijn onderzoeken op ownerId |
 | 04 | Dreigende SLA signaleren | Aanwezig | Dashboard en alertdeadline; geen pushmelding |
 | 05 | Overschreden SLA's bij alerts en onderzoeken | Deels | Alert-SLA; geen aparte case-SLA |
 | 06 | SLA-instellingen per klant beheren | Aanwezig | Reactietermijn per klant; standaard 60 minuten, alleen nieuwe alerts |
@@ -463,8 +466,8 @@ Status: **Aanwezig** = functionaliteit in de broncode; **Deels** = onvolledig; *
 | 09 | Klanten aanmaken, wijzigen, deactiveren | Aanwezig | Inclusief heractiveren en naam wijzigen; nog testen |
 | 10 | Gebruikers aanmaken, wijzigen, deactiveren | Aanwezig | Inclusief wachtwoordreset en heractiveren; nog testen |
 | 11 | Functionaliteit bepalen via rollen | Aanwezig | Server-side rolcontroles en frontendnavigatie |
-| 12 | Zoeken op alerts, onderzoeken en observables | Deels | Alerts/cases zoeken; geen globale observablezoekfunctie |
-| 13 | Filteren op klant, status, prioriteit en datum | Deels | Klant/status/prioriteit; datumfilter ontbreekt |
+| 12 | Zoeken op alerts, onderzoeken en observables | Aanwezig | Zoeken op alerts/cases en observables binnen bevoegde cases; client-side |
+| 13 | Filteren op klant, status, prioriteit en datum | Aanwezig | Client-side datumfilters en overige filters |
 | 14 | Overzicht openstaande alerts en onderzoeken | Aanwezig | Dashboard en lijsten |
 | 15 | Actuele status SLA-afspraken | Deels | Eerste behandeling en demo-deadlines; geen klantcontracten |
 | 16 | Export onderzoeksinformatie PDF/CSV | Open | Geen exportfunctie |
@@ -496,8 +499,8 @@ Status: **Aanwezig** = functionaliteit in de broncode; **Deels** = onvolledig; *
 2. Log in als beheerder, maak een tijdelijk account aan, bewerk dit en deactiveer het. Toon klantbeheer en API-sleutels.
 3. Stuur een fictieve alert via de ingest-API. Vernieuw het dashboard als analist.
 4. Pak de alert op, triageer als bevestigd incident met motivatie en maak een case.
-5. Voeg interne en klantzichtbare informatie toe. Geef de case vrij.
-6. Log in als klant en toon de afgeschermde informatie. Sluit daarna als analist de case met conclusie.
+5. Log in als senior analist, prioriteer de case en wijs deze toe aan de gewenste analist. Log als die analist in, voeg interne en klantzichtbare informatie toe en geef de case vrij.
+6. Log in als klant en toon de afgeschermde informatie. Zet de case daarna als toegewezen analist eerst op Opgelost en sluit af met samenvatting en conclusie.
 7. Toon de auditlog als beheerder en trek de tijdelijke sleutel in.
 
 Gebruik bij voorkeur niet de oorspronkelijke demoaccounts voor de accountbewerkingsdemo, zodat de smoketest bruikbaar blijft.
@@ -505,9 +508,9 @@ Gebruik bij voorkeur niet de oorspronkelijke demoaccounts voor de accountbewerki
 ### Prioriteiten voor vervolgontwikkeling
 
 1. Stem procesrollen, statussen, eigenaarschap en toegang af met het FO/TO en de opdrachtgever.
-2. Implementeer expliciete overdracht met motivatie, ontvanger en historie; voeg case-SLA toe.
-3. Voeg datumfilters, zoeken op observables en PDF/CSV-export toe.
-4. Voeg een securitytool-simulator of werkelijke connector toe; realiseer volledige OCSF-normalisatie; de opslag van het originele bronbericht is aanwezig.
+2. Werk de formele roltoewijzing, onafhankelijke validatie en case-SLA verder uit.
+3. Voeg server-side zoeken/paginering en PDF/CSV-export toe.
+4. Voeg echte bronadapters en volledige OCSF-validatie toe; de simulator en OCSF-basismapping zijn aanwezig.
 5. Werk beveiliging, audit, retentie, TLS en databaseprovisioning uit; voer isolatie-, OWASP-, performance- en loadtests uit.
 6. Splits grote componenten/services op, voeg unit tests, CI en dependency-locks toe.
 
@@ -531,7 +534,29 @@ De reactietermijn staat in platform.Tenants.ResponseMinutes en is via Klantenbeh
 | FO FR-14/15, NFR-07; TO 9.1 | CreatedAt, FirstHandledAt, Deadline, ResponseMinutes | SLA-grenstesten; case-SLA aanvullend vereist |
 | FO FR-16–18/20, NFR-01–03; TO 6.2/8.1 | TenantDbFactory, modelcache, scope-controles, samengestelde case-FK's | Afzonderlijke platformrollen, per-scope rollen, SQL-principals en volledige negatieve tests |
 | FO FR-19, NFR-04–06/10; TO 8.3/8.4 | Identity, TOTP, CSRF, audit en API-key hashing | TLS-productie, auditintegriteit, complete auditdekking en 2FA-test |
-| FO NFR-11; TO 4.3 | Origineel JSON en bronmetadata | OCSF-mapping (Should) |
+| FO NFR-11; TO 4.3 | Origineel JSON, bronmetadata en beperkte OCSF-basismapping | Volledige bronadapters en schema-validatie (Should) |
 | TO 7.3/10/11 | Trace-ID bij domeinfouten, demo schema-upgrade, smoketest | Serverpaginering, productie-migraties, backups, unit/load/securitytests |
 
 De SQL-demo-upgrade voegt velden en constraints toe in een transactie. Bestaande childrecords krijgen de scope van hun case; een ongeldige alert-case-koppeling laat de upgrade falen in plaats van gegevens te verplaatsen. De wijziging is nog niet getest met SQL Server. Gebruik niet `docker compose down -v` om een fout te maskeren.
+
+### Securityuitbreiding en eenvoudige incidentworkflow
+
+De klasse SecurityAlertDetails leest vaste velden uit het bronbericht (categorie, IP-adressen, hostname, username, detectieregel en simulatie-indicator). De oorspronkelijke JSON blijft bewaard. Een afzonderlijk veld NormalizedPayload bevat een beperkte OCSF 1.8 Detection Finding-mapping (klasse 2004, activiteit Create, ernst, tijd en finding_info). Bron: https://github.com/ocsf/ocsf-schema/blob/main/events/findings/detection_finding.json. Dit is geen gevalideerde volledige OCSF-eventimplementatie; mapping per echte bron, schema-validatie en uitgebreidere observables ontbreken. Oudere records krijgen geen fictieve securityvelden of normalisatie.
+
+Het dashboard toont dreigingscategorieën, betrokken systemen en recente alerts. Filter op datum, categorie en eigen onderzoeken; zoek in zichtbare alerts en case-observables. Alle filtering gebeurt momenteel op reeds door de backend geautoriseerde gegevens in de frontend.
+
+De workflow gebruikt de bestaande rollen, niet de nog te bevestigen afzonderlijke opdrachtgeverrollen:
+
+| Processtap | Uitvoering |
+| --- | --- |
+| Ontvangst | Ingest-API of handmatige alert |
+| Analyse en classificatie | Analist claimt en triageert |
+| Prioritering en toewijzing | Senior analist wijst de open case toe en stelt prioriteit vast |
+| Uitvoering | Toegewezen analist of senior; notities, acties en observables, eventueel wachten op klant |
+| Validatie en afsluiting | Eerst status Opgelost, dan beoordeling/afsluiting met samenvatting en conclusie |
+
+Open cases gaan via de toewijzing naar In onderzoek. Vanuit In onderzoek kan de case wachten op de klant of opgelost worden. Vanuit Opgelost volgt beoordeling, terug naar onderzoek of definitieve afsluiting. Een senior kan een gesloten case met reden heropenen. Andere analisten kunnen alleen lezen binnen hun scope; mutaties zijn voor de eigenaar of senior. De aparte Ticket Intake Officer-, Security Coordinator- en System Owner-rollen, afzonderlijke onafhankelijke eindvalidatie en case-SLA's zijn nog niet geïmplementeerd. De bestaande basisrollen en FO blijven voorlopig behouden. Deze uitbreiding moet nog op een echte draaiende SQL Server en in de browser worden getest.
+
+### Wireframes en huisstijl
+
+De oorspronkelijke kaartweergave uit FO v1.1 (figuren 1–4) is hersteld: drie kaarten naast elkaar, maximaal twaalf alerts per pagina, zoek- en filterbalk, driepuntjesmenu, apart triagepaneel, casebanner, observables en tijdlijn, en kaarten voor klantonderzoeken. De basis-index.css is overgenomen van de aangeleverde groepscode. De precieze ernstkleuren zijn in het FO nog niet definitief vastgelegd; deze versie gebruikt grijs voor laag/gemiddeld, oranje voor hoog, rood voor urgent en magenta voor kritiek, steeds met tekstlabels. Het latere FO v2.0 bevat ook een tabelvariant; de oorspronkelijke v1.1-kaarten zijn hier gekozen omdat die als visuele basis zijn aangewezen. De beheerder heeft geen automatische analisttoegang (TO 6.2/8.2). Browser- en buildcontrole van deze nieuwe UI zijn nog nodig.

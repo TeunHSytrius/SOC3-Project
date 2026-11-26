@@ -37,7 +37,57 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .slaoverview { flex-wrap: wrap; }
 }
 
-/* Develop has a nested #root selector; keep its source intact and supply the root layout here. */
-#root { width:100%; min-height:100svh; display:flex; flex-direction:column; }
+/* Root layout comes directly from index.css. */
 /* The original navigation branch uses a light workspace independently of the login theme. */
 .AppShell { color-scheme:light; --text:#4a4a4a; --text-h:#454545; --bg:#fff; --border:#e5e4e7; --code-bg:#f4f3ec; --accent:#444; --accent-border:rgba(68,68,68,.5); }
+
+/* FO v1.1, figures 1–4: light workspace, rectangular cards and explicit severity labels.
+   Severity colors are separate from the global accent variable. */
+.AppShell { background:#fff; text-align:left; font-family:var(--sans); }
+.AppShell__content { max-width:1126px; }
+.AppShell__content .stat,.AppShell__content .panel { border-color:#c7c7c7; box-shadow:none; }
+.AppShell__content .stat-icon { background:#e5e5e5; color:#444; }
+.AppShell__content .stat-icon.warn { background:#ffb000; color:#292929; }
+.AppShell__content .stat-icon.danger { background:#ff624b; color:#292929; }
+.AppShell__content .bar.Low,.AppShell__content .bar.Moderate { background:#b8b8b8; }
+.AppShell__content .bar.High { background:#ffb000; }
+.AppShell__content .bar.Urgent { background:#ff624b; }
+.AppShell__content .bar.Immediate { background:#d51ac7; }
+.AppShell__content .badge.blue { background:#e7e7e7; color:#383838; }
+.AppShell__content .badge.warn { background:#ffe6a1; color:#5e4100; }
+.AppShell__content .badge.danger { background:#ffded8; color:#8c251a; }
+.wire-screen { margin:0 auto; width:100%; }
+.wire-tools { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-bottom:12px; }
+.wire-screen .filters { padding:8px 0; }
+.wire-count { text-align:left; margin:10px 0 14px; font-size:12px; }
+.wire-card-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.wire-alert-card { position:relative; display:flex; flex-direction:column; gap:8px; min-height:225px; border:1px solid #aaa; border-radius:12px; padding:13px; color:#272727; text-align:left; }
+.severity-low,.severity-moderate { background:#dedede; color:#272727; }
+.severity-high { background:#ffb000; color:#272727; }
+.severity-urgent { background:#ff624b; color:#272727; }
+.severity-immediate { background:#d51ac7; color:#fff; }
+.wire-card-meta { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; font-size:11px; }
+.wire-card-main { border:0; text-align:left; color:inherit; background:transparent; padding:14px 0; display:flex; flex-direction:column; justify-content:flex-end; align-items:flex-start; flex:1; min-width:0; }
+.wire-card-main strong { font-size:16px; line-height:1.3; margin-bottom:8px; }
+.wire-card-main span { font-size:12px; line-height:1.45; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; overflow-wrap:anywhere; }
+.wire-card-menu { position:relative; }
+.wire-card-menu summary { list-style:none; cursor:pointer; border:1px solid #999; border-radius:5px; background:#e5e5e5; color:#333; padding:1px 8px; font-weight:bold; }
+.wire-card-menu summary::-webkit-details-marker { display:none; }
+.wire-card-menu button { position:absolute; z-index:2; right:0; top:100%; min-width:145px; background:#fff; border:1px solid #aaa; border-radius:5px; color:#333; padding:8px; }
+.wire-card-priority { font-size:11px; font-weight:600; }
+.wire-pagination { display:flex; justify-content:center; align-items:center; gap:15px; margin:18px 0; }
+.wire-detail-grid { display:grid; grid-template-columns:minmax(0,1.8fr) minmax(0,1fr); gap:16px; align-items:start; }
+.wire-banner { padding:13px 16px; border:1px solid #aaa; border-radius:8px; margin-bottom:18px; }
+.wire-banner h2,.wire-banner p,.wire-banner small { color:inherit; }
+.wire-banner h2 { margin-top:4px; font-weight:700; }
+.wire-data { gap:0 12px; }
+.wire-data dt,.wire-data dd { padding:9px 0; border-bottom:1px solid #ddd; }
+.wire-next { margin-top:16px; }
+.case-banner { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.wire-observable { background:#e5e5e5; padding:8px; border-radius:5px; margin-bottom:5px; overflow-wrap:anywhere; }
+.admin-stat { text-align:left; color:#333; cursor:pointer; }
+.admin-stat:hover { border-color:#777; }
+.admin-access-note { font-size:12px; margin:15px 0; }
+.AppShell .notice { position:fixed; bottom:20px; right:20px; max-width:calc(100% - 40px); z-index:12; box-shadow:0 2px 8px #0002; }
+@media(max-width:850px){ .wire-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));} .wire-detail-grid{grid-template-columns:1fr;} }
+@media(max-width:520px){ .wire-card-grid{grid-template-columns:1fr;} .case-banner{flex-direction:column;align-items:flex-start;} }
