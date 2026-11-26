@@ -13,10 +13,10 @@ export default function ErrorLog({
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
   const filtered = errors.filter(
-    (e) =>
-      (!status || String(e.status).startsWith(status)) &&
-      [e.traceId, e.route, e.reason, e.exceptionType, e.status].some((v) =>
-        String(v || '')
+    (entry) =>
+      (!status || String(entry.status).startsWith(status)) &&
+      [entry.traceId, entry.route, entry.reason, entry.exceptionType, entry.status].some((value) =>
+        String(value || '')
           .toLowerCase()
           .includes(query.toLowerCase()),
       ),
@@ -41,12 +41,12 @@ export default function ErrorLog({
             aria-label="Zoek fout"
             placeholder="Zoek foutreferentie, route of reden"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(event) => setQuery(event.target.value)}
           />
           <select
             aria-label="HTTP-status"
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
+            onChange={(event) => setStatus(event.target.value)}
           >
             <option value="">Alle fouten</option>
             <option value="4">4xx – verzoeken</option>
@@ -58,18 +58,18 @@ export default function ErrorLog({
           empty={!filtered.length}
         >
           {filtered.map((e, i) => (
-            <tr key={e.traceId + '-' + i}>
-              <td>{fmt(e.at)}</td>
+            <tr key={entry.traceId + '-' + i}>
+              <td>{fmt(entry.at)}</td>
               <td>
-                <Badge value={String(e.status)} kind={e.status >= 500 ? 'danger' : 'warn'} />
+                <Badge value={String(entry.status)} kind={entry.status >= 500 ? 'danger' : 'warn'} />
               </td>
               <td>
-                {e.method} {e.route}
+                {entry.method} {entry.route}
               </td>
-              <td>{e.reason}</td>
-              <td>{e.exceptionType || '—'}</td>
+              <td>{entry.reason}</td>
+              <td>{entry.exceptionType || '—'}</td>
               <td>
-                <code>{e.traceId}</code>
+                <code>{entry.traceId}</code>
               </td>
             </tr>
           ))}
