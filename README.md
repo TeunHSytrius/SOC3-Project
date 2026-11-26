@@ -435,7 +435,7 @@ De [smoketest](tests/smoke.mjs) controleert onder andere login/logout, gebruiker
 
 De [CI-workflow](.github/workflows/docker.yml) voert backendtests, Compose-validatie, de Docker-build, HTTP-readiness, controles op SQL-tabellen en de API-smoketest uit. Raadpleeg [Actions](https://github.com/TeunHSytrius/SOC3-Project/actions) voor het resultaat van de betreffende commit.
 
-De native startprocedure is toegevoegd in [PR #13](https://github.com/TeunHSytrius/SOC3-Project/pull/13). De Docker-CI op de eerdere PR-versie was geslaagd; de native installatie moet nog door het team worden uitgevoerd en vastgelegd. Een buildresultaat van een eerdere commit geldt niet automatisch voor iedere volgende commit.
+De native startprocedure is toegevoegd in [PR #13](https://github.com/TeunHSytrius/SOC3-Project/pull/13). De CI bevat ook een native job: SQL Server draait in een testcontainer, terwijl de backend via User Secrets en het lokale startprofiel en de frontend via Vite rechtstreeks op de Linux-runner draaien. De job controleert de frontend, API-health en API-smoketest via de Vite-proxy. Bekijk het resultaat per commit in GitHub Actions. Installatie van een native SQL Server en de lokale IDE-/databaseclientconfiguratie op individuele laptops worden hiermee niet getest.
 
 ## 8. Problemen oplossen
 
@@ -493,7 +493,7 @@ Het eerdere uitgebreide, met AI ondersteunde prototype blijft beschikbaar op [ar
 
 ### 9.3 AI-gebruik en eigen controle
 
-Voor het opstellen en structureren van deze README en de installatie-instructies is ChatGPT gebruikt. De voorgestelde commando's en technische beschrijving zijn door de assistent vergeleken met de repositorybestanden. Dit is AI-ondersteunde conceptdocumentatie; de projectgroep moet de tekst, keuzes en commando's zelf controleren, zo nodig aanpassen en de uiteindelijke versie goedkeuren. De native installatie is nog niet door de assistent uitgevoerd.
+Voor het opstellen en structureren van deze README en de installatie-instructies is ChatGPT gebruikt. De voorgestelde commando's en technische beschrijving zijn door de assistent vergeleken met de repositorybestanden. Dit is AI-ondersteunde conceptdocumentatie; de projectgroep moet de tekst, keuzes en commando's zelf controleren, zo nodig aanpassen en de uiteindelijke versie goedkeuren. De native CI-test is met AI-ondersteuning toegevoegd; controleer de werkelijke uitkomst in GitHub Actions en voer de lokale installatie zelf uit.
 
 Leg per relevant bewijsstuk vast welke AI-tool is gebruikt, waarvoor, welke onderdelen zijn overgenomen en welke eigen controles en aanpassingen daadwerkelijk zijn uitgevoerd. Volg de opleidingsafspraken voor AIAS-niveau 3. Rapporteer ook AI-gebruik bij de ontwikkeling en integratie van de code; deze algemene vermelding vervangt geen individuele rapportage.
 
