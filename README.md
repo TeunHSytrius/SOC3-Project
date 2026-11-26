@@ -30,7 +30,7 @@ Dit zijn fictieve lokale demoaccounts en gekozen demonstratierollen, geen offici
 
 De geïntegreerde MVP is als referentie bewaard op [archive/full-mvp](https://github.com/TeunHSytrius/SOC3-Project/tree/archive/full-mvp), commit `6fca2626d56179029aa08dd9285639c92d7e62a0`. De MVP is gemaakt met AI-ondersteuning en bevat geïntegreerde bijdragen van de groep. Het archief is geen bewijs dat alle individuele leeruitkomsten zijn behaald.
 
-In de actieve versie blijven database en klantschema's, inloggen, uitloggen, 2FA (oorspronkelijke bijdrage van Thijs, geïntegreerd met Identity), klantenbeheer, gebruikersbeheer, rol- en klanttoegang, navigatie en basis-auditregistratie beschikbaar. De database-entiteiten blijven staan als technische basis voor latere sprints. Er worden geen bestaande gegevens verwijderd.
+In de actieve versie blijven database en klantschema's, inloggen, uitloggen, 2FA (oorspronkelijke bijdrage van Thijs, geïntegreerd met Identity), klantenbeheer, gebruikersbeheer, rol- en klanttoegang, navigatie en basis-auditregistratie beschikbaar. De bestaande platform- en klantschema's blijven behouden voor compatibiliteit met de werkende login, 2FA en beheerfunctionaliteit. Daarnaast is Hamza's oorspronkelijke domeindatabase teruggebracht als ontwikkelbasis. Er worden geen bestaande gegevens verwijderd.
 
 Alert-ingest, API-sleutels, echte alertverwerking, triage, SLA-functionaliteit, cases, notities, observables, klantportaal, rapportages en de simulator zijn nog niet beschikbaar in de actieve versie. Beheerders en analisten zien een expliciet gemarkeerd klikbaar frontendprototype met fictieve meldingen, filters en details. De voorbeelden komen uitsluitend uit `frontend/src/features/demo`, worden niet in SQL opgeslagen en gebruiken geen alert-API. Ze tellen niet als gerealiseerde acceptatiecriteria voor de volgende sprints. De bijbehorende user stories worden later door het team gerealiseerd en getest. De auditpagina is een eenvoudige inspectie van platformactiviteiten, geen volledige US-27-implementatie.
 
@@ -175,6 +175,16 @@ docker compose --profile test run --rm smoke
 ```
 
 Deze test gebruikt de Node-container en maakt fictieve testrecords aan. Gebruik de standaard generieke testaccounts; activeer daarop geen 2FA. GitHub Actions bevat daarnaast een automatische Docker-build en smoketest op een schone x86-64-runner. Controleer [Actions](https://github.com/TeunHSytrius/SOC3-Project/actions) voor het werkelijke resultaat; een workflowbestand betekent niet dat de build is geslaagd.
+
+## Oorspronkelijke domeindatabase
+
+Hamza's databasebijdrage komt uit [feature/database](https://github.com/TeunHSytrius/soc3Managment/tree/4550bc7a424b3815a2873882fda369f5bd8ce2a5), commit `4550bc7a424b3815a2873882fda369f5bd8ce2a5`. De oorspronkelijke entiteiten, enums, integer-ID's, constraints en relaties zijn opgenomen onder `backend/Soc.Data/Domain`. De context heet `DomainDbContext` en gebruikt een afzonderlijke namespace om naamconflicten met de bestaande modellen te voorkomen.
+
+- `Soc3Demo`: bestaande authenticatie (Identity en Thijs' 2FA), gebruikers- en klantenbeheer, audit en compatibiliteit met bestaande klantschema's.
+- `Soc3Demo_Domain`: oorspronkelijke domeinmodellen van Hamza, waaronder Alerts, Tickets, Researches, Customers, Organizations, Employees, Contracts, Notes en Evidences. De domeindatabase wordt bij het starten van de lokale demo aangemaakt als deze nog niet bestaat.
+- Bestaande schermen en API's zijn **nog niet** gekoppeld aan de oorspronkelijke domeinentiteiten. Voorbeeldalerts blijven fictieve frontenddata. Het team moet de koppeling tussen Identity/klanttoegang en het oorspronkelijke domeinmodel gezamenlijk ontwerpen, inclusief de afwijkende ID's en tenantisolatie.
+
+Beide databases draaien op dezelfde SQL Server-container en worden in hetzelfde bestaande Docker-volume opgeslagen. Er is geen migratie van bestaande records naar de oorspronkelijke tabellen uitgevoerd. De domeinconnectie wordt standaard afgeleid van `ConnectionStrings:Soc` door `_Domain` toe te voegen aan de databasenaam; een expliciete afzonderlijke database kan worden ingesteld via `ConnectionStrings:SocDomain` (omgeving: `ConnectionStrings__SocDomain`). Voor een externe SQL Server is ook toegang tot die afzonderlijke database nodig, inclusief rechten om tabellen aan te maken. Deze demo-initialisatie is geen productie-migratiestrategie.
 
 ## Ontwikkelen en testen
 

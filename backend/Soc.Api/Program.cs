@@ -7,6 +7,7 @@ using Soc.Api.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Soc.Data.Context;
+using Soc.Data.Domain.Context;
 using Soc.Data.Entities;
 using Soc.Business.Services;
 using Soc.Business.Repositories;
@@ -42,6 +43,10 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 builder.Services.AddDbContext<SocDbContext>(options => options.UseSqlServer(connection));
+builder.Services.AddDbContext<DomainDbContext>(options =>
+    options.UseSqlServer(DomainDatabaseConnection.Resolve(
+        connection,
+        builder.Configuration.GetConnectionString("SocDomain"))));
 builder.Services.AddSingleton(new TenantDbFactory(connection));
 builder.Services.AddIdentity<AppUser, IdentityRole<Guid>>(options =>
 {
@@ -159,9 +164,10 @@ app.Use(async (context, next) =>
 app.UseAuthorization();
 app.MapControllers();
 app.MapOpenApi();
-app.MapGet("/api/v1/health", async (SocDbContext database) =>
+app.MapGet("/api/v1/health", async (SocDbContext database, DomainDbContext domainDatabase) =>
 {
-    if (await database.Database.CanConnectAsync())
+    if (await database.Database.CanConnectAsync() &&
+        await domainDatabase.Database.CanConnectAsync())
     {
         return Results.Ok(new
         {
@@ -192,6 +198,8 @@ if (demo)
         try
         {
             await scope.ServiceProvider.GetRequiredService<SocService>().InitializeAsync();
+            await scope.ServiceProvider.GetRequiredService<DomainDbContext>()
+                .Database.EnsureCreatedAsync();
             app.Logger.LogInformation("SOC-demo gereed.");
             break;
         }
