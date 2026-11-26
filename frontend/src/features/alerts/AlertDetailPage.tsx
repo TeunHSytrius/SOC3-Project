@@ -55,7 +55,7 @@ export default function AlertDetailPage({
         sub={isAdmin ? 'Beheerder · alleen lezen' : 'Beoordelen van binnengekomen melding'}
       />
       <button className="back" onClick={() => navigate('alerts')}>
-        ← Alerts
+        ← Terug naar alerts
       </button>
       <div className="wire-detail-grid">
         <Panel title="Alertgegevens">
@@ -172,12 +172,12 @@ export default function AlertDetailPage({
             {alert.history
               .slice()
               .reverse()
-              .map((h, i) => (
-                <div key={i}>
+              .map((historyEntry, index) => (
+                <div key={index}>
                   <span className="timeline-dot" />
-                  <strong>{h.text}</strong>
+                  <strong>{historyEntry.text}</strong>
                   <small>
-                    {h.actor} · {fmt(h.at)}
+                    {historyEntry.actor} · {fmt(historyEntry.at)}
                   </small>
                 </div>
               ))}

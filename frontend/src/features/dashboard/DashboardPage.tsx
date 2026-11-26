@@ -1,24 +1,11 @@
-import type { State, Alert, ResearchCase } from '../../types/soc';
-import { Icon, Badge, Button, Field, Select, Table, Panel, PageHeader } from '../../components/Ui';
-import {
-  labels,
-  priorities,
-  states,
-  caseStates,
-  active,
-  isClosed,
-  fmt,
-  sla,
-  caseMatchesView,
-  sortRecords,
-  nextCaseStates,
-  roles,
-} from '../../types/domain';
+import type { State } from '../../types/soc';
+import { Icon, Button, Panel, PageHeader } from '../../components/Ui';
+import { active, isClosed, sla, caseMatchesView, sortRecords } from '../../types/domain';
 import DashboardStats from './DashboardStats';
 import DashboardAlerts from '../alerts/DashboardAlerts';
-import AlertTrend from '../alerts/AlertTrend';
-import TicketTable from '../cases/TicketTable';
-import type { Navigate, UpdateState, RunAction } from '../../types/workspace';
+import DashboardTickets from './DashboardTickets';
+import PlatformManagement from './PlatformManagement';
+import type { Navigate, UpdateState } from '../../types/workspace';
 interface DashboardPageProps {
   state: Pick<State, 'org' | 'user' | 'orgs' | 'users' | 'keys' | 'errors' | 'alerts' | 'cases'>;
   isAdmin: boolean;
@@ -43,7 +30,7 @@ export default function DashboardPage({
   update,
   showQueue,
 }: DashboardPageProps) {
-  const { org, user, orgs, users, keys, errors } = state;
+  const { org, user } = state;
   const alerts = state.alerts.filter((alert) => !org || alert.organizationId === org);
   const cases = state.cases.filter((ticket) => !org || ticket.organizationId === org);
   const openAlerts = alerts.filter(active);
@@ -52,9 +39,6 @@ export default function DashboardPage({
   );
   const risk = openAlerts.filter((alert) => sla(alert).kind === 'warn');
   const overdue = openAlerts.filter((alert) => sla(alert).kind === 'danger');
-  const handled = alerts.filter((alert) => alert.firstHandledAt);
-  const onTime = handled.filter((alert) => sla(alert).kind === 'good').length;
-  const percentage = handled.length ? Math.round((100 * onTime) / handled.length) : null;
   const activeCases = cases.filter((ticket) => caseMatchesView(ticket, 'open'));
   const myCases = activeCases.filter((ticket) => ticket.ownerId === user?.id);
   const reviewCases = cases.filter((ticket) => caseMatchesView(ticket, 'resolved'));
@@ -104,60 +88,6 @@ export default function DashboardPage({
           )
         }
       />
-      {admin && (
-        <section className="dashboard-management" aria-label="Platformbeheer">
-          <h2>Platformbeheer</h2>
-          <div className="dashboard-management-grid">
-            {[
-              {
-                page: 'customers',
-                label: 'Klanten',
-                value: orgs.filter((item) => item.isActive).length,
-                detail: 'Actieve organisaties',
-                icon: 'customers',
-              },
-              {
-                page: 'users',
-                label: 'Gebruikers',
-                value: users.filter((item) => item.isActive).length,
-                detail: 'Actieve accounts',
-                icon: 'users',
-              },
-              {
-                page: 'keys',
-                label: 'API-sleutels',
-                value: keys.filter((item) => item.isActive).length,
-                detail: 'Actieve integraties',
-                icon: 'keys',
-              },
-              {
-                page: 'errors',
-                label: 'Foutenlog',
-                value: errors.length,
-                detail: 'Sinds backendstart',
-                icon: 'alerts',
-              },
-            ].map((item) => (
-              <button
-                type="button"
-                className="dashboard-management-item"
-                key={item.page}
-                onClick={() => navigate(item.page)}
-              >
-                <Icon name={item.icon} />
-                <span>
-                  <strong>{item.label}</strong>
-                  <small>{item.detail}</small>
-                </span>
-                <b>{item.value}</b>
-              </button>
-            ))}
-          </div>
-          <Button onClick={() => navigate('audit')}>
-            Auditlog bekijken <Icon name="arrow" size={16} />
-          </Button>
-        </section>
-      )}
       <section aria-label="Werkvoorraad">
         <h2 className="dashboard-section-title">{admin ? 'SOC-overzicht' : 'Werkvoorraad'}</h2>
         <DashboardStats items={summary} />
@@ -172,29 +102,20 @@ export default function DashboardPage({
             }
           >
             <DashboardAlerts
-              alerts={sortRecords(unassigned, 'oldest', true).slice(0, 5)}
+              alerts={sortRecords(unassigned, 'oldest', true).slice(0, 3)}
               customerName={(id) => customerName(id)}
               open={(id) => navigate('alerts', id)}
             />
           </Panel>
           <Panel
-            title="Recent ontvangen meldingen"
-            sub="Alle statussen · nieuwste eerst"
-            action={
-              <Button
-                onClick={() => {
-                  showQueue('alerts', 'all');
-                  update({ listSort: 'newest' });
-                }}
-              >
-                Alle alerts <Icon name="arrow" size={16} />
-              </Button>
-            }
+            title={admin ? 'Actieve tickets' : 'Mijn actieve tickets'}
+            sub="Meest recent aangemaakt"
+            action={<Button onClick={() => showQueue('cases', 'open', !admin)}>Bekijk tickets <Icon name="arrow" size={16} /></Button>}
           >
-            <DashboardAlerts
-              alerts={sortRecords(alerts, 'newest', false).slice(0, 5)}
-              customerName={(id) => customerName(id)}
-              open={(id) => navigate('alerts', id)}
+            <DashboardTickets
+              tickets={sortRecords(workCases, 'newest', false).slice(0, 3)}
+              customerName={customerName}
+              navigate={navigate}
             />
           </Panel>
         </div>
@@ -216,51 +137,33 @@ export default function DashboardPage({
             Archief ({cases.filter(isClosed).length})
           </Button>
         </div>
+      </section>
+      {admin && <PlatformManagement state={state} navigate={navigate} />}
+      <section aria-label="Recente meldingen">
         <Panel
-          title={admin ? 'Actieve onderzoeken' : 'Mijn actieve onderzoeken'}
-          sub="Meest recent aangemaakt"
-          action={
-            <Button onClick={() => showQueue('cases', 'all')}>
-              Alle tickets <Icon name="arrow" size={16} />
-            </Button>
-          }
-        >
-          <TicketTable
-            tickets={sortRecords(workCases, 'newest', false).slice(0, 5)}
-            customerName={customerName}
-            onOpen={(id) => navigate('cases', id)}
-          />
+            title="Recent ontvangen meldingen"
+            sub="Alle statussen · nieuwste eerst"
+            action={
+              <Button
+                onClick={() => {
+                  showQueue('alerts', 'all');
+                  update({ listSort: 'newest' });
+                }}
+              >
+                Alle alerts <Icon name="arrow" size={16} />
+              </Button>
+            }
+          >
+            <DashboardAlerts
+              alerts={sortRecords(alerts, 'newest', false).slice(0, 3)}
+              customerName={(id) => customerName(id)}
+              open={(id) => navigate('alerts', id)}
+            />
         </Panel>
       </section>
-      <section aria-label="Rapportage">
-        <h2 className="dashboard-section-title">Rapportage</h2>
-        <AlertTrend alerts={alerts} />
-        <Panel title="SLA-prestaties" sub="Op basis van de eerste behandeling">
-          <div className="slaoverview">
-            <div
-              className="donut"
-              style={{ background: `conic-gradient(#14836c ${percentage || 0}%, var(--surface-hover) 0)` }}
-            >
-              <div>
-                <strong>{percentage === null ? '—' : percentage + '%'}</strong>
-                <small>op tijd</small>
-              </div>
-            </div>
-            <div>
-              <p>
-                <span className="dot green" /> Binnen SLA <b>{onTime}</b>
-              </p>
-              <p>
-                <span className="dot red" /> Te laat behandeld{' '}
-                <b>{handled.filter((alert) => sla(alert).kind === 'danger').length}</b>
-              </p>
-              <p>
-                <span className="dot orange" /> Open met SLA-risico <b>{risk.length}</b>
-              </p>
-            </div>
-          </div>
-        </Panel>
-      </section>
+      <div className="dashboard-report-link">
+        <Button onClick={() => navigate('reports')}>Rapportages bekijken <Icon name="arrow" size={16} /></Button>
+      </div>
     </div>
   );
 }

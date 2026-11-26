@@ -12,7 +12,7 @@ import type { ActionResult, WorkspaceActions } from './types/workspace';
 import './features/FeatureStyles.css';
 
 const REFRESH_INTERVAL = 15000;
-const AUTO_REFRESH_PAGES = ['dashboard', 'alerts', 'cases', 'errors', 'ticket-register'];
+const AUTO_REFRESH_PAGES = ['dashboard', 'alerts', 'cases', 'errors', 'ticket-register', 'reports'];
 
 export default class App extends React.Component<Record<string, never>, State> {
   state: State = initialState();
@@ -223,6 +223,7 @@ export default class App extends React.Component<Record<string, never>, State> {
   };
 
   private navigate = (page: string, selected: string | null = null) => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
     const clearMessages = { selected, error: '', notice: '', modal: null, secret: null };
     if (page === this.state.page && (selected || this.state.selected)) {
       this.setState(clearMessages);

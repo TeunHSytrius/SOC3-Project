@@ -53,7 +53,7 @@
   text-align: center;
 }
 .AppShell__content .statline {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 .AppShell__content .barrow {
   grid-template-columns: minmax(0, 110px) minmax(0, 1fr) auto;
@@ -91,6 +91,7 @@
   .AppShell__content .stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .AppShell__content .statline { flex-wrap: wrap; }
   .AppShell__content .stat {
     min-width: 0;
   }
@@ -133,7 +134,7 @@
     flex: 1 1 0;
   }
   .AppShell__content .PageHeader__title {
-    font-size: clamp(1.6rem, 7vw, 2rem);
+    font-size: clamp(1.25rem, 6vw, 1.6rem);
   }
   .wire-card-grid {
     gap: 10px;

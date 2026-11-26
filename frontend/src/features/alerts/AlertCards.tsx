@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Alert, ResearchCase } from '../../types/soc';
-import { active, fmt, labels, sla } from '../../types/domain';
+import { active, fmt, sla } from '../../types/domain';
 import { Badge, Button } from '../../components/Ui';
 
 export function priorityColor(priority: Alert['priority']) {
@@ -30,7 +30,7 @@ export function AlertCards({ alerts, customerName, open, busy }: AlertCardsProps
             </div>
             <div className="wire-card-meta">
               <Badge value={alert.status} />
-              <span>{sla(alert).text}</span>
+              <Badge value={sla(alert).text} kind={sla(alert).kind} />
             </div>
             <button className="wire-card-main" onClick={() => open(alert.id)} disabled={busy}>
               <strong>{alert.title}</strong>
@@ -43,29 +43,29 @@ export function AlertCards({ alerts, customerName, open, busy }: AlertCardsProps
               </span>
               <details className="wire-card-menu">
                 <summary aria-label={'Acties voor ' + alert.number}>···</summary>
-                <button onClick={() => open(alert.id)}>
+                <button type="button" onClick={() => open(alert.id)} disabled={busy}>
                   {active(alert) ? 'Openen / beoordelen' : 'Details bekijken'}
                 </button>
               </details>
             </div>
             <span className="wire-card-priority">
-              {labels[alert.priority]} · {alert.number}
+              <Badge value={alert.priority} /> {alert.number}
             </span>
           </article>
         ))}
       </div>
       {pageCount > 1 && (
-        <div className="wire-pagination">
+        <nav className="wire-pagination" aria-label="Alertpaginering">
           <Button disabled={current === 0} onClick={() => setPage(current - 1)}>
             Vorige
           </Button>
-          <span>
-            Pagina {current + 1} van {pageCount}
+          <span aria-live="polite">
+            Pagina {current + 1} van {pageCount} · {current * 12 + 1}–{Math.min((current + 1) * 12, alerts.length)} van {alerts.length}
           </span>
           <Button disabled={current === pageCount - 1} onClick={() => setPage(current + 1)}>
             Volgende
           </Button>
-        </div>
+        </nav>
       )}
     </>
   );
@@ -82,7 +82,7 @@ export function CaseCards({
 }) {
   return (
     <>
-      {!cases.length && <p className="empty">Geen onderzoeken gevonden.</p>}
+      {!cases.length && <p className="empty">Geen tickets gevonden.</p>}
       <div className="wire-card-grid">
         {cases.map((research) => (
           <article
@@ -96,6 +96,7 @@ export function CaseCards({
             <button className="wire-card-main" onClick={() => open(research.id)}>
               <strong>{research.number}</strong>
               <span>{research.title}</span>
+              <Badge value={research.priority} />
             </button>
             <div className="wire-card-meta">
               <span>

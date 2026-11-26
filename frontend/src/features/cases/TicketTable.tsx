@@ -10,7 +10,7 @@ interface TicketTableProps {
 export default function TicketTable({ tickets, customerName, onOpen }: TicketTableProps) {
   return (
     <Table
-      head={['Case', 'Klant', 'Prioriteit', 'Status', 'Eigenaar', 'Aangemaakt', 'Afgesloten', '']}
+      head={['Ticket', 'Klant', 'Prioriteit', 'Status', 'Eigenaar', 'Aangemaakt', 'Afgesloten', '']}
       empty={!tickets.length}
     >
       {tickets.map((ticket) => (

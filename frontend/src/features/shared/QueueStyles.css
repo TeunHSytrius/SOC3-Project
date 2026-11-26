@@ -13,9 +13,9 @@
   font-weight: 600;
 }
 .archive-tabs button[aria-pressed='true'] {
-  background: var(--accent);
-  color: var(--accent-text);
-  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--text-h);
+  border-color: var(--accent-border);
 }
 @media (max-width: 600px) {
   .archive-tabs button {
@@ -69,3 +69,5 @@
     width: 100%;
   }
 }
+
+.archive-tabs button:not([aria-pressed='true']):hover { background: var(--surface-hover); }

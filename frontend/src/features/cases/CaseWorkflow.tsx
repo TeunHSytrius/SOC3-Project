@@ -1,39 +1,55 @@
-import type { ResearchCase } from '../../types/soc';
-import { Badge, Panel } from '../../components/Ui';
+import type { ResearchCase, CaseStatus } from '../../types/soc';
+import { Icon, Panel } from '../../components/Ui';
+import './CaseWorkflow.css';
+
+const workflowSteps = [
+  { title: 'Ontvangst', role: 'Externe securitytool / intake' },
+  { title: 'Analyse', role: 'Analist' },
+  { title: 'Toewijzing', role: 'Senior analist' },
+  { title: 'Uitvoering', role: 'Toegewezen analist' },
+  { title: 'Validatie en afsluiting', role: 'Analist / senior' },
+];
+
+function getActiveStep(status: CaseStatus): number {
+  switch (status) {
+    case 'Open':
+      return 2;
+    case 'Resolved':
+    case 'UnderReview':
+      return 4;
+    case 'Closed':
+      return workflowSteps.length;
+    default:
+      return 3;
+  }
+}
 
 export default function CaseWorkflow({ research }: { research: ResearchCase }) {
-  const stage =
-    research.status === 'Open'
-      ? 2
-      : research.status === 'Closed'
-        ? 5
-        : ['Resolved', 'UnderReview'].includes(research.status)
-          ? 4
-          : 3;
-  const steps = [
-    ['Ontvangst', 'Externe securitytool / intake'],
-    ['Analyse en classificatie', 'Analist'],
-    ['Prioritering en toewijzing', 'Senior analist'],
-    ['Uitvoering', 'Toegewezen analist'],
-    ['Validatie en afsluiting', 'Analist / senior'],
-  ];
+  const activeStep = getActiveStep(research.status);
+  const description = activeStep === workflowSteps.length
+    ? 'Alle processtappen afgerond'
+    : `Stap ${activeStep + 1} van ${workflowSteps.length}`;
+
   return (
-    <Panel title="Incidentworkflow" sub="Demo-indeling op basis van de vijf processtappen">
-      <div className="bodypad">
-        {steps.map(([name, role], index) => (
-          <p key={name}>
-            <Badge
-              value={index < stage ? 'Afgerond' : index === stage ? 'Actief' : 'Gepland'}
-              kind={index < stage ? 'good' : index === stage ? 'blue' : 'neutral'}
-            />{' '}
-            <strong>
-              {index + 1}. {name}
-            </strong>
-            {' — '}
-            {role}
-          </p>
-        ))}
-      </div>
+    <Panel title="Incidentworkflow" sub={description}>
+      <ol className="case-workflow" aria-label="Voortgang incidentworkflow">
+        {workflowSteps.map((step, index) => {
+          const completed = index < activeStep;
+          const current = index === activeStep;
+          const status = completed ? 'completed' : current ? 'current' : 'planned';
+
+          return (
+            <li key={step.title} className={'workflow-step ' + status} aria-current={current ? 'step' : undefined}>
+              <span className="workflow-number" aria-hidden="true">
+                {completed ? <Icon name="check" size={16} /> : index + 1}
+              </span>
+              <strong>{step.title}</strong>
+              <small>{step.role}</small>
+              <span className="workflow-state">{completed ? 'Afgerond' : current ? 'Actief' : 'Gepland'}</span>
+            </li>
+          );
+        })}
+      </ol>
     </Panel>
   );
 }

@@ -37,23 +37,27 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
     </svg>
   );
 }
+const badgeKinds: Record<string, string> = {
+  Immediate: 'critical',
+  Urgent: 'danger',
+  High: 'warn',
+  Moderate: 'neutral',
+  Low: 'neutral',
+  New: 'blue',
+  Open: 'blue',
+  PendingReview: 'blue',
+  UnderReview: 'warn',
+  UnderInvestigation: 'blue',
+  WaitingForCustomer: 'warn',
+  Escalated: 'blue',
+  Resolved: 'good',
+  Closed: 'good',
+  Dismissed: 'neutral',
+};
+
 export function Badge({ value, kind }: { value: string; kind?: string }) {
   return (
-    <span
-      className={
-        'badge ' +
-        (kind ||
-          (['Immediate', 'Urgent', 'New'].includes(value)
-            ? 'danger'
-            : ['High', 'UnderReview', 'PendingReview'].includes(value)
-              ? 'warn'
-              : ['Resolved', 'Closed', 'Dismissed', 'Low'].includes(value)
-                ? 'good'
-                : ['Escalated', 'UnderInvestigation'].includes(value)
-                  ? 'blue'
-                  : 'neutral'))
-      }
-    >
+    <span className={'badge ' + (kind || badgeKinds[value] || 'neutral')}>
       {labels[value] || value}
     </span>
   );
