@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Soc.Data.Context;
 using Soc.Data.Entities;
 using static Soc.Business.Services.SocService;
+
 namespace Soc.Business.Services;
 
 public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> users, SocService platform)
@@ -25,6 +26,7 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
             _ => false
         };
     }
+
     private static object CaseDto(ResearchCase researchCase, Guid organizationId, bool internalView)
     {
         var visibleEntries = researchCase.Entries
@@ -75,6 +77,7 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
             entries = visibleEntries.OrderBy(entry => entry.At)
         };
     }
+
     public record EntryRow(Guid Id, DateTimeOffset At, string Actor, string Kind, string Text, bool Visible);
     static void ValidateObservable(string type, string value, string assessment)
     {
@@ -90,6 +93,7 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
         };
         Require(valid, "Observable heeft geen geldig formaat voor dit type.", 400);
     }
+
     private static IQueryable<ResearchCase> CaseQuery(TenantDbContext tenantDb)
     {
         return tenantDb.Cases
@@ -99,6 +103,7 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
                 .ThenInclude(alert => alert.History)
             .AsSplitQuery();
     }
+
     public async Task<object> Cases(AppUser currentUser, Guid? workspace, Guid? scope)
     {
         Require(CanReadInternal(currentUser) || currentUser.Role is "Klant" or "Accountmanager");
@@ -106,7 +111,7 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
         foreach (var (tenant, scopes) in await platform.ReadWorkspaces(currentUser, workspace, scope))
         {
             await using var tenantDb = factory.Open(tenant);
-            foreach (var researchCase in await CaseQuery(tenantDb).Where(record => scopes.Contains(record.ScopeId) && (CanReadInternal(currentUser) || record.CustomerVisible)).ToListAsync())
+            foreach (var researchCase in await CaseQuery(tenantDb).AsNoTracking().Where(record => scopes.Contains(record.ScopeId) && (CanReadInternal(currentUser) || record.CustomerVisible)).ToListAsync())
                 result.Add(CaseDto(researchCase, tenant.Id, CanReadInternal(currentUser)));
             foreach (var scopeId in scopes)
                 LogTenant(tenantDb, scopeId, currentUser.Name, "Caseoverzicht bekeken", "Cases");
@@ -114,6 +119,7 @@ public sealed class CaseService(TenantDbFactory factory, UserManager<AppUser> us
         }
         return result;
     }
+
     public async Task<object> CaseAction(AppUser currentUser, Guid id, string action, CaseActionRequest input, Guid? workspace, Guid? scope)
     {
         Require(action == "get" ? (CanReadInternal(currentUser) || currentUser.Role is "Klant" or "Accountmanager") : (Analyst(currentUser) || currentUser.Role == "Klant" && action == "entry"));

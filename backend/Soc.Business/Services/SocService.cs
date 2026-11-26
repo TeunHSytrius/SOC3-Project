@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Soc.Data.Context;
 using Soc.Data.Entities;
+
 namespace Soc.Business.Services;
 
 public sealed partial class SocService
@@ -29,11 +30,22 @@ public sealed partial class SocService
         if (!condition)
             throw new SocException(status, message);
     }
+
     public static string Required(string? value, int max = 500)
     {
         Require(!string.IsNullOrWhiteSpace(value) && value.Length <= max, "Ongeldige of ontbrekende invoer.", 400);
         return value!.Trim();
     }
+
+    public static string RequiredPassword(string? password)
+    {
+        Require(!string.IsNullOrWhiteSpace(password) && password.Length <= 200,
+            "Ongeldig of ontbrekend wachtwoord.", 400);
+
+        // Passwords are opaque values. Do not normalize or trim them.
+        return password!;
+    }
+
     public static bool Analyst(AppUser user) => user.Role is "Analist" or "Senior analist";
     internal static bool CanReadInternal(AppUser user) => Analyst(user) || user.Role == "Beheerder";
     public static void Admin(AppUser user) => Require(user.Role == "Beheerder");
@@ -44,6 +56,7 @@ public sealed partial class SocService
         Require(Enum.TryParse<PriorityLevel>(value, out var priority) && Enum.IsDefined(priority), "Ongeldige prioriteit.", 400);
         return priority;
     }
+
     internal static string Hash(string key) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)));
     internal const int DefaultResponseMinutes = 60;
     internal static int SlaMinutes(int? minutes)
@@ -52,6 +65,7 @@ public sealed partial class SocService
         Require(value >= 1 && value <= 10080, "SLA moet tussen 1 en 10080 minuten liggen.", 400);
         return value;
     }
+
     private bool NeedsTwoFactor(AppUser user)
     {
         bool internalRole = user.Role is "Analist" or "Senior analist" or "Beheerder";
@@ -63,6 +77,7 @@ public sealed partial class SocService
 
         return !demoAccount;
     }
+
     public async Task<AppUser> UserAsync(System.Security.Claims.ClaimsPrincipal principal, bool allowSetup = false)
     {
         var user = await users.GetUserAsync(principal);
@@ -70,6 +85,7 @@ public sealed partial class SocService
         Require(allowSetup || !NeedsTwoFactor(user!), "Stel eerst tweestapsverificatie in via Account.", 403);
         return user!;
     }
+
     public async Task<object> PublicUser(AppUser user)
     {
         var organizationIds = await db.Assignments
@@ -90,6 +106,7 @@ public sealed partial class SocService
             organizationIds
         };
     }
+
     public async Task<object> Access(AppUser user)
     {
         var publicUser = await PublicUser(user);
@@ -112,6 +129,7 @@ public sealed partial class SocService
             workspaces
         };
     }
+
     public async Task Log(AppUser user, string action, Guid? tenant = null, string? target = null)
     {
         db.Audit.Add(new()
@@ -123,6 +141,7 @@ public sealed partial class SocService
         });
         await db.SaveChangesAsync();
     }
+
     internal static void LogTenant(TenantDbContext tenantDb, Guid scope, string actor, string action, string target)
     {
         tenantDb.Audit.Add(new TenantAudit
@@ -133,6 +152,7 @@ public sealed partial class SocService
             Target = target
         });
     }
+
     internal async Task<Tenant> Tenant(Guid? id) => await db.Tenants.SingleOrDefaultAsync(organization => organization.Id == id) ?? throw new SocException(404, "Klant niet gevonden.");
     internal async Task<List<Guid>> Scopes(AppUser user, Guid tenant)
     {
@@ -141,6 +161,7 @@ public sealed partial class SocService
             .Select(assignment => assignment.ScopeId)
             .ToListAsync();
     }
+
     internal async Task<List<(Tenant Tenant, List<Guid> Scopes)>> Workspaces(AppUser user, Guid? tenant = null, Guid? scope = null)
     {
         var organizationIds = await db.Assignments.Where(assignment => assignment.UserId == user.Id).Select(assignment => assignment.TenantId).Distinct().ToListAsync();
@@ -175,6 +196,7 @@ public sealed partial class SocService
         }
         return result;
     }
+
     internal async Task<Tenant> CreateTenant(string name, int responseMinutes = DefaultResponseMinutes)
     {
         Require(!await db.Tenants.AnyAsync(organization => organization.Name == name), "Naam bestaat al.", 409);
@@ -190,6 +212,7 @@ public sealed partial class SocService
         await db.SaveChangesAsync();
         return organization;
     }
+
     internal static void CheckVersion(byte[] actual, string? supplied)
     {
         Require(!string.IsNullOrWhiteSpace(supplied), "RowVersion is verplicht.", 400);
