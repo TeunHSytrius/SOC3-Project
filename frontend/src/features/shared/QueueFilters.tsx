@@ -1,4 +1,4 @@
-import type { State, ResearchCase } from '../../types/soc';
+import type { State } from '../../types/soc';
 import { Button, Field, Select } from '../../components/Ui';
 import { priorities, states, caseStates, caseMatchesView } from '../../types/domain';
 import type { UpdateState } from '../../types/workspace';
@@ -33,7 +33,7 @@ export default function QueueFilters({
               ? status === 'Escalated'
               : ['Dismissed', 'Resolved'].includes(status)),
       )
-    : caseStates.filter((status) => caseMatchesView({ status: status as ResearchCase['status'] }, filters.archiveFilter));
+    : caseStates.filter((status) => caseMatchesView({ status }, filters.archiveFilter));
   const alerts = filters.alerts.filter((alert) => !filters.org || alert.organizationId === filters.org);
   const categories = [
     ...new Set(alerts.map((alert) => alert.security?.category || 'Niet geclassificeerd')),

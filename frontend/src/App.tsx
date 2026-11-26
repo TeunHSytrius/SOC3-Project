@@ -5,14 +5,14 @@ import LoginPage from './features/auth/LoginPage';
 import { LoadingState } from './components/PageStates';
 import { formData } from './features/shared/formData';
 import { AlertTracker, mergeNotifications } from './features/alerts/AlertTracker';
-import { clearSession, currentUser, hasSession, isCurrentSession, isUnauthorized, loginUser, logoutUser, restoreUser } from './services/sessionService';
-import { loadAlerts, loadWorkspace, submitWorkspaceAction } from './services/workspaceService';
+import { clearSession, currentUser, isCurrentSession, isUnauthorized, loginUser, logoutUser, restoreUser } from './services/sessionService';
+import { loadAlerts, loadLiveWorkspace, loadWorkspace, submitWorkspaceAction } from './services/workspaceService';
 import type { Alert, State, User } from './types/soc';
 import type { ActionResult, WorkspaceActions } from './types/workspace';
 import './features/FeatureStyles.css';
 
 const REFRESH_INTERVAL = 15000;
-const AUTO_REFRESH_PAGES = ['dashboard', 'alerts', 'cases', 'errors', 'ticket-register', 'reports'];
+const AUTO_REFRESH_PAGES = new Set(['dashboard', 'alerts', 'cases', 'errors', 'ticket-register', 'reports']);
 
 export default class App extends React.Component<Record<string, never>, State> {
   state: State = initialState();
@@ -59,7 +59,7 @@ export default class App extends React.Component<Record<string, never>, State> {
       user.requiresTwoFactorSetup || loading || busy || this.refreshing
     ) return;
 
-    if (!modal && !selected && AUTO_REFRESH_PAGES.includes(page)) {
+    if (!modal && !selected && AUTO_REFRESH_PAGES.has(page)) {
       void this.refresh(user, true);
     } else {
       void this.pollNotifications(user);
@@ -116,7 +116,7 @@ export default class App extends React.Component<Record<string, never>, State> {
     try {
       await logoutUser();
     } finally {
-      this.setState({ ...emptyWorkspaceData(), user: null, error: '', notice: '' });
+      this.setState({ ...emptyWorkspaceData(), user: null, error: '', notice: '', busy: false });
     }
   };
 
@@ -126,7 +126,7 @@ export default class App extends React.Component<Record<string, never>, State> {
       clearSession();
       this.invalidateRefresh();
       this.alertTracker.reset();
-      this.setState({ ...emptyWorkspaceData(), user: null, error: message });
+      this.setState({ ...emptyWorkspaceData(), user: null, error: message, busy: false });
       return;
     }
     this.setState({ error: message, notice: '' });
@@ -142,7 +142,9 @@ export default class App extends React.Component<Record<string, never>, State> {
     this.refreshing = true;
 
     try {
-      const data = await loadWorkspace(user);
+      const data = automatic
+        ? await loadLiveWorkspace(user, this.state.page)
+        : await loadWorkspace(user);
       if (!this.isCurrentRefresh(version, user)) return;
       if (automatic && (this.state.selected || this.state.modal || this.state.busy)) return;
 
@@ -202,13 +204,16 @@ export default class App extends React.Component<Record<string, never>, State> {
     message: string,
     after?: (result: ActionResult) => void,
   ) => {
-    if (this.state.busy) return;
+    const { user, busy } = this.state;
+    if (!user || busy) return;
     this.setState({ busy: true, error: '', notice: '' });
 
     try {
       const result = await submitWorkspaceAction(this.state, path, data);
-      const refreshed = await this.refresh();
-      if (!this.state.user || !hasSession()) return;
+      if (!isCurrentSession(user.id) || this.state.user?.id !== user.id) return;
+
+      const refreshed = await this.refresh(user);
+      if (!isCurrentSession(user.id) || this.state.user?.id !== user.id) return;
 
       this.setState({
         notice: refreshed ? message : message + ' Gegevens vernieuwen is mislukt; klik op Vernieuwen.',
@@ -216,9 +221,9 @@ export default class App extends React.Component<Record<string, never>, State> {
       });
       after?.(result);
     } catch (error) {
-      this.fail(error);
+      if (isCurrentSession(user.id)) this.fail(error);
     } finally {
-      this.setState({ busy: false });
+      if (this.state.user?.id === user.id) this.setState({ busy: false });
     }
   };
 
@@ -230,7 +235,12 @@ export default class App extends React.Component<Record<string, never>, State> {
       return;
     }
 
+    const pageChanged = page !== this.state.page;
     this.setState({ ...initialFilters(), ...clearMessages, page });
+
+    if (pageChanged && !this.state.busy) {
+      void this.refresh();
+    }
   };
 
   private showQueue = (

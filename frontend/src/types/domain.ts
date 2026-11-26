@@ -1,4 +1,4 @@
-import type { Alert, ResearchCase } from './soc';
+import type { Alert, AlertStatus, CaseStatus, Priority, ResearchCase } from './soc';
 export const labels = {
   New: 'Nieuw',
   PendingReview: 'Wacht op beoordeling',
@@ -16,10 +16,10 @@ export const labels = {
   Urgent: 'Urgent',
   Immediate: 'Kritiek',
 };
-export const priorities = ['Low', 'Moderate', 'High', 'Urgent', 'Immediate'],
-  roles = ['Analist', 'Senior analist', 'Beheerder', 'Klant', 'Accountmanager'];
-export const states = ['New', 'PendingReview', 'UnderReview', 'Escalated', 'Dismissed', 'Resolved'],
-  caseStates = [
+export const priorities: Priority[] = ['Low', 'Moderate', 'High', 'Urgent', 'Immediate'];
+export const roles = ['Analist', 'Senior analist', 'Beheerder', 'Klant', 'Accountmanager'];
+export const states: AlertStatus[] = ['New', 'PendingReview', 'UnderReview', 'Escalated', 'Dismissed', 'Resolved'];
+export const caseStates: CaseStatus[] = [
     'Open',
     'UnderInvestigation',
     'WaitingForCustomer',

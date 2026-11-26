@@ -1,22 +1,30 @@
 import { Icon } from '../../components/Ui';
 
-export default function DashboardStats({
-  items,
-}: {
-  items: [string, number, string, string, string][];
-}) {
+export interface DashboardMetric {
+  label: string;
+  value: number;
+  description: string;
+  icon: string;
+  tone: 'blue' | 'purple' | 'warn' | 'danger';
+}
+
+interface DashboardStatsProps {
+  items: DashboardMetric[];
+}
+
+export default function DashboardStats({ items }: DashboardStatsProps) {
   return (
     <div className="stats">
-      {items.map(([label, value, description, icon, tone]) => (
-        <div className="stat" key={label}>
+      {items.map((metric) => (
+        <div className="stat" key={metric.label}>
           <div className="statline">
-            <span>{label}</span>
-            <span className={'stat-icon ' + tone}>
-              <Icon name={icon} />
+            <span>{metric.label}</span>
+            <span className={'stat-icon ' + metric.tone}>
+              <Icon name={metric.icon} />
             </span>
           </div>
-          <strong>{value}</strong>
-          <small>{description}</small>
+          <strong>{metric.value}</strong>
+          <small>{metric.description}</small>
         </div>
       ))}
     </div>

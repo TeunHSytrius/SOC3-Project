@@ -1,6 +1,6 @@
 import type { State } from '../../types/soc';
 import { Icon, Button, Panel, PageHeader } from '../../components/Ui';
-import { active, isClosed, sla, caseMatchesView, sortRecords } from '../../types/domain';
+import { getDashboardOverview } from './dashboardOverview';
 import DashboardStats from './DashboardStats';
 import DashboardAlerts from '../alerts/DashboardAlerts';
 import DashboardTickets from './DashboardTickets';
@@ -30,53 +30,14 @@ export default function DashboardPage({
   update,
   showQueue,
 }: DashboardPageProps) {
-  const { org, user } = state;
-  const alerts = state.alerts.filter((alert) => !org || alert.organizationId === org);
-  const cases = state.cases.filter((ticket) => !org || ticket.organizationId === org);
-  const openAlerts = alerts.filter(active);
-  const unassigned = openAlerts.filter(
-    (alert) => !alert.ownerId && ['New', 'PendingReview'].includes(alert.status),
-  );
-  const risk = openAlerts.filter((alert) => sla(alert).kind === 'warn');
-  const overdue = openAlerts.filter((alert) => sla(alert).kind === 'danger');
-  const activeCases = cases.filter((ticket) => caseMatchesView(ticket, 'open'));
-  const myCases = activeCases.filter((ticket) => ticket.ownerId === user?.id);
-  const reviewCases = cases.filter((ticket) => caseMatchesView(ticket, 'resolved'));
-  const newCases = cases.filter((ticket) => caseMatchesView(ticket, 'new'));
-  const senior = user?.role === 'Senior analist';
-  const admin = isAdmin;
-  const workCases = admin ? activeCases : myCases;
-  const summary: [string, number, string, string, string][] = admin
-    ? [
-        ['Wachtrij', unassigned.length, 'Onbeheerde alerts', 'alerts', 'blue'],
-        [
-          'Actieve tickets',
-          activeCases.length,
-          'Nieuw, in onderzoek of wachtend',
-          'cases',
-          'purple',
-        ],
-        ['SLA-risico', risk.length, 'Minder dan 15 minuten', 'clock', 'warn'],
-        ['SLA te laat', overdue.length, 'Open alerts buiten SLA', 'alerts', 'danger'],
-      ]
-    : [
-        ['Wachtrij', unassigned.length, 'Beschikbaar in de wachtrij', 'alerts', 'blue'],
-        [
-          senior ? 'Te prioriteren' : 'Mijn tickets',
-          senior ? newCases.length : myCases.length,
-          senior ? 'Nieuwe onderzoeken' : 'Aan mij toegewezen',
-          'cases',
-          'purple',
-        ],
-        ['SLA-risico', risk.length, 'Minder dan 15 minuten', 'clock', 'warn'],
-        ['SLA te laat', overdue.length, 'Open alerts buiten SLA', 'alerts', 'danger'],
-      ];
+  const { metrics, ticketCounts, alertQueue, ticketQueue, recentAlerts } = getDashboardOverview(state, isAdmin);
+
   return (
     <div className="fragment soc-dashboard">
       <PageHeader
-        title={admin ? 'Beheerdersdashboard' : 'Werkoverzicht'}
+        title={isAdmin ? 'Beheerdersdashboard' : 'Werkoverzicht'}
         sub={
-          admin
+          isAdmin
             ? 'Platformbeheer en toezicht op de beveiligingsmeldingen.'
             : 'Je werkvoorraad, nieuwe meldingen en lopende onderzoeken.'
         }
@@ -88,10 +49,10 @@ export default function DashboardPage({
           )
         }
       />
-      {admin && <PlatformManagement state={state} navigate={navigate} />}
+      {isAdmin && <PlatformManagement state={state} navigate={navigate} />}
       <section aria-label="Werkvoorraad">
-        {admin && <h2 className="dashboard-section-title">SOC-overzicht</h2>}
-        <DashboardStats items={summary} />
+        {isAdmin && <h2 className="dashboard-section-title">SOC-overzicht</h2>}
+        <DashboardStats items={metrics} />
         <div className="dashboard-queues">
           <Panel
             title="Alertwachtrij"
@@ -103,30 +64,30 @@ export default function DashboardPage({
             }
           >
             <DashboardAlerts
-              alerts={sortRecords(unassigned, 'oldest', true).slice(0, 3)}
-              customerName={(id) => customerName(id)}
+              alerts={alertQueue}
+              customerName={customerName}
               open={(id) => navigate('alerts', id)}
             />
           </Panel>
           <Panel
-            title={admin ? 'Actieve tickets' : 'Mijn actieve tickets'}
+            title={isAdmin ? 'Actieve tickets' : 'Mijn actieve tickets'}
             sub="Meest recent aangemaakt"
-            action={<Button onClick={() => showQueue('cases', 'open', !admin)}>Bekijk tickets <Icon name="arrow" size={16} /></Button>}
+            action={<Button onClick={() => showQueue('cases', 'open', !isAdmin)}>Bekijk tickets <Icon name="arrow" size={16} /></Button>}
           >
             <DashboardTickets
-              tickets={sortRecords(workCases, 'newest', false).slice(0, 3)}
+              tickets={ticketQueue}
               customerName={customerName}
               navigate={navigate}
             />
             <div className="dashboard-ticket-links" aria-label="Ticketfasen">
-              <Button onClick={() => showQueue('cases', 'new')}>Nieuw ({newCases.length})</Button>
+              <Button onClick={() => showQueue('cases', 'new')}>Nieuw ({ticketCounts.new})</Button>
               <Button onClick={() => showQueue('cases', 'waiting')}>
-                Wacht op klant ({cases.filter((ticket) => caseMatchesView(ticket, 'waiting')).length})
+                Wacht op klant ({ticketCounts.waiting})
               </Button>
               <Button onClick={() => showQueue('cases', 'resolved')}>
-                Af te sluiten ({reviewCases.length})
+                Af te sluiten ({ticketCounts.resolved})
               </Button>
-              <Button onClick={() => showQueue('cases', 'closed')}>Archief ({cases.filter(isClosed).length})</Button>
+              <Button onClick={() => showQueue('cases', 'closed')}>Archief ({ticketCounts.closed})</Button>
             </div>
           </Panel>
         </div>
@@ -147,7 +108,7 @@ export default function DashboardPage({
             }
           >
             <DashboardAlerts
-              alerts={sortRecords(alerts, 'newest', false).slice(0, 2)}
+              alerts={recentAlerts}
               customerName={(id) => customerName(id)}
               open={(id) => navigate('alerts', id)}
             />
