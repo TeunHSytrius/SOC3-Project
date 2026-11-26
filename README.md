@@ -226,9 +226,40 @@ Log in met `teun@soc.demo`.
 4. Open API-sleutels en maak een tijdelijke sleutel voor Northstar Finance met de naam Demo securitytool. Kopieer de sleutel; deze is maar één keer volledig zichtbaar.
 5. Stuur de voorbeeldmelding hieronder vanuit de terminal. Noteer het teruggegeven alertnummer.
 
+**Windows (PowerShell):**
+
+```powershell
+$SOC_KEY = Read-Host "Voer je API-sleutel in"
+$headers = @{ "X-API-Key" = $SOC_KEY }
+$body = @{
+    externalEventId = "demo-$([guid]::NewGuid())"
+    title = "Verdachte VPN-aanmelding demo"
+    occurredAt = [DateTime]::UtcNow.ToString("o")
+    severity = "High"
+    payload = @{
+        simulated = $true
+        category = "Authenticatie"
+        description = "Aanmelding vanaf een onbekende locatie na meerdere mislukte pogingen."
+        sourceIp = "192.0.2.45"
+        destinationIp = "198.51.100.10"
+        hostname = "DEMO-VPN01"
+        username = "demo.user"
+        detectionRule = "AUTH-001"
+    }
+} | ConvertTo-Json -Depth 5
+try {
+    Invoke-RestMethod -Uri "http://localhost:8081/api/v1/ingest/alerts" -Method Post -Headers $headers -ContentType "application/json" -Body $body
+} finally {
+    Remove-Variable SOC_KEY, headers
+}
+```
+
+**macOS/Linux (zsh of bash):**
+
 ```bash
-# macOS zsh
-read -rs 'SOC_KEY?API-sleutel: '
+printf 'API-sleutel: '
+read -r -s SOC_KEY
+printf '\n'
 curl -i -X POST http://localhost:8081/api/v1/ingest/alerts \
   -H "X-API-Key: $SOC_KEY" \
   -H 'Content-Type: application/json' \
@@ -371,14 +402,8 @@ Er is een echte ingest-API, maar geen live koppeling met Sentinel, Defender of S
 
 Maak als beheerder onder API-sleutels een sleutel voor Northstar Finance. Stuur daarna een fictieve melding via de terminal:
 
-```bash
-read -rs 'SOC_KEY?API-sleutel: ' # zsh op macOS
-curl -X POST http://localhost:8081/api/v1/ingest/alerts \
-  -H "X-API-Key: $SOC_KEY" \
-  -H 'Content-Type: application/json' \
-  -d '{"externalEventId":"demo-001","title":"Testmelding","occurredAt":"2026-11-25T12:00:00Z","severity":"High","payload":{"description":"Fictieve melding voor de demo"}}'
-unset SOC_KEY
-```
+Gebruik het volledige voorbeeld bij [Stap 1 — Teun: platformbeheer en alertontvangst](#stap-1--teun-platformbeheer-en-alertontvangst). Kies daar **Windows PowerShell** of **macOS/Linux**; voer de twee varianten niet allebei uit.
+
 
 Verwacht HTTP 201 bij een nieuw event-ID. Identieke herhaling geeft 200 met hetzelfde alert-ID; gewijzigde bytes onder hetzelfde event-ID geven 409. Gebruik een nieuw event-ID voor elke nieuwe melding. Klant-, scope- en andere niet-contractvelden worden geweigerd. Het oorspronkelijke JSON-bericht en de SHA-256-hash worden opgeslagen. De maximale berichtgrootte is 1 MiB. Vernieuw daarna het dashboard als analist. De API-key bepaalt server-side klant en scope; waarden uit de requestbody mogen dit niet overschrijven. Ongeldige of ingetrokken sleutels geven HTTP 401.
 
@@ -386,19 +411,31 @@ Verwacht HTTP 201 bij een nieuw event-ID. Identieke herhaling geeft 200 met hetz
 
 Maak als beheerder een API-sleutel met bronnaam Demo securitytool voor een actieve klant. Kopieer de sleutel eenmalig. Start vervolgens vanuit de hoofdmap:
 
+**Windows (PowerShell):**
+
+```powershell
+$env:SOC_SIM_KEY = Read-Host "API-sleutel"
+try {
+    docker compose --profile simulator run --rm -e SOC_SIM_KEY simulator
+} finally {
+    Remove-Item Env:SOC_SIM_KEY -ErrorAction SilentlyContinue
+}
+```
+
+**macOS/Linux (zsh of bash):**
+
 ```bash
-read -rs 'SOC_SIM_KEY?API-sleutel: '
+printf 'API-sleutel: '
+read -r -s SOC_SIM_KEY
+printf '\n'
 export SOC_SIM_KEY
-node scripts/simulate-alerts.mjs
-```
-
-Of voer na dezelfde export uit:
-
-```bash
 docker compose --profile simulator run --rm -e SOC_SIM_KEY simulator
+unset SOC_SIM_KEY
 ```
 
-De simulator stuurt iedere 30 seconden een fictieve alert naar de echte ingest-API. Stop met Ctrl+C en voer `unset SOC_SIM_KEY` uit. De simulator maakt geen netwerkverbindingen met de IP-adressen uit de voorbeelden en voert geen echte detectie uit. De API-sleutel bepaalt klant en scope. Start hem alleen voor de demo; hij is standaard uitgeschakeld. De voorbeeld-IP's zijn documentatieadressen.
+Met lokaal geïnstalleerde Node.js kun je het Docker-commando in beide varianten vervangen door `node scripts/simulate-alerts.mjs`.
+
+De simulator stuurt iedere 30 seconden een fictieve alert naar de echte ingest-API. Stop met Ctrl+C en verwijder de omgevingsvariabele met het opruimcommando voor je shell. De simulator maakt geen netwerkverbindingen met de IP-adressen uit de voorbeelden en voert geen echte detectie uit. De API-sleutel bepaalt klant en scope. Start hem alleen voor de demo; hij is standaard uitgeschakeld. De voorbeeld-IP's zijn documentatieadressen.
 
 ## 5. Technische architectuur
 
@@ -586,6 +623,21 @@ Open http://localhost:5173. In een tweede terminal, vanuit frontend: `npm run bu
 
 .NET 10 SDK. Start alleen de databasecontainer en gebruik een afzonderlijke ontwikkel-database Soc3Dev. Gebruik het eigen lokale SQL-wachtwoord indien aangepast.
 
+**Windows (PowerShell):**
+
+```powershell
+docker compose stop app
+docker compose up -d sqlserver
+dotnet restore SOC3.slnx
+dotnet build SOC3.slnx
+$env:ConnectionStrings__Soc = 'Server=127.0.0.1,14333;Database=Soc3Dev;User Id=sa;Password=SocDemo!2026Local;Encrypt=True;TrustServerCertificate=True'
+$env:Demo__Enabled = "true"
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+dotnet watch --project backend/Soc.Api/Soc.Api.csproj run --no-launch-profile --urls http://localhost:8080
+```
+
+**macOS/Linux (bash of zsh):**
+
 ```bash
 docker compose stop app
 docker compose up -d sqlserver
@@ -597,7 +649,22 @@ export ASPNETCORE_ENVIRONMENT=Development
 dotnet watch --project backend/Soc.Api/Soc.Api.csproj run --no-launch-profile --urls http://localhost:8080
 ```
 
-In een tweede terminal vanuit de hoofdmap: `cd frontend && VITE_API_TARGET=http://127.0.0.1:8080 npm run dev`. Open http://localhost:5173. De Vite-proxy gebruikt standaard Docker-poort 8081, met deze override de lokale backend 8080. Geen databasevolumes wissen.
+In een tweede terminal vanuit de hoofdmap:
+
+```powershell
+# Windows PowerShell
+cd frontend
+$env:VITE_API_TARGET = 'http://127.0.0.1:8080'
+npm run dev
+```
+
+```bash
+# macOS/Linux
+cd frontend
+VITE_API_TARGET=http://127.0.0.1:8080 npm run dev
+```
+
+ Open http://localhost:5173. De Vite-proxy gebruikt standaard Docker-poort 8081, met deze override de lokale backend 8080. Geen databasevolumes wissen.
 
 ### Smoketest
 
@@ -605,7 +672,13 @@ In een tweede terminal vanuit de hoofdmap: `cd frontend && VITE_API_TARGET=http:
 bash scripts/check-demo.sh
 ```
 
-Voor de variant zonder Docker: `SOC_URL=http://localhost:8080 bash scripts/check-demo.sh`.
+Voor de variant zonder Docker op macOS/Linux: `SOC_URL=http://localhost:8080 bash scripts/check-demo.sh`. Op Windows, nadat de lokale backend bereikbaar is:
+
+```powershell
+$env:SOC_URL = 'http://localhost:8080'
+node tests/smoke.mjs
+Remove-Item Env:SOC_URL
+```
 
 De test wacht op de healthcheck en controleert authenticatie, rollen, tenantgrenzen, accountbewerking, wachtwoordreset, deactivering/heractivering, klantnaamwijziging, ingest, CSRF, triage, casepromotie, zichtbaarheid, afsluiten, audit en sleutelintrekking. De test schrijft fictieve records. Gebruik oorspronkelijke demoaccounts met de initiële wachtwoorden en zonder geactiveerde 2FA.
 
